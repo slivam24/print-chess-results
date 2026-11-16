@@ -42,6 +42,17 @@ Při vytváření Workeru zvolte **Continue with GitHub**, vyberte repozitář a
 **Project name** `chess-print-proxy` (musí odpovídat `name` ve `wrangler.toml`), **Root directory** `worker`,
 **Deploy command** `npx wrangler deploy`, Build command prázdný. Každá změna ve větvi `main` se pak nasadí sama.
 
+Zkontrolujte v nastavení Workeru (**Settings → Build**):
+
+- **Production branch** = `main` – Cloudflare jinak převezme výchozí větev GitHubu, a pokud je jí pracovní větev,
+  nasazuje neschválené změny a sloučení do `main` nic nespustí,
+- **Disable builds** = vypnuto,
+- buildy ostatních větví vypnuté (nasazovat se má jen to, co je sloučené do `main`),
+- výchozí větev repozitáře na GitHubu (Settings → General → Default branch) = `main`.
+
+Ověření po nasazení: `https://<worker>/` odpoví „chess-print proxy OK“ a požadavek z webu mimo `ALLOWED_ORIGINS`
+dostane chybu 403.
+
 ### Omezení na vaši appku (doporučeno)
 
 Při nasazení z GitHubu nebo přes wrangler platí hodnota z `wrangler.toml` (a přepíše tu z webového rozhraní).
