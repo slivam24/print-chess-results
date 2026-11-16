@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Šachový tisk</title>
+  <meta name="description" content="Pohodlný tisk šachových turnajů z chess-results.com – los kola, pořadí, startovní listina, výsledkové lístky.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%99%9E%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/print.css">
+  <style id="page-rule">@page { size: A4 portrait; margin: 0; }</style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-icon" aria-hidden="true">♞</span> Šachový tisk</div>
+      <label class="profile-pick">Profil
+        <select id="profile-select" title="Aktivní profil nastavení"></select>
+      </label>
+      <div class="topbar-spacer"></div>
+      <button type="button" class="btn ghost" id="btn-manual" title="Vložit uložené HTML stránky chess-results (když proxy nefunguje)">Vložit HTML ručně</button>
+      <button type="button" class="btn ghost" id="btn-settings" aria-pressed="false">⚙ Nastavení</button>
+    </header>
+
+    <aside class="side" id="side-main" aria-label="Ovládání tisku">
+      <section class="card" id="card-tournament">
+        <h2>1. Turnaj</h2>
+        <form id="form-load" class="row">
+          <input id="input-tournament" type="text" inputmode="url" autocomplete="off"
+                 placeholder="Číslo turnaje nebo odkaz z chess-results" aria-label="Číslo turnaje nebo odkaz">
+          <button type="submit" class="btn primary" id="btn-load">Stáhnout</button>
+        </form>
+        <div id="recent" class="recent"></div>
+        <div id="tournament-info" class="tinfo" hidden></div>
+      </section>
+
+      <section class="card" id="card-output">
+        <h2>2. Co tisknout</h2>
+        <div id="template-list" class="tpl-list"><p class="muted small">Nejdřív stáhněte turnaj.</p></div>
+      </section>
+
+      <section class="card" id="card-options">
+        <h2>3. Možnosti</h2>
+        <div id="options"></div>
+        <p class="muted small">Možnosti výstupu se ukládají do aktivního profilu.</p>
+      </section>
+
+      <div class="print-actions">
+        <button type="button" class="btn primary big" id="btn-print" disabled>🖨 Tisknout</button>
+        <p class="muted small">Nebo Ctrl+P. V dialogu tisku nechte měřítko 100&nbsp;% a okraje „Výchozí“ – okraje si řídí appka podle profilu.</p>
+      </div>
+    </aside>
+
+    <aside class="side settings" id="side-settings" aria-label="Nastavení" hidden></aside>
+
+    <main class="preview" aria-label="Náhled tisku">
+      <div class="preview-bar">
+        <div id="status" class="status" role="status" aria-live="polite"></div>
+        <div class="preview-tools">
+          <span id="page-count" class="muted"></span>
+          <label class="zoom">Zvětšení
+            <select id="zoom">
+              <option value="fit">Na šířku</option>
+              <option value="0.5">50 %</option>
+              <option value="0.75">75 %</option>
+              <option value="1">100 %</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <div id="warnings" class="warnings" hidden></div>
+      <div class="preview-scroll" id="preview-scroll">
+        <div id="pages" class="pages">
+          <div class="empty-state">
+            <div class="empty-icon" aria-hidden="true">♞</div>
+            <h1>Tisk turnajů z chess-results.com</h1>
+            <ol>
+              <li>Zadejte číslo turnaje (nebo vložte odkaz) a klikněte na <b>Stáhnout</b>.</li>
+              <li>Vyberte, co chcete tisknout – náhled se zobrazí zde.</li>
+              <li>Klikněte na <b>Tisknout</b>. Po dalším kole stačí <b>Aktualizovat data</b> a tisknout znovu.</li>
+            </ol>
+            <p id="proxy-hint" class="muted" hidden>Nejdřív je potřeba v <b>Nastavení → Připojení</b> zadat adresu vaší proxy (Cloudflare Worker). Návod je v README.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="dlg-manual" class="dialog">
+    <form method="dialog" id="form-manual">
+      <h2>Vložit stránky ručně</h2>
+      <p>Když proxy nefunguje: otevřete stránku turnaje na chess-results.com, uložte ji
+        (<kbd>Ctrl</kbd>+<kbd>S</kbd>, „Webová stránka, pouze HTML“) a soubor sem nahrajte,
+        nebo vložte zdrojový kód stránky (<kbd>Ctrl</kbd>+<kbd>U</kbd>, vše zkopírovat).</p>
+      <p class="small muted">Potřebné stránky: hlavní stránka turnaje se zapnutými detaily, a podle výstupu
+        „Pairings/Results“ (los) daného kola, „Ranking list after round“ (pořadí), u družstev „Board pairings“.
+        Appka sama pozná, o kterou stránku a kolo jde. Můžete nahrát více souborů najednou.</p>
+      <label class="field">Soubory HTML
+        <input type="file" id="manual-files" accept=".html,.htm,text/html" multiple>
+      </label>
+      <label class="field">nebo vložený zdrojový kód
+        <textarea id="manual-text" rows="8" placeholder="&lt;html&gt;…"></textarea>
+      </label>
+      <div id="manual-result" class="small"></div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="manual-cancel">Zavřít</button>
+        <button type="button" class="btn primary" id="manual-submit">Načíst</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

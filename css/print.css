@@ -1,0 +1,193 @@
+/* Vzhled tiskových stránek – platí pro náhled i tisk.
+   Rozměry řídí proměnné, které nastavuje js/layout.js podle profilu. */
+
+.print-doc {
+  --page-w: 210mm;
+  --page-h: 297mm;
+  --m-top: 12mm; --m-right: 12mm; --m-bottom: 12mm; --m-left: 12mm;
+  --font: Arial, Helvetica, sans-serif;
+  --fs: 10pt;
+  --cols: 1;
+  --col-gap: 6mm;
+  --ink: #000;
+  --grey: #555;
+  --rule: #999;
+  --zebra: #f1f1f1;
+  font-family: var(--font);
+  font-size: var(--fs);
+  line-height: 1.25;
+  color: var(--ink);
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.page {
+  width: var(--page-w);
+  height: var(--page-h);
+  padding: var(--m-top) var(--m-right) var(--m-bottom) var(--m-left);
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+.pages .page { box-shadow: 0 1px 3px rgba(0,0,0,.18), 0 6px 18px rgba(0,0,0,.08); margin-bottom: 18px; }
+
+.pg-head { flex: none; margin-bottom: 3.5mm; }
+.pg-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  column-gap: var(--col-gap);
+}
+.pg-col { min-width: 0; min-height: 0; overflow: hidden; }
+.pg-foot {
+  flex: none;
+  display: flex;
+  gap: 4mm;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 2.5mm;
+  padding-top: 1.2mm;
+  border-top: .3pt solid var(--rule);
+  font-size: 7pt;
+  color: var(--grey);
+}
+.pg-foot .ft-left { flex: 1; }
+.pg-foot .ft-mid { flex: 2; text-align: center; }
+.pg-foot .ft-right { flex: 1; text-align: right; white-space: nowrap; }
+
+/* Bloky: odsazení je uvnitř bloku, aby se započítalo do měření */
+.blk { display: flow-root; padding-bottom: 2.5mm; }
+.blk:last-child { padding-bottom: 0; }
+
+/* --- Záhlaví --------------------------------------------------------- */
+.hd-bar {
+  display: flex;
+  align-items: center;
+  gap: 4mm;
+  padding-bottom: 2mm;
+  border-bottom: .8pt solid var(--ink);
+}
+.hd-logo img { display: block; max-width: 60mm; object-fit: contain; }
+.hd-main { flex: 1; min-width: 0; }
+.hd-title { font-size: 1.55em; font-weight: 700; line-height: 1.15; }
+.hd-sub { font-size: .95em; color: var(--grey); margin-top: .5mm; }
+.hd-right { text-align: right; font-size: .85em; color: var(--grey); max-width: 45%; }
+.hd-right .lbl { color: var(--grey); }
+.hd-output { display: flex; align-items: baseline; gap: 3mm; margin-top: 2.5mm; }
+.hd-output-title { font-size: 1.35em; font-weight: 700; }
+.hd-output-sub { font-size: 1em; color: var(--grey); }
+
+.sec-title { font-size: 1.2em; margin: 1.5mm 0 0; padding-bottom: .8mm; border-bottom: .5pt solid var(--rule); }
+.sec-title small { font-weight: 400; color: var(--grey); font-size: .8em; margin-left: 2mm; }
+.note { color: var(--grey); font-style: italic; }
+.legend { font-size: .8em; color: var(--grey); display: flex; flex-direction: column; gap: .5mm; }
+
+/* --- Tabulky --------------------------------------------------------- */
+table.grid { width: 100%; border-collapse: collapse; table-layout: auto; }
+table.grid th, table.grid td { padding: .45em .4em; vertical-align: middle; text-align: left; }
+table.grid thead th {
+  font-weight: 700;
+  font-size: .85em;
+  border-bottom: .8pt solid var(--ink);
+  white-space: nowrap;
+}
+table.grid tbody td { border-bottom: .3pt solid #c8c8c8; }
+table.grid tbody tr:nth-child(even) td { background: var(--zebra); }
+table.grid .c { text-align: center; }
+table.grid .r { text-align: right; }
+table.grid .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.grid .muted, .print-doc .muted { color: var(--grey); }
+table.grid .strong, .print-doc .strong { font-weight: 700; }
+table.grid .title, .print-doc .title { font-size: .85em; font-weight: 700; color: var(--grey); }
+table.grid .name { font-weight: 600; }
+table.grid .club { font-size: .9em; color: #333; }
+table.grid .res { font-weight: 700; white-space: nowrap; }
+table.grid .bye { font-style: italic; color: var(--grey); font-weight: 400; }
+table.grid tr.bye-row td { background: #fff; }
+
+/* Rozhodcovský list – kolonky pro psaní */
+table.arbiter td.write { border-left: .3pt solid #bbb; background: #fff !important; }
+table.arbiter tbody tr td { background: #fff; }
+.signs { display: flex; gap: 8mm; justify-content: space-between; align-items: flex-end; margin-top: 6mm; font-size: .9em; }
+.signs .sign { min-width: 50mm; border-top: .5pt solid var(--ink); text-align: center; padding-top: 1mm; margin-top: 10mm; color: var(--grey); }
+.signs.three { margin-top: 2mm; }
+.signs.three .sign { flex: 1; margin-top: 9mm; }
+
+/* --- Nástěnka (velké písmo) ------------------------------------------ */
+.board-doc table.grid td { padding: .3em .35em; }
+.board-doc table.grid .name { font-weight: 700; white-space: nowrap; }
+.board-doc table.grid td, table.alpha td { white-space: nowrap; }
+.board-doc .hd-title { font-size: 18pt; }
+.board-doc .hd-output-title { font-size: 16pt; }
+.board-doc .hd-output-sub { font-size: 12pt; }
+.board-doc .hd-sub, .board-doc .hd-right { font-size: 9pt; }
+table.board-pairings .res { color: var(--grey); font-weight: 400; }
+
+/* --- Družstva --------------------------------------------------------- */
+.match-head {
+  display: flex;
+  align-items: baseline;
+  gap: 3mm;
+  padding: 1.2mm 2mm;
+  margin-top: 1mm;
+  background: #e6e6e6;
+  border: .5pt solid #aaa;
+  border-bottom: 0;
+  font-size: 1.1em;
+}
+.match-head .m-no { font-size: .8em; color: var(--grey); white-space: nowrap; }
+.match-head .m-team { flex: 1; font-weight: 700; }
+.match-head .m-team:last-child { text-align: right; }
+.match-head .m-vs { font-weight: 700; min-width: 12mm; text-align: center; }
+table.boards { border: .5pt solid #aaa; }
+table.boards td.write { border-left: .3pt solid #bbb; border-right: .3pt solid #bbb; }
+table.boards tr.total-row td { border-bottom: 0; background: #fff; font-size: .9em; }
+.blank-line { display: inline-block; width: 90%; border-bottom: .4pt dotted #777; height: 1em; }
+
+/* --- Výsledkové lístky ----------------------------------------------- */
+.slips-doc .blk { padding: 0; }
+.slip {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: .6pt dashed #888;
+  padding: 3mm 4mm;
+  overflow: hidden;
+}
+.sl-head { display: flex; flex-wrap: wrap; column-gap: 3mm; align-items: baseline; border-bottom: .5pt solid #000; padding-bottom: 1mm; }
+.sl-tour { flex: 1 0 100%; font-weight: 700; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sl-round { flex: 1; }
+.sl-round { color: var(--grey); white-space: nowrap; }
+.sl-board { white-space: nowrap; }
+.sl-board b { font-size: 1.4em; }
+.sl-player { display: flex; align-items: flex-end; gap: 3mm; }
+.sl-color { width: 10mm; color: var(--grey); font-size: .9em; }
+.sl-name { flex: 1; font-weight: 700; font-size: 1.1em; border-bottom: .3pt solid #bbb; padding-bottom: .5mm; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sl-no { display: inline-block; min-width: 7mm; color: var(--grey); font-weight: 400; }
+.sl-sign { width: 20mm; border-bottom: .3pt solid #000; font-size: .7em; color: var(--grey); text-align: right; align-self: flex-end; }
+.sl-result { display: flex; align-items: center; gap: 4mm; }
+.sl-result .lbl { color: var(--grey); }
+.sl-box { display: inline-flex; align-items: center; gap: 1.5mm; font-weight: 700; }
+.sl-box .sq { display: inline-block; width: 3.6mm; height: 3.6mm; border: .6pt solid #000; }
+.sl-known { margin-left: auto; color: var(--grey); }
+
+/* --- Tisk -------------------------------------------------------------- */
+@media print {
+  html, body { background: #fff !important; height: auto; }
+  .app { display: block; height: auto; }
+  .topbar, .side, .preview-bar, .warnings, .dialog, .empty-state { display: none !important; }
+  .preview, .preview-scroll { display: block; overflow: visible !important; padding: 0 !important; }
+  .pages { zoom: 1 !important; width: auto; margin: 0; }
+  .pages .print-doc + .print-doc { margin-top: 0; }
+  .pages .page {
+    box-shadow: none;
+    margin: 0;
+    height: calc(var(--page-h) - .4mm);
+    break-after: page;
+    page-break-after: always;
+  }
+  .pages .print-doc:last-child .page:last-child { break-after: auto; page-break-after: auto; }
+}

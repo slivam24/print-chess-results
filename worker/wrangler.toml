@@ -1,0 +1,12 @@
+# Konfigurace Cloudflare Workeru (nasazení: viz worker/README.md)
+name = "chess-print-proxy"
+main = "worker.js"
+compatibility_date = "2026-11-01"
+
+[vars]
+# Které weby smí proxy používat. "*" = kdokoli. Doporučeno po nasazení omezit,
+# např. "https://slivam24.github.io,http://localhost:8080"
+ALLOWED_ORIGINS = "*"
+# Jak dlouho (v sekundách) držet stažené stránky v cache.
+# Tlačítko „Aktualizovat data“ cache vždy obchází.
+CACHE_SECONDS = "60"
