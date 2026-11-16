@@ -3,7 +3,7 @@
 
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 
 /**
  * Vestavěná proxy (Cloudflare Worker z worker/worker.js nasazený pro tuto appku).
@@ -23,7 +23,7 @@ export function defaultProfile(name = 'Výchozí') {
     name,
     page: {
       orientation: 'portrait',
-      margins: { top: 12, right: 12, bottom: 12, left: 12 },
+      margins: { top: 5, right: 5, bottom: 5, left: 5 },
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: 10,
       tableStyle: 'grid',
@@ -93,6 +93,15 @@ export function normalizeProfile(p) {
 export function normalizeState(raw) {
   if (!isObj(raw)) throw new Error('Soubor neobsahuje nastavení appky.');
   const d = defaultState();
+  // Verze < 3: výchozí okraje 12 mm → 5 mm (jen u profilů, které měly pořád původní výchozí hodnotu)
+  if (!raw.version || raw.version < 3) {
+    for (const p of Array.isArray(raw.profiles) ? raw.profiles : []) {
+      const m = p && p.page && p.page.margins;
+      if (m && ['top', 'right', 'bottom', 'left'].every((k) => Number(m[k]) === 12)) {
+        p.page.margins = { top: 5, right: 5, bottom: 5, left: 5 };
+      }
+    }
+  }
   // Verze 1 → 2: výchozí vzhled podle Swiss-Manageru (jména „Příjmení Jméno“)
   if (!raw.version || raw.version < 2) {
     for (const p of Array.isArray(raw.profiles) ? raw.profiles : []) {
@@ -293,6 +302,9 @@ export function templateSettings(profile, tpl) {
     orientation: saved.orientation || 'inherit',
     fontSize: saved.fontSize ?? null,
     rowHeight: Number(saved.rowHeight) > 0 ? Number(saved.rowHeight) : null,
+    // 'fixed' = pevná velikost; 'max' = co největší písmo, při kterém se všechny sloupce vejdou na šířku
+    fontMode: saved.fontMode === 'max' ? 'max' : 'fixed',
+    fontMax: Number(saved.fontMax) > 0 ? Number(saved.fontMax) : 20,
     pageColumns: saved.pageColumns ?? (tpl.defaults && tpl.defaults.columns) ?? 1,
     options: opts,
   };

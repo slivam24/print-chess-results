@@ -306,3 +306,26 @@ describe('sloupce: šířka, písmo, výška řádku, nové sloupce', () => {
     assert.equal(doc.layout.rowHeight, 7);
   });
 });
+
+describe('okraje a písmo „co největší“', () => {
+  test('výchozí okraje 5 mm; profil s původními 12 mm se převede, vlastní okraje zůstanou', async () => {
+    const { normalizeState } = await import('../js/store.js');
+    assert.deepEqual(defaultProfile().page.margins, { top: 5, right: 5, bottom: 5, left: 5 });
+    const s = normalizeState({ version: 2, profiles: [
+      { id: 'a', name: 'A', page: { margins: { top: 12, right: 12, bottom: 12, left: 12 } } },
+      { id: 'b', name: 'B', page: { margins: { top: 10, right: 12, bottom: 12, left: 12 } } },
+    ] });
+    assert.deepEqual(s.profiles[0].page.margins, { top: 5, right: 5, bottom: 5, left: 5 });
+    assert.deepEqual(s.profiles[1].page.margins, { top: 10, right: 12, bottom: 12, left: 12 });
+  });
+  test('režim „co největší“ zapne hledání písma a vypne zalamování; nástěnku nemění', () => {
+    const p = defaultProfile();
+    p.templates.alphalist = { fontMode: 'max', fontMax: 16 };
+    const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: swiss.data, profile: p });
+    assert.deepEqual(doc.layout.fitWidth, { enabled: true, minPt: 6, maxPt: 16 });
+    assert.match(doc.layout.docClass, /nowrap-cells/);
+    p.templates['pairings-board'] = { fontMode: 'max' };
+    const board = buildDocument({ tpl: getTemplate('pairings-board'), info: swiss.info, data: swiss.data, profile: p, round: 7 });
+    assert.equal(board.layout.fitWidth, undefined);
+  });
+});

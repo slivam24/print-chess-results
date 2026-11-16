@@ -61,6 +61,11 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     ...extra,
     docClass: [profile.page.tableStyle === 'stripes' ? '' : 'tbl-grid', extra.docClass || ''].join(' ').trim(),
   };
+  // Písmo „co největší“ – jen u výstupů, které si velikost neurčují samy (nástěnka apod.)
+  if (ts.fontMode === 'max' && !(extra.fit && extra.fit.enabled)) {
+    layout.fitWidth = { enabled: true, minPt: 6, maxPt: ts.fontMax };
+    layout.docClass = `${layout.docClass} nowrap-cells`.trim();
+  }
   if (extra.header === null) layout.header = null;
   if (extra.footer === null) layout.footer = null;
   return { ...out, layout, opts };

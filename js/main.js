@@ -414,7 +414,9 @@ function layoutAll(docs) {
     pages += res.pageCount;
     orientation = d.layout.orientation;
     for (const w of d.warnings) warnings.push(d.groupName ? `${d.groupName}: ${w}` : w);
-    if (d.layout.fit && d.layout.fit.enabled) {
+    if (d.layout.fitWidth && d.layout.fitWidth.enabled) {
+      container.dataset.fit = `${String(res.fontSize).replace('.', ',')} pt (co největší)`;
+    } else if (d.layout.fit && d.layout.fit.enabled) {
       container.dataset.fit = `${res.fontSize} pt, ${res.columns} sl.`;
     }
   }

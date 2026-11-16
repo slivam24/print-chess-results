@@ -228,10 +228,18 @@ export class SettingsPanel {
       h('h2', {}, `Výstup: ${tpl.name}`),
       field('Orientace', h('select', { onchange: (e) => setT((t) => { t.orientation = e.target.value; }) },
         options([['inherit', 'podle profilu'], ['portrait', 'na výšku'], ['landscape', 'na šířku']], ts.orientation))),
-      field('Velikost písma (pt, prázdné = podle profilu)', h('input', {
-        type: 'number', min: 6, max: 30, step: 0.5, value: ts.fontSize ?? '', placeholder: String(this.profile.page.fontSize),
-        oninput: (e) => setT((t) => { t.fontSize = e.target.value === '' ? null : clampNum(e.target.value, 6, 30, null); }),
-      }), true),
+      field('Velikost písma', h('select', { onchange: (e) => setT((t) => { t.fontMode = e.target.value; }, { rerenderPanel: true }) },
+        options([['fixed', 'pevná'], ['max', 'co největší – aby se vešly všechny sloupce']], ts.fontMode))),
+      ts.fontMode === 'max'
+        ? field('Nejvýš (pt)', h('input', {
+          type: 'number', min: 6, max: 40, step: 0.5, value: ts.fontMax,
+          oninput: (e) => setT((t) => { t.fontMax = clampNum(e.target.value, 6, 40, 20); }),
+        }), true)
+        : field('Velikost písma (pt, prázdné = podle profilu)', h('input', {
+          type: 'number', min: 6, max: 30, step: 0.5, value: ts.fontSize ?? '', placeholder: String(this.profile.page.fontSize),
+          oninput: (e) => setT((t) => { t.fontSize = e.target.value === '' ? null : clampNum(e.target.value, 6, 30, null); }),
+        }), true),
+      ts.fontMode === 'max' ? h('p', { class: 'help' }, 'Appka zvolí největší písmo (nejvýš zadanou velikost), při kterém se všechny sloupce vejdou na šířku stránky bez zalamování textu. Tabulka může pokračovat na další stránce. Zvolená velikost se ukáže nad náhledem.') : null,
       tpl.layout && /fit/.test(String(tpl.layout)) ? h('p', { class: 'help' }, 'Tento výstup velikost písma volí automaticky, aby se vše vešlo na jednu stránku.') : null,
       field('Sloupců na stránce', h('select', { onchange: (e) => setT((t) => { t.pageColumns = Number(e.target.value); }) },
         options([[1, '1'], [2, '2'], [3, '3']], ts.pageColumns)), true),

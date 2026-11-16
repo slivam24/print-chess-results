@@ -109,6 +109,7 @@ table.grid .title, .print-doc .title { font-weight: 700; color: var(--grey); }
 table.grid .name { font-weight: 600; }
 table.grid .club { color: #333; }
 .fixed-rows table.grid tbody tr { height: var(--row-h); }
+.nowrap-cells table.grid th, .nowrap-cells table.grid td { white-space: nowrap; }
 table.grid .res { font-weight: 700; white-space: nowrap; }
 table.grid .bye { font-style: italic; color: var(--grey); font-weight: 400; }
 table.grid tr.bye-row td { background: #fff; }
