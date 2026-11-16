@@ -278,3 +278,31 @@ describe('vzhled podle Swiss-Manageru', () => {
     assert.equal(s2.profiles[0].nameFormat, 'original');
   });
 });
+
+describe('sloupce: šířka, písmo, výška řádku, nové sloupce', () => {
+  test('nový sloupec se vloží na výchozí místo, ne na konec', () => {
+    const defs = [{ key: 'rowNo', label: 'Č.' }, { key: 'startNo', label: 'St.č.' }, { key: 'name', label: 'Jméno' }, { key: 'club', label: 'Klub' }];
+    const r = resolveColumns(defs, [{ key: 'name', on: true }, { key: 'club', on: true }, { key: 'startNo', on: true }]);
+    assert.deepEqual(r.map((c) => c.key), ['rowNo', 'name', 'club', 'startNo']);
+    const r2 = resolveColumns(defs, [{ key: 'startNo', on: true }, { key: 'club', on: true }]);
+    assert.deepEqual(r2.map((c) => c.key), ['rowNo', 'startNo', 'name', 'club']);
+  });
+  test('abecední seznam: sloupce uložené ve staré verzi se nepoužijí', () => {
+    const p = defaultProfile();
+    p.templates.alphalist = { columns: [{ key: 'name', on: true }, { key: 'startNo', on: true }] };
+    const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: swiss.data, profile: p });
+    assert.match(doc.blocks[0].thead, /^<tr><th class="c num">Č\.<\/th>/);
+    p.templates.alphalist = { columnsVersion: 2, columns: [{ key: 'name', on: true }, { key: 'rowNo', on: true }] };
+    const doc2 = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: swiss.data, profile: p });
+    assert.match(doc2.blocks[0].thead, /^<tr><th class="name">Jméno<\/th>/);
+  });
+  test('šířka v mm, písmo v pt a výška řádku se propíšou do výstupu', () => {
+    const p = defaultProfile();
+    p.templates.startlist = { rowHeight: 7, columns: [{ key: 'startNo', on: true, width: 12 }, { key: 'name', on: true, fontSize: 13 }] };
+    const doc = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p });
+    const t = doc.blocks[0];
+    assert.match(t.colgroup, /<col style="width:12mm">/);
+    assert.match(t.rows[0], /<td class="name" style="font-size:13pt">/);
+    assert.equal(doc.layout.rowHeight, 7);
+  });
+});

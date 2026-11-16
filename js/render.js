@@ -54,6 +54,7 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     fontFamily: profile.page.fontFamily,
     fontSize: ts.fontSize || profile.page.fontSize,
     columns: ts.pageColumns || 1,
+    rowHeight: ts.rowHeight,
     header: headerHtml,
     headerEveryPage: !!(profile.header && profile.header.everyPage),
     footer: footerFn,

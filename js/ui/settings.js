@@ -236,27 +236,56 @@ export class SettingsPanel {
       field('Sloupců na stránce', h('select', { onchange: (e) => setT((t) => { t.pageColumns = Number(e.target.value); }) },
         options([[1, '1'], [2, '2'], [3, '3']], ts.pageColumns)), true),
     );
+    add(card,
+      field('Výška řádku tabulky (mm, prázdné = podle písma)', h('input', {
+        type: 'number', min: 3, max: 30, step: 0.5, value: ts.rowHeight ?? '', placeholder: 'auto',
+        oninput: (e) => setT((t) => { t.rowHeight = e.target.value === '' ? null : clampNum(e.target.value, 3, 30, null); }),
+      }), true),
+    );
     if ((tpl.columns || []).length) {
       const cols = resolveColumns(tpl.columns, ts.columns);
-      const save = (list) => setT((t) => { t.columns = list.map((c) => ({ key: c.key, on: c.on, ...(c.customLabel ? { label: c.customLabel } : {}) })); }, { rerenderPanel: true });
-      const current = () => cols.map((c) => ({ key: c.key, on: c.on, customLabel: (ts.columns || []).find((s) => s.key === c.key)?.label }));
+      const savedOf = (key) => (ts.columns || []).find((x) => x.key === key) || {};
+      const current = () => cols.map((c) => {
+        const sv = savedOf(c.key);
+        return { key: c.key, on: c.on, label: sv.label || '', width: sv.width ?? null, fontSize: sv.fontSize ?? null };
+      });
+      const save = (list) => setT((t) => {
+        t.columnsVersion = tpl.columnsVersion || 1;
+        t.columns = list.map((c) => ({
+          key: c.key,
+          on: c.on,
+          ...(c.label ? { label: c.label } : {}),
+          ...(Number(c.width) > 0 ? { width: Number(c.width) } : {}),
+          ...(Number(c.fontSize) > 0 ? { fontSize: Number(c.fontSize) } : {}),
+        }));
+      }, { rerenderPanel: true });
+      const numInput = (i, prop, title, ph, min, max, step) => h('input', {
+        type: 'number', min, max, step, value: current()[i][prop] ?? '', placeholder: ph, title,
+        onchange: (e) => { const l = current(); l[i][prop] = e.target.value === '' ? null : clampNum(e.target.value, min, max, null); save(l); },
+      });
       const ul = h('ul', { class: 'col-editor' });
+      ul.append(h('li', { class: 'col-head' },
+        h('span', { style: { width: '18px' } }), h('span', { class: 'c-label' }, 'Sloupec'),
+        h('span', { class: 'c-h-label' }, 'Vlastní nadpis'), h('span', { class: 'c-h-num' }, 'Šířka mm'),
+        h('span', { class: 'c-h-num' }, 'Písmo pt'), h('span', { class: 'c-h-btn' })));
       cols.forEach((c, i) => {
         ul.append(h('li', { class: c.on ? '' : 'off' },
           h('input', { type: 'checkbox', checked: c.on, title: 'Zobrazit sloupec', onchange: (e) => { const l = current(); l[i].on = e.target.checked; save(l); } }),
           h('span', { class: 'c-label' }, describeColumn(tpl.columns.find((d) => d.key === c.key))),
           h('input', {
-            type: 'text', value: (ts.columns || []).find((s) => s.key === c.key)?.label || '', placeholder: c.label || '(bez nadpisu)', title: 'Vlastní nadpis sloupce',
-            onchange: (e) => { const l = current(); l[i].customLabel = e.target.value.trim(); save(l); },
+            type: 'text', class: 'c-in-label', value: savedOf(c.key).label || '', placeholder: c.label || '(bez nadpisu)', title: 'Vlastní nadpis sloupce',
+            onchange: (e) => { const l = current(); l[i].label = e.target.value.trim(); save(l); },
           }),
+          numInput(i, 'width', 'Šířka sloupce v mm (prázdné = automaticky)', 'auto', 3, 150, 1),
+          numInput(i, 'fontSize', 'Velikost písma sloupce v pt (prázdné = jako tabulka)', '–', 5, 30, 0.5),
           h('button', { class: 'btn icon small', type: 'button', title: 'Nahoru', disabled: i === 0, onclick: () => { const l = current(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; save(l); } }, '↑'),
           h('button', { class: 'btn icon small', type: 'button', title: 'Dolů', disabled: i === cols.length - 1, onclick: () => { const l = current(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; save(l); } }, '↓')));
       });
-      add(card, 
+      add(card,
         h('h3', {}, 'Sloupce'),
-        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, šipkami změníte pořadí, do pole můžete napsat vlastní nadpis.'),
+        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, šipkami změníte pořadí. Vlastní nadpis, šířka (mm) a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Šířka je nejmenší šířka; zbylé místo dostanou sloupce bez zadané šířky.'),
         ul,
-        h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
+        h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; delete t.columnsVersion; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
       );
     }
     add(card, h('p', { class: 'help', style: { marginTop: '12px' } }, 'Volby výstupu (např. zobrazení výsledků) najdete vlevo v části „Možnosti“ – i ty se ukládají do profilu.'));

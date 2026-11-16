@@ -44,7 +44,9 @@ export function applyDocStyle(root, o) {
   root.style.setProperty('--fs', `${o.fontSize || 10}pt`);
   root.style.setProperty('--cols', String(o.columns || 1));
   root.style.setProperty('--col-gap', `${o.columnGap ?? 6}mm`);
-  root.className = `print-doc ${o.docClass || ''}`.trim();
+  if (o.rowHeight) root.style.setProperty('--row-h', `${o.rowHeight}mm`);
+  else root.style.removeProperty('--row-h');
+  root.className = `print-doc ${o.docClass || ''} ${o.rowHeight ? 'fixed-rows' : ''}`.replace(/\s+/g, ' ').trim();
 }
 
 function buildPage(o, { withHeader, pageNo, pageCount }) {

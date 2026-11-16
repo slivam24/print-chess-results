@@ -86,12 +86,28 @@ export function resolveColumns(defs, saved) {
     const d = byKey.get(s.key);
     if (!d || seen.has(s.key)) continue;
     seen.add(s.key);
-    out.push({ ...d, on: s.on !== false, label: s.label || d.label });
+    const w = Number(s.width) > 0 ? Number(s.width) : null;
+    const fs = Number(s.fontSize) > 0 ? Number(s.fontSize) : null;
+    out.push({
+      ...d,
+      on: s.on !== false,
+      label: s.label || d.label,
+      ...(w ? { width: `${w}mm`, userWidth: w } : {}),
+      ...(fs ? { fontSize: fs } : {}),
+    });
   }
-  for (const d of defs) {
-    if (seen.has(d.key)) continue;
-    out.push({ ...d, on: d.def !== false });
-  }
+  // Sloupce, které uložené nastavení nezná (přibyly v nové verzi), vložíme na jejich
+  // výchozí místo – za nejbližší předchozí sloupec podle definice šablony.
+  defs.forEach((d, i) => {
+    if (seen.has(d.key)) return;
+    let at = 0;
+    for (let j = i - 1; j >= 0; j--) {
+      const idx = out.findIndex((c) => c.key === defs[j].key);
+      if (idx >= 0) { at = idx + 1; break; }
+    }
+    out.splice(at, 0, { ...d, on: d.def !== false });
+    seen.add(d.key);
+  });
   return out;
 }
 
@@ -115,6 +131,11 @@ export function theadRow(cols) {
   return `<tr>${cols.map((c) => `<th class="${c.cls || ''}">${esc(c.label)}</th>`).join('')}</tr>`;
 }
 
+/** Vlastní velikost písma sloupce (pt) z nastavení profilu. */
+function cellStyle(c) {
+  return c.fontSize ? ` style="font-size:${c.fontSize}pt"` : '';
+}
+
 export function colgroup(cols) {
   if (!cols.some((c) => c.width)) return '';
   return `<colgroup>${cols.map((c) => `<col${c.width ? ` style="width:${c.width}"` : ''}>`).join('')}</colgroup>`;
@@ -122,7 +143,7 @@ export function colgroup(cols) {
 
 /** Datový řádek – getter vrací už escapované HTML. */
 export function bodyRow(cols, item, ctx, trClass = '') {
-  return `<tr${trClass ? ` class="${trClass}"` : ''}>${cols.map((c) => `<td class="${c.cls || ''}">${c.get(item, ctx) ?? ''}</td>`).join('')}</tr>`;
+  return `<tr${trClass ? ` class="${trClass}"` : ''}>${cols.map((c) => `<td class="${c.cls || ''}"${cellStyle(c)}>${c.get(item, ctx) ?? ''}</td>`).join('')}</tr>`;
 }
 
 /** Nahrazení proměnných v textech záhlaví/zápatí. */

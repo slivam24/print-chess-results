@@ -122,7 +122,8 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje, orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
 5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí,
-   vlastní nadpisy sloupců, orientace, velikost písma, počet sloupců na stránce.
+   vlastní nadpisy, **šířka sloupce (mm)** a **velikost písma sloupce (pt)**, **výška řádku (mm)**, orientace, velikost písma,
+   počet sloupců na stránce. Celá tabulka má jednotnou velikost písma, pokud ji u sloupce nezměníte.
 6. **⚙ Nastavení → Záloha → Exportovat zálohu** – uschovejte si soubor JSON.
 
 ### Během turnaje (každé kolo)

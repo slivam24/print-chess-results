@@ -128,6 +128,7 @@ export const alphaList = {
   roundMode: null,
   options: [categoryOption],
   columns: ALPHA_COLUMNS,
+  columnsVersion: 2, // sloupce podle Swiss-Manageru (Č., St.č., …)
   defaults: { orientation: 'portrait', columns: 1 },
   needs: () => [{ dataset: 'main' }],
   render({ data, opts, cols: allCols, nameFormat }) {
