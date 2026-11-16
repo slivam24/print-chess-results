@@ -204,6 +204,8 @@ export function layoutDocument(target, blocks, o) {
 
   if (o.fit && o.fit.enabled) {
     opts = fitToOnePage(host, blocks, o);
+  } else if (o.fitWidth && o.fitWidth.enabled) {
+    opts = fitToWidth(host, blocks, o);
   }
   const { pages } = measureAndPack(host, blocks, opts);
   host.innerHTML = '';
@@ -253,6 +255,25 @@ function fitToOnePage(host, blocks, o) {
   }
   if (!best) return { ...o, fontSize: minPt, columns: tryCols[tryCols.length - 1] };
   return { ...o, ...best };
+}
+
+/**
+ * Největší písmo (nejvýš maxPt), při kterém se všechny sloupce tabulek vejdou na šířku
+ * bez zalamování. Počet stránek se nehlídá – tabulka může pokračovat na další stránce.
+ */
+function fitToWidth(host, blocks, o) {
+  const minPt = o.fitWidth.minPt || 6;
+  const maxPt = Math.max(minPt, o.fitWidth.maxPt || 20);
+  const fits = (pt) => !measureAndPack(host, blocks, { ...o, fontSize: pt }).overflowX;
+  if (fits(maxPt)) return { ...o, fontSize: maxPt };
+  let lo = minPt;
+  let hi = maxPt;
+  if (!fits(lo)) return { ...o, fontSize: lo };
+  while (hi - lo > 0.25) {
+    const mid = Math.round(((lo + hi) / 2) * 4) / 4;
+    if (fits(mid)) lo = mid; else hi = mid;
+  }
+  return { ...o, fontSize: lo };
 }
 
 /** CSS pravidlo @page pro tisk dané orientace. */

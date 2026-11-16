@@ -119,11 +119,13 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 2. **⚙ Nastavení → Profily**: vyberte nebo vytvořte profil (např. „Otevřený turnaj“). Profil můžete **duplikovat** a **přejmenovat**.
 3. **⚙ Nastavení → Záhlaví a zápatí**: název akce, pořadatel, rozhodčí, logo (obrázek se zmenší a uloží do prohlížeče), text zápatí.
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
-4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje, orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
+4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
 5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí,
    vlastní nadpisy, **šířka sloupce (mm)** a **velikost písma sloupce (pt)**, **výška řádku (mm)**, orientace, velikost písma,
    počet sloupců na stránce. Celá tabulka má jednotnou velikost písma, pokud ji u sloupce nezměníte.
+   Velikost písma může být **pevná**, nebo **co největší** – appka zvolí největší písmo (do zadané hranice), při kterém
+   se všechny sloupce vejdou na šířku stránky bez zalamování.
 6. **⚙ Nastavení → Záloha → Exportovat zálohu** – uschovejte si soubor JSON.
 
 ### Během turnaje (každé kolo)
