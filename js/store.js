@@ -288,9 +288,11 @@ export function templateSettings(profile, tpl) {
   const opts = {};
   for (const o of tpl.options || []) opts[o.key] = saved.options && saved.options[o.key] !== undefined ? saved.options[o.key] : o.def;
   return {
-    columns: Array.isArray(saved.columns) ? saved.columns : null,
+    // Když šablona změní výchozí sadu sloupců (columnsVersion), staré uložené pořadí se nepoužije
+    columns: Array.isArray(saved.columns) && (saved.columnsVersion || 1) === (tpl.columnsVersion || 1) ? saved.columns : null,
     orientation: saved.orientation || 'inherit',
     fontSize: saved.fontSize ?? null,
+    rowHeight: Number(saved.rowHeight) > 0 ? Number(saved.rowHeight) : null,
     pageColumns: saved.pageColumns ?? (tpl.defaults && tpl.defaults.columns) ?? 1,
     options: opts,
   };
