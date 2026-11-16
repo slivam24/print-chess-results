@@ -126,6 +126,23 @@ export function pruneEmpty(cols, items, ctx) {
   }));
 }
 
+/**
+ * Šířky sloupců pro tabulky s dvojicemi (bílý/černý, domácí/hosté). Protějškové sloupce
+ * mají stejnou šířku; sloupce se jménem šířku nemají a rozdělí si zbylé místo rovným dílem
+ * (tabulka má table-layout: fixed). Hodnoty v em rostou s písmem, takže sedí při každé velikosti.
+ */
+export const SYM_W = {
+  board: '2.8em',
+  no: '2.8em',
+  title: '3.2em',
+  rating: '3.6em',
+  ratingNat: '4.2em',
+  fed: '3.2em',
+  points: '2.6em',
+  result: '5.4em',
+  color: '2em',
+};
+
 /** Řádek hlavičky tabulky. */
 export function theadRow(cols) {
   return `<tr>${cols.map((c) => `<th class="${c.cls || ''}">${esc(c.label)}</th>`).join('')}</tr>`;

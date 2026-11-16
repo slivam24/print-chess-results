@@ -1,7 +1,7 @@
 // Rozhodcovský list kola a výsledkové lístky.
 
 import {
-  esc, fmtName, fmtRating, fmtPoints, fmtResult, theadRow, colgroup, bodyRow, byeLabel, noteBlock, fmtDate,
+  esc, fmtName, fmtRating, fmtPoints, fmtResult, theadRow, colgroup, bodyRow, byeLabel, noteBlock, fmtDate, SYM_W,
 } from './common.js';
 import { pickRound, enrichPairings } from './pairings.js';
 
@@ -15,15 +15,15 @@ function roundSub(round) {
 // ---------------------------------------------------------------------------
 
 const ARB_COLUMNS = [
-  { key: 'board', label: 'Š.', cls: 'c num strong', width: '2.4em', get: (p) => esc(p.board ?? '') },
-  { key: 'wNo', label: 'č.', cls: 'c num muted', width: '2.4em', get: (p) => esc(p.white?.startNo ?? '') },
+  { key: 'board', label: 'Š.', cls: 'c num strong', width: SYM_W.board, get: (p) => esc(p.board ?? '') },
+  { key: 'wNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => esc(fmtName(p.white?.name, ctx.nameFormat)) },
-  { key: 'wRating', hideEmpty: true, label: 'Elo', cls: 'r num', def: false, get: (p) => fmtRating(p.white?.rating) },
-  { key: 'wPoints', label: 'B.', cls: 'c num', def: false, get: (p) => fmtPoints(p.white?.points) },
-  { key: 'bNo', label: 'č.', cls: 'c num muted', width: '2.4em', get: (p) => esc(p.black?.startNo ?? '') },
+  { key: 'wRating', hideEmpty: true, label: 'Elo', cls: 'r num', def: false, width: SYM_W.rating, get: (p) => fmtRating(p.white?.rating) },
+  { key: 'wPoints', label: 'B.', cls: 'c num', def: false, width: SYM_W.points, get: (p) => fmtPoints(p.white?.points) },
+  { key: 'bNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.black?.startNo ?? '') },
   { key: 'bName', label: 'Černý', cls: 'name', get: (p, ctx) => (p.black ? esc(fmtName(p.black.name, ctx.nameFormat)) : `<span class="bye">${esc(byeLabel(p.bye))}</span>`) },
-  { key: 'bRating', hideEmpty: true, label: 'Elo', cls: 'r num', def: false, get: (p) => fmtRating(p.black?.rating) },
-  { key: 'bPoints', label: 'B.', cls: 'c num', def: false, get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
+  { key: 'bRating', hideEmpty: true, label: 'Elo', cls: 'r num', def: false, width: SYM_W.rating, get: (p) => fmtRating(p.black?.rating) },
+  { key: 'bPoints', label: 'B.', cls: 'c num', def: false, width: SYM_W.points, get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
   { key: 'result', label: 'Výsledek', cls: 'c res write', width: '6em', get: (p, ctx) => (ctx.opts.prefill ? esc(fmtResult(p.result)) : p.black ? '' : esc(p.result?.text || '')) },
   { key: 'check', label: '✓', cls: 'c write', width: '2em', get: () => '' },
   { key: 'note', label: 'Poznámka', cls: 'write', width: '22%', get: () => '' },
@@ -54,7 +54,7 @@ export const arbiterSheet = {
     if (list.length) {
       blocks.push({
         type: 'table',
-        className: 'grid arbiter',
+        className: 'grid arbiter sym',
         colgroup: colgroup(cols),
         thead: theadRow(cols),
         rows: list.map((p) => bodyRow(cols, p, ctx, p.black ? '' : 'bye-row').replace('<tr', `<tr style="height:${h}mm"`)),

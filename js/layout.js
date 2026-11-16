@@ -92,6 +92,12 @@ function measureBlocks(col, blocks) {
       out.push({ b, h: total, theadH, rowH, extra: Math.max(0, total - sum) });
     }
     if (wrap.scrollWidth > colW + 1 || (wrap.firstElementChild && wrap.firstElementChild.getBoundingClientRect().width > colW + 1)) out.overflowX = true;
+    // Pevné rozložení tabulky (table-layout: fixed) nepřeteče jako celek – přetéct může obsah buňky
+    if (!out.overflowX && b.type === 'table' && /\bsym\b/.test(b.className || '')) {
+      for (const cell of wrap.querySelectorAll('td')) {
+        if (cell.scrollWidth > cell.clientWidth + 1) { out.overflowX = true; break; }
+      }
+    }
     col.removeChild(wrap);
   }
   return out;
