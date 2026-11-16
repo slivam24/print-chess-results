@@ -119,7 +119,8 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 2. **⚙ Nastavení → Profily**: vyberte nebo vytvořte profil (např. „Otevřený turnaj“). Profil můžete **duplikovat** a **přejmenovat**.
 3. **⚙ Nastavení → Záhlaví a zápatí**: název akce, pořadatel, rozhodčí, logo (obrázek se zmenší a uloží do prohlížeče), text zápatí.
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
-4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje, orientace, formát jmen (`Novák, Jindřich` / `NOVÁK Jindřich` / …).
+4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje, orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
+   formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
 5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí,
    vlastní nadpisy sloupců, orientace, velikost písma, počet sloupců na stránce.
 6. **⚙ Nastavení → Záloha → Exportovat zálohu** – uschovejte si soubor JSON.
@@ -158,7 +159,7 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 | **Rozhodcovský list kola** | jednotlivci | prázdné kolonky výsledek / ✓ / poznámka, výška řádku, předvyplnění známých výsledků, podpis |
 | **Výsledkové lístky** | jednotlivci | 4–12 lístků na stránku, body, podpisy, vlastní krátký název |
 | **Startovní listina** | jednotlivci | řazení (st. čísla / rating), kategorie |
-| **Abecední seznam hráčů** | jednotlivci | jméno, startovní číslo, Elo, klub…; česká abeceda (CH za H), kategorie |
+| **Abecední seznam hráčů** | jednotlivci | jako ve Swiss-Manageru: Č., St.č., titul, Jméno, NRtg, IRtg, FED, Klub; česká abeceda (CH za H), kategorie |
 | **Pořadí** | jednotlivci | po zvoleném kole, kategorie (vč. přepočtu pořadí v kategorii), vysvětlivky pomocných hodnocení |
 | **Los zápasů družstev** | družstva | výsledky, velké písmo na nástěnku |
 | **Rozpis hráčů na šachovnicích** | družstva | každý zápas se sestavami a barvami, Elo ze soupisek, podpisy kapitánů a rozhodčího, zápas na stránku; když sestavy nejsou zveřejněné, vytiskne prázdné řádky k vyplnění |
@@ -166,6 +167,8 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 | **Pořadí družstev** | družstva | po kole, vysvětlivky |
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
+Ratingy: chess-results u některých turnajů uvádí jen jeden sloupec „Rtg“ (bez rozlišení národní/mezinárodní) – appka ho pak
+zobrazí jako „Rtg“; oba sloupce NRtg a IRtg se objeví, když je chess-results nabízí.
 Výsledky kola a křížová tabulka jsou připravené k doplnění jako další šablony – viz [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md).
 
 ---

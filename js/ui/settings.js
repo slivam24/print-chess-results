@@ -147,6 +147,9 @@ export class SettingsPanel {
         type: 'number', min: 6, max: 24, step: 0.5, value: p.page.fontSize,
         oninput: (e) => this.edit((pp) => { pp.page.fontSize = clampNum(e.target.value, 6, 24, 10); }),
       }), true),
+      field('Vzhled tabulek', h('select', {
+        onchange: (e) => this.edit((pp) => { pp.page.tableStyle = e.target.value; }),
+      }, options([['grid', 'mřížka – jako Swiss-Manager'], ['stripes', 'pruhy – bez svislých čar']], p.page.tableStyle || 'grid'))),
       field('Formát jmen', h('select', {
         onchange: (e) => this.edit((pp) => { pp.nameFormat = e.target.value; }),
       }, options(NAME_FORMATS, p.nameFormat))),
@@ -183,6 +186,8 @@ export class SettingsPanel {
     add(card, 
       h('h2', {}, 'Záhlaví'),
       check('Zobrazit záhlaví (název, logo, pořadatel)', 'enabled', 'header'),
+      field('Zarovnání nadpisu', h('select', { onchange: (e) => this.edit((pp) => { pp.header.align = e.target.value; }) },
+        options([['center', 'na střed (jako Swiss-Manager)'], ['left', 'vlevo']], hd.align || 'center'))),
       text('Nadpis', 'title', 'header', { ph: '{turnaj}' }),
       text('Podnadpis', 'subtitle', 'header', { area: true, ph: '{misto}, {datum}' }),
       text('Pořadatel', 'organizer', 'header', { ph: 'např. ŠK Štětí' }),
@@ -196,7 +201,7 @@ export class SettingsPanel {
         field('Výška loga (mm)', h('input', { type: 'number', min: 5, max: 50, value: hd.logoHeight, oninput: (e) => this.edit((pp) => { pp.header.logoHeight = clampNum(e.target.value, 5, 50, 16); }) }), true),
         field('Umístění', h('select', { onchange: (e) => this.edit((pp) => { pp.header.logoPosition = e.target.value; }) }, options([['left', 'vlevo'], ['right', 'vpravo']], hd.logoPosition)), true)),
       check('Záhlaví na každé stránce (jinak jen na první)', 'everyPage', 'header'),
-      h('p', { class: 'help', html: 'Proměnné: <code>{turnaj}</code> <code>{misto}</code> <code>{datum}</code> <code>{kolo}</code> <code>{rozhodci}</code> <code>{zastupce}</code> <code>{reditel}</code> <code>{poradatel}</code> <code>{tempo}</code> <code>{kol}</code> – doplní se z chess-results.' }),
+      h('p', { class: 'help', html: 'Proměnné: <code>{turnaj}</code> <code>{misto}</code> <code>{datum}</code> <code>{kolo}</code> <code>{rozhodci}</code> <code>{zastupce}</code> <code>{reditel}</code> <code>{poradatel}</code> <code>{tempo}</code> <code>{kol}</code> <code>{rating}</code> (průměrný rating) – doplní se z chess-results.' }),
       h('h2', { style: { marginTop: '16px' } }, 'Zápatí'),
       check('Zobrazit zápatí', 'enabled', 'footer'),
       text('Text vlevo', 'text', 'footer', { ph: 'např. www.mujklub.cz' }),

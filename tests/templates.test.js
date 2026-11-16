@@ -59,7 +59,7 @@ describe('vykreslení šablon jednotlivců', () => {
       assert.ok(doc.title);
       assert.deepEqual(doc.warnings, []);
       const h = html(doc);
-      assert.match(h, /Novák, Jindřich/);
+      assert.match(h, /Novák,? Jindřich/);
       assert.doesNotMatch(h, /undefined|NaN|\[object/);
     });
   }
@@ -130,7 +130,7 @@ describe('vykreslení šablon družstev', () => {
   test('rozpis šachovnic doplní Elo ze soupisek', () => {
     const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile, round: 3 });
     const h = html(doc);
-    assert.match(h, /Kuboš, Rostislav/);
+    assert.match(h, /Kuboš,? Rostislav/);
     const firstTable = doc.blocks.find((b) => b.type === 'table');
     assert.match(firstTable.rows[0], />\d{4}</);
   });
@@ -232,13 +232,49 @@ describe('abecední seznam hráčů', () => {
   test('řadí podle české abecedy, jméno je první sloupec', () => {
     const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: swiss.data, profile: defaultProfile() });
     const t = doc.blocks[0];
-    assert.equal(doc.title, 'Abecední seznam hráčů');
-    assert.match(t.thead, /^<tr><th class="name">Jméno<\/th>/);
+    assert.equal(doc.title, 'Abecední seznam');
     const names = t.rows.map((r) => r.match(/<td class="name">([^<]*)</)[1]);
     assert.equal(names.length, 57);
     const sorted = [...names].sort(new Intl.Collator('cs').compare);
     assert.deepEqual(names, sorted);
     // CH patří v češtině za H
-    assert.ok(names.indexOf('Chamoso, Javier') > names.indexOf('Havlák, Lubomír'));
+    assert.ok(names.indexOf('Chamoso Javier') > names.indexOf('Havlák Lubomír'));
+  });
+});
+
+describe('vzhled podle Swiss-Manageru', () => {
+  test('abecední seznam: sloupce Č., St.č., titul, Jméno, NRtg, IRtg, FED, Klub a pořadová čísla', () => {
+    const info = parseInfo(fixture('categories-main'));
+    const sl = parseStartList(fixture('categories-main'));
+    const doc = buildDocument({ tpl: getTemplate('alphalist'), info, data: { main: { players: sl.players, ratingInfo: sl.ratingInfo } }, profile: defaultProfile() });
+    const head = doc.blocks[0].thead.replace(/<[^>]+>/g, '|').split('|').filter(Boolean);
+    assert.deepEqual(head, ['Č.', 'St.č.', 'Jméno', 'NRtg', 'IRtg', 'FED', 'Klub']);
+    assert.match(doc.blocks[0].rows[0], /^<tr><td class="c num">1<\/td><td class="c num">17<\/td>/); // Č. 1, St.č. 17
+    assert.match(doc.blocks[0].rows[0], /Barabas Aleš/); // výchozí formát „Příjmení Jméno“
+    assert.match(doc.blocks[0].rows.join(''), /GM<\/td><td class="name">Druska Juraj/);
+  });
+  test('jen obecný „Rtg“ → sloupec se jmenuje Rtg, ne IRtg', () => {
+    const sl = parseStartList(fixture('swiss-main'));
+    assert.deepEqual(sl.ratingInfo, { generic: true, international: false, national: false });
+    const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: { main: { players: sl.players, ratingInfo: sl.ratingInfo } }, profile: defaultProfile() });
+    assert.match(doc.blocks[0].thead, />Rtg</);
+    assert.doesNotMatch(doc.blocks[0].thead, /IRtg|NRtg/);
+  });
+  test('styl mřížky a centrovaný nadpis jsou výchozí, pruhy lze zvolit', () => {
+    const p = defaultProfile();
+    const doc = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p });
+    assert.match(doc.layout.docClass, /tbl-grid/);
+    assert.match(doc.layout.header, /hd-bar[^"]*center/);
+    p.page.tableStyle = 'stripes';
+    const doc2 = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p });
+    assert.doesNotMatch(doc2.layout.docClass, /tbl-grid/);
+  });
+  test('migrace: starý profil s formátem „original“ přejde na „Příjmení Jméno“', async () => {
+    const { normalizeState } = await import('../js/store.js');
+    const s = normalizeState({ version: 1, profiles: [{ id: 'a', name: 'X', nameFormat: 'original' }] });
+    assert.equal(s.profiles[0].nameFormat, 'last-first');
+    assert.equal(s.profiles[0].page.tableStyle, 'grid');
+    const s2 = normalizeState({ version: 2, profiles: [{ id: 'a', name: 'X', nameFormat: 'original' }] });
+    assert.equal(s2.profiles[0].nameFormat, 'original');
   });
 });
