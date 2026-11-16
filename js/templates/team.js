@@ -1,6 +1,6 @@
 // Výstupy pro soutěže družstev: los zápasů a rozpis hráčů na šachovnicích.
 
-import { esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, colorLabel, theadRow, colgroup, bodyRow, noteBlock } from './common.js';
+import { esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, colorLabel, theadRow, colgroup, bodyRow, noteBlock, SYM_W } from './common.js';
 
 function roundSub(round) {
   if (!round) return '';
@@ -46,11 +46,11 @@ const needs = ({ round }) => [{ dataset: 'boards', round }, { dataset: 'teamPair
 
 const MATCH_COLUMNS = [
   { key: 'no', label: 'Zápas', cls: 'c num', width: '3.4em', get: (m) => esc(m.no ?? '') },
-  { key: 'homeNo', label: 'č.', cls: 'c num muted', width: '2.4em', get: (m) => esc(m.home?.no ?? '') },
+  { key: 'homeNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (m) => esc(m.home?.no ?? '') },
   { key: 'home', label: 'Domácí', cls: 'name strong', get: (m) => esc(m.home?.name || '') },
   { key: 'score', label: 'Výsledek', cls: 'c res', width: '6em', get: (m, ctx) => (ctx.opts.showResults && matchPlayed(m) ? esc(scoreText(m)) : '–') },
   { key: 'away', label: 'Hosté', cls: 'name strong', get: (m) => (m.away ? esc(m.away.name) : '<span class="bye">volno</span>') },
-  { key: 'awayNo', label: 'č.', cls: 'c num muted', width: '2.4em', get: (m) => esc(m.away?.no ?? '') },
+  { key: 'awayNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (m) => esc(m.away?.no ?? '') },
 ];
 
 export const teamMatches = {
@@ -72,7 +72,7 @@ export const teamMatches = {
     const round = teamRound(data, rq);
     const ctx = { opts };
     const blocks = round
-      ? [{ type: 'table', className: 'grid matches', colgroup: colgroup(cols), thead: theadRow(cols), rows: round.matches.map((m) => bodyRow(cols, m, ctx)) }]
+      ? [{ type: 'table', className: 'grid matches sym', colgroup: colgroup(cols), thead: theadRow(cols), rows: round.matches.map((m) => bodyRow(cols, m, ctx)) }]
       : [noteBlock('Pro toto kolo nejsou k dispozici žádné zápasy.')];
     return { title: `Los ${rq}. kola`, sub: roundSub(round), blocks, warnings: round ? [] : teamWarnings(round, rq) };
   },
@@ -90,13 +90,13 @@ function playerHtml(s, ctx) {
 
 const BOARD_COLUMNS = [
   { key: 'board', label: 'Š.', cls: 'c num strong', width: '2.4em', get: (b) => esc(b.board ?? '') },
-  { key: 'homeColor', label: '', cls: 'c muted', width: '1.8em', get: (b) => colorLabel(b.home.color) },
+  { key: 'homeColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.home.color) },
   { key: 'home', label: 'Domácí', cls: 'name', get: (b, ctx) => playerHtml(b.home, ctx) },
-  { key: 'homeRating', label: 'Elo', cls: 'r num', width: '3.2em', get: (b) => fmtRating(b.home.rating) },
+  { key: 'homeRating', label: 'Elo', cls: 'r num', width: SYM_W.rating, get: (b) => fmtRating(b.home.rating) },
   { key: 'result', label: 'Výsledek', cls: 'c res write', width: '5.5em', get: (b, ctx) => (ctx.opts.showResults ? esc(fmtResult(b.result)) : '') },
-  { key: 'awayColor', label: '', cls: 'c muted', width: '1.8em', get: (b) => colorLabel(b.away.color) },
+  { key: 'awayColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.away.color) },
   { key: 'away', label: 'Hosté', cls: 'name', get: (b, ctx) => playerHtml(b.away, ctx) },
-  { key: 'awayRating', label: 'Elo', cls: 'r num', width: '3.2em', get: (b) => fmtRating(b.away.rating) },
+  { key: 'awayRating', label: 'Elo', cls: 'r num', width: SYM_W.rating, get: (b) => fmtRating(b.away.rating) },
 ];
 
 /** Doplní rating a titul hráčů ze soupisek (stránka šachovnic rating neuvádí). */
@@ -164,7 +164,7 @@ export const teamBoards = {
         rows.push(`<tr class="total-row">${total.join('')}</tr>`);
       }
       blocks.push({ type: 'html', html: head, keepWithNext: true, breakBefore: opts.matchPerPage && i > 0 });
-      blocks.push({ type: 'table', className: 'grid boards', colgroup: colgroup(cols), thead: theadRow(cols), rows, keepTogether: true });
+      blocks.push({ type: 'table', className: 'grid boards sym', colgroup: colgroup(cols), thead: theadRow(cols), rows, keepTogether: true });
       if (opts.signatures !== false) {
         blocks.push({ type: 'html', html: '<div class="signs three"><div class="sign">Kapitán domácích</div><div class="sign">Kapitán hostů</div><div class="sign">Rozhodčí</div></div>' });
       }

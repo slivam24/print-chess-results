@@ -109,6 +109,11 @@ table.grid .title, .print-doc .title { font-weight: 700; color: var(--grey); }
 table.grid .name { font-weight: 600; }
 table.grid .club { color: #333; }
 .fixed-rows table.grid tbody tr { height: var(--row-h); }
+/* Tabulky s dvojicemi: pevné rozložení – protějškové sloupce stejně široké, jména si dělí zbytek */
+table.grid.sym { table-layout: fixed; }
+table.grid.sym td, table.grid.sym th { overflow: hidden; }
+/* Nadpis sloupce se v pevném rozložení raději zalomí, než aby byl oříznutý */
+table.grid.sym th, .nowrap-cells table.grid.sym th { white-space: normal; overflow-wrap: anywhere; }
 .nowrap-cells table.grid th, .nowrap-cells table.grid td { white-space: nowrap; }
 table.grid .res { font-weight: 700; white-space: nowrap; }
 table.grid .bye { font-style: italic; color: var(--grey); font-weight: 400; }

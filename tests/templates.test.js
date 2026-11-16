@@ -329,3 +329,29 @@ describe('okraje a písmo „co největší“', () => {
     assert.equal(board.layout.fitWidth, undefined);
   });
 });
+
+describe('symetrické šířky sloupců v tabulkách s dvojicemi', () => {
+  const widthsOf = (block) => [...block.colgroup.matchAll(/<col(?: style="width:([^"]+)")?>/g)].map((m) => m[1] || 'auto');
+  const keysOf = (block) => [...block.thead.matchAll(/<th class="[^"]*">([^<]*)<\/th>/g)].map((m) => m[1]);
+  test('los kola: protějškové sloupce mají stejnou šířku, jména se dělí o zbytek', () => {
+    const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile: defaultProfile(), round: 7 });
+    const t = doc.blocks[0];
+    assert.match(t.className, /\bsym\b/);
+    const w = widthsOf(t);
+    const k = keysOf(t);
+    // levá strana (bez čísla šachovnice) má stejné šířky jako pravá
+    const mid = k.indexOf('Výsledek');
+    const left = w.slice(1, mid); const right = w.slice(mid + 1).reverse().slice(0, left.length);
+    assert.deepEqual(new Set(w.filter((x) => x === 'auto')).size, 1);
+    assert.equal(w.filter((x) => x === 'auto').length, 2); // Bílý a Černý
+    assert.deepEqual([...left].sort(), [...right].sort());
+  });
+  test('rozpis šachovnic družstev a rozhodcovský list jsou také symetrické', () => {
+    for (const [id, info, data, round] of [['team-boards', team.info, team.data, 3], ['arbiter-sheet', swiss.info, swiss.data, 7]]) {
+      const doc = buildDocument({ tpl: getTemplate(id), info, data, profile: defaultProfile(), round });
+      const t = doc.blocks.find((b) => b.type === 'table');
+      assert.match(t.className, /\bsym\b/, id);
+      assert.equal(widthsOf(t).filter((x) => x === 'auto').length, 2, id);
+    }
+  });
+});

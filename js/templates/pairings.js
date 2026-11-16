@@ -2,7 +2,7 @@
 
 import {
   esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, byeLabel, theadRow, colgroup,
-  bodyRow, playerIndex, collator, noteBlock, pruneEmpty,
+  bodyRow, playerIndex, collator, noteBlock, pruneEmpty, SYM_W,
 } from './common.js';
 
 /** Najde v datech losu požadované kolo (kruhový systém má všechna kola najednou). */
@@ -50,24 +50,24 @@ const nm = (s, ctx) => esc(fmtName(s.name, ctx.nameFormat));
 
 /** Sloupce tabulky losu. */
 const PAIRING_COLUMNS = [
-  { key: 'board', label: 'Š.', cls: 'c num', width: '2.2em', get: (p) => esc(p.board ?? '') },
-  { key: 'wNo', label: 'č.', cls: 'c num muted', width: '2.4em', get: (p) => esc(p.white?.startNo ?? '') },
-  { key: 'wTitle', hideEmpty: true, label: '', cls: 'c title', width: '2.6em', get: (p) => esc(p.white?.title || '') },
+  { key: 'board', label: 'Š.', cls: 'c num', width: SYM_W.board, get: (p) => esc(p.board ?? '') },
+  { key: 'wNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
+  { key: 'wTitle', hideEmpty: true, label: '', cls: 'c title', width: SYM_W.title, get: (p) => esc(p.white?.title || '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => side(p.white, ctx, nm) },
-  { key: 'wFed', hideEmpty: true, label: 'Fed', cls: 'c', def: false, get: (p) => esc(p.white?.fed || '') },
-  { key: 'wRating', hideEmpty: true, label: 'Elo', cls: 'r num', width: '3em', get: (p) => fmtRating(p.white?.rating) },
-  { key: 'wRatingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', def: false, get: (p) => fmtRating(p.white?.ratingNat) },
+  { key: 'wFed', hideEmpty: true, label: 'Fed', cls: 'c', def: false, width: SYM_W.fed, get: (p) => esc(p.white?.fed || '') },
+  { key: 'wRating', hideEmpty: true, label: 'Elo', cls: 'r num', width: SYM_W.rating, get: (p) => fmtRating(p.white?.rating) },
+  { key: 'wRatingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', def: false, width: SYM_W.ratingNat, get: (p) => fmtRating(p.white?.ratingNat) },
   { key: 'wClub', hideEmpty: true, label: 'Klub', cls: 'club', def: false, get: (p) => esc(p.white?.club || '') },
-  { key: 'wPoints', hideEmpty: true, label: 'B.', cls: 'c num', width: '2.4em', get: (p) => fmtPoints(p.white?.points) },
-  { key: 'result', label: 'Výsledek', cls: 'c res', width: '5em', get: (p, ctx) => resultCell(p, ctx) },
-  { key: 'bPoints', hideEmpty: true, label: 'B.', cls: 'c num', width: '2.4em', get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
-  { key: 'bTitle', hideEmpty: true, label: '', cls: 'c title', width: '2.6em', get: (p) => esc(p.black?.title || '') },
+  { key: 'wPoints', hideEmpty: true, label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => fmtPoints(p.white?.points) },
+  { key: 'result', label: 'Výsledek', cls: 'c res', width: SYM_W.result, get: (p, ctx) => resultCell(p, ctx) },
+  { key: 'bPoints', hideEmpty: true, label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
+  { key: 'bTitle', hideEmpty: true, label: '', cls: 'c title', width: SYM_W.title, get: (p) => esc(p.black?.title || '') },
   { key: 'bName', label: 'Černý', cls: 'name', get: (p, ctx) => (p.black ? nm(p.black, ctx) : `<span class="bye">${esc(byeLabel(p.bye))}</span>`) },
-  { key: 'bFed', hideEmpty: true, label: 'Fed', cls: 'c', def: false, get: (p) => esc(p.black?.fed || '') },
-  { key: 'bRating', hideEmpty: true, label: 'Elo', cls: 'r num', width: '3em', get: (p) => fmtRating(p.black?.rating) },
-  { key: 'bRatingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', def: false, get: (p) => fmtRating(p.black?.ratingNat) },
+  { key: 'bFed', hideEmpty: true, label: 'Fed', cls: 'c', def: false, width: SYM_W.fed, get: (p) => esc(p.black?.fed || '') },
+  { key: 'bRating', hideEmpty: true, label: 'Elo', cls: 'r num', width: SYM_W.rating, get: (p) => fmtRating(p.black?.rating) },
+  { key: 'bRatingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', def: false, width: SYM_W.ratingNat, get: (p) => fmtRating(p.black?.ratingNat) },
   { key: 'bClub', hideEmpty: true, label: 'Klub', cls: 'club', def: false, get: (p) => esc(p.black?.club || '') },
-  { key: 'bNo', label: 'č.', cls: 'c num muted', width: '2.4em', get: (p) => esc(p.black?.startNo ?? '') },
+  { key: 'bNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.black?.startNo ?? '') },
 ];
 
 function resultCell(p, ctx) {
@@ -114,7 +114,7 @@ export const pairingsTable = {
     if (list.length) {
       blocks.push({
         type: 'table',
-        className: 'grid pairings',
+        className: 'grid pairings sym',
         colgroup: colgroup(cols),
         thead: theadRow(cols),
         rows: list.map((p) => bodyRow(cols, p, ctx, p.black ? '' : 'bye-row')),
@@ -136,14 +136,14 @@ export const pairingsTable = {
 // ---------------------------------------------------------------------------
 
 const BOARD_COLUMNS = [
-  { key: 'board', label: 'Šach.', cls: 'c num strong', get: (p) => esc(p.board ?? '') },
-  { key: 'wNo', label: 'č.', cls: 'c num muted', def: false, get: (p) => esc(p.white?.startNo ?? '') },
+  { key: 'board', label: 'Šach.', cls: 'c num strong', width: '3.8em', get: (p) => esc(p.board ?? '') },
+  { key: 'wNo', label: 'č.', cls: 'c num muted', def: false, width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => boardName(p.white, ctx) },
-  { key: 'wPoints', label: 'B.', cls: 'c num', get: (p) => fmtPoints(p.white?.points) },
-  { key: 'result', label: '', cls: 'c res', get: (p, ctx) => (ctx.opts.showResults ? esc(fmtResult(p.result)) || '–' : '–') },
-  { key: 'bPoints', label: 'B.', cls: 'c num', get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
+  { key: 'wPoints', label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => fmtPoints(p.white?.points) },
+  { key: 'result', label: '', cls: 'c res', width: '2em', get: (p, ctx) => (ctx.opts.showResults ? esc(fmtResult(p.result)) || '–' : '–') },
+  { key: 'bPoints', label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
   { key: 'bName', label: 'Černý', cls: 'name', get: (p, ctx) => (p.black ? boardName(p.black, ctx) : `<span class="bye">${esc(byeLabel(p.bye))}</span>`) },
-  { key: 'bNo', label: 'č.', cls: 'c num muted', def: false, get: (p) => esc(p.black?.startNo ?? '') },
+  { key: 'bNo', label: 'č.', cls: 'c num muted', def: false, width: SYM_W.no, get: (p) => esc(p.black?.startNo ?? '') },
 ];
 
 function boardName(s, ctx) {
@@ -175,7 +175,7 @@ export const pairingsBoard = {
     const list = filterPairings(enrichPairings(round, data.main?.players), opts);
     const ctx = { opts, nameFormat };
     const blocks = list.length
-      ? [{ type: 'table', className: 'grid board-pairings', thead: theadRow(cols), rows: list.map((p) => bodyRow(cols, p, ctx, p.black ? '' : 'bye-row')) }]
+      ? [{ type: 'table', className: 'grid board-pairings sym', colgroup: colgroup(cols), thead: theadRow(cols), rows: list.map((p) => bodyRow(cols, p, ctx, p.black ? '' : 'bye-row')) }]
       : [noteBlock('Pro toto kolo nejsou k dispozici žádné dvojice.')];
     return { title: `Los ${rq}. kola`, sub: roundSub(round), blocks, warnings: roundWarnings(info, round, rq) };
   },
