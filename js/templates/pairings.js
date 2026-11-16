@@ -196,8 +196,8 @@ const ALPHA_COLUMNS = [
 
 export const pairingsAlpha = {
   id: 'pairings-alpha',
-  name: 'Los kola – abecedně (kdo kde hraje)',
-  description: 'Abecední seznam hráčů s číslem šachovnice a barvou. Ideální k losu na nástěnku.',
+  name: 'Los kola – kdo kde hraje',
+  description: 'Hráči podle abecedy s číslem šachovnice, barvou a soupeřem – k losu na nástěnku.',
   group: 'Los kola',
   supports: (info) => !info.isTeam,
   roundMode: 'pairings',

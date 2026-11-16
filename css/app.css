@@ -15,7 +15,7 @@
   --err-line: #e5a0a0;
   --ok: #1e7b46;
   --radius: 8px;
-  --side-w: 380px;
+  --side-w: 560px;
   color-scheme: light;
 }
 
@@ -30,10 +30,23 @@ body {
 
 .app {
   display: grid;
-  grid-template-columns: var(--side-w) 1fr;
+  grid-template-columns: var(--side-w) 8px minmax(0, 1fr);
   grid-template-rows: auto 1fr;
   height: 100vh;
 }
+.side { grid-column: 1; grid-row: 2; }
+.preview { grid-column: 3; grid-row: 2; }
+.splitter {
+  grid-column: 2;
+  grid-row: 2;
+  cursor: col-resize;
+  background: var(--line);
+  border-left: 3px solid #f7f8fa;
+  border-right: 3px solid var(--bg);
+  touch-action: none;
+}
+.splitter:hover, .splitter:focus-visible, body.resizing .splitter { background: var(--accent); }
+body.resizing { cursor: col-resize; user-select: none; }
 
 /* --- Horní lišta ---------------------------------------------------- */
 .topbar {
@@ -56,10 +69,16 @@ body {
 /* --- Postranní panel ------------------------------------------------- */
 .side {
   overflow-y: auto;
-  padding: 12px;
-  border-right: 1px solid var(--line);
+  padding: 16px;
   background: #f7f8fa;
 }
+/* Ve širokém panelu: šablony a volby ve dvou sloupcích, větší pole */
+.side .card { padding: 16px; }
+.tpl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; }
+.tpl-group { grid-column: 1 / -1; }
+.side textarea { min-height: 4.5em; }
+.side input[type="text"], .side input[type="url"], .side select { min-height: 34px; }
+.col-editor input[type="text"] { width: 12em; }
 .card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -149,7 +168,6 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 .badge { display: inline-block; padding: 0 6px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 600; }
 
 /* Seznam šablon */
-.tpl-list { display: flex; flex-direction: column; gap: 4px; }
 .tpl-group { margin: 6px 0 2px; font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .04em; }
 .tpl {
   text-align: left;
@@ -180,7 +198,7 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 .col-editor li:last-child { border-bottom: 0; }
 .col-editor li.off .c-label { color: var(--muted); text-decoration: line-through; }
 .col-editor .c-label { flex: 1; }
-.col-editor input[type="text"] { width: 7em; padding: 2px 4px; font-size: 12px; }
+.col-editor input[type="text"] { padding: 2px 6px; font-size: 13px; }
 .margins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .margins label { font-size: 12px; display: flex; flex-direction: column; }
 .margins input { width: 100%; }
@@ -246,6 +264,8 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 /* --- Užší obrazovky ---------------------------------------------------- */
 @media (max-width: 900px) {
   .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; height: auto; min-height: 100vh; }
+  .side, .preview { grid-column: 1; grid-row: auto; }
+  .splitter { display: none; }
   .side { border-right: 0; border-bottom: 1px solid var(--line); }
   .preview-scroll { padding: 12px; }
   .profile-pick select { min-width: 120px; }

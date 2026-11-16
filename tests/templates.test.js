@@ -50,7 +50,7 @@ describe('registr šablon', () => {
 
 describe('vykreslení šablon jednotlivců', () => {
   const profile = defaultProfile();
-  for (const id of ['pairings', 'pairings-board', 'pairings-alpha', 'arbiter-sheet', 'scoresheets', 'startlist', 'ranking']) {
+  for (const id of ['pairings', 'pairings-board', 'pairings-alpha', 'arbiter-sheet', 'scoresheets', 'startlist', 'alphalist', 'ranking']) {
     test(id, () => {
       const tpl = getTemplate(id);
       const round = id === 'ranking' ? 6 : 7;
@@ -225,5 +225,20 @@ describe('vestavěná proxy', () => {
     assert.equal(st.proxyUrl, 'http://localhost:8787/proxy');
     st.state.proxyUrl = '';
     assert.equal(st.proxyUrl, DEFAULT_PROXY_URL);
+  });
+});
+
+describe('abecední seznam hráčů', () => {
+  test('řadí podle české abecedy, jméno je první sloupec', () => {
+    const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: swiss.data, profile: defaultProfile() });
+    const t = doc.blocks[0];
+    assert.equal(doc.title, 'Abecední seznam hráčů');
+    assert.match(t.thead, /^<tr><th class="name">Jméno<\/th>/);
+    const names = t.rows.map((r) => r.match(/<td class="name">([^<]*)</)[1]);
+    assert.equal(names.length, 57);
+    const sorted = [...names].sort(new Intl.Collator('cs').compare);
+    assert.deepEqual(names, sorted);
+    // CH patří v češtině za H
+    assert.ok(names.indexOf('Chamoso, Javier') > names.indexOf('Havlák, Lubomír'));
   });
 });

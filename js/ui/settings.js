@@ -161,7 +161,7 @@ export class SettingsPanel {
     const hd = p.header;
     const ft = p.footer;
     const text = (label, key, obj, opt = {}) => field(label, h(opt.area ? 'textarea' : 'input', {
-      type: 'text', rows: opt.area ? 2 : null, value: obj === 'header' ? hd[key] ?? '' : ft[key] ?? '', placeholder: opt.ph || '',
+      type: 'text', rows: opt.area ? 3 : null, value: obj === 'header' ? hd[key] ?? '' : ft[key] ?? '', placeholder: opt.ph || '',
       oninput: (e) => this.edit((pp) => { pp[obj][key] = e.target.value; }),
     }));
     const check = (label, key, obj) => h('label', { class: 'check' },

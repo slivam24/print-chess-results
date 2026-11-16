@@ -61,7 +61,7 @@ export function defaultState() {
     activeProfileId: open.id,
     profiles: [open, league],
     recent: [],
-    ui: { zoom: 'fit', lastTemplate: 'pairings' },
+    ui: { previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings' },
   };
 }
 
