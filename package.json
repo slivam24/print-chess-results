@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"tests/**/*.test.js\"",
-    "serve": "python3 -m http.server 8080",
+    "dev": "node tools/dev-server.mjs",
     "fixtures": "tools/fetch-fixtures.sh"
   },
   "license": "MIT",
