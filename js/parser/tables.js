@@ -158,7 +158,16 @@ export function parseStartList(doc) {
   }
   const h = headingBefore(table);
   heading = h ? text(h) : null;
-  return { players, heading };
+  // Které ratingy stránka uvádí: obecný „Rtg“ (chess-results neříká jaký), mezinárodní, národní
+  const ratingInfo = { generic: false, international: false, national: false };
+  for (const sec of splitTable(table)) {
+    if (!sec.header) continue;
+    for (const c of mapHeader(sec.header)) {
+      if (c.key === 'rating') ratingInfo[c.generic ? 'generic' : 'international'] = true;
+      if (c.key === 'ratingNat') ratingInfo.national = true;
+    }
+  }
+  return { players, heading, ratingInfo };
 }
 
 // ---------------------------------------------------------------------------

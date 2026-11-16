@@ -13,8 +13,8 @@ const SYNONYMS = {
   black: ['black', 'cerny', 'schwarz'],
   fideId: ['fideid', 'fide-id', 'fide id', 'id fide', 'fide-nr.', 'fide-nr'],
   fed: ['fed', 'fed.', 'land', 'stat'],
-  rating: ['rtg', 'elo', 'rtgi', 'rtgfide', 'rtg fide', 'rtgint', 'rtg int', 'fide', 'elo fide', 'eloi', 'ratingi'],
-  ratingNat: ['rtgn', 'rtgnat', 'rtg nat', 'elo narodni', 'nwz', 'dwz', 'elon', 'national rating'],
+  rating: ['rtg', 'elo', 'rating', 'rtgi', 'rtgfide', 'rtg fide', 'rtgint', 'rtg int', 'fide', 'elo fide', 'eloi', 'ratingi', 'irtg'],
+  ratingNat: ['rtgn', 'rtgnat', 'rtg nat', 'elo narodni', 'nwz', 'dwz', 'elon', 'national rating', 'nrtg'],
   club: ['club/city', 'club', 'klub/misto', 'klub', 'oddil', 'verein/ort', 'verein', 'club/ort'],
   points: ['pts.', 'pts', 'points', 'body', 'b.', 'pkt.', 'pkt', 'punkte'],
   result: ['result', 'res.', 'res', 'vysledek', 'vysl.', 'ergebnis', 'erg.'],
@@ -52,6 +52,8 @@ export function headerKey(raw) {
     return { key: 'xt', index: Number(t.match(/\d+/)[0]) };
   }
   const k = LOOKUP.get(t);
+  // Obecný „Rtg“/„Elo“ nevypovídá, zda jde o mezinárodní, nebo národní rating
+  if (k === 'rating') return { key: k, generic: ['rtg', 'elo', 'rating'].includes(t) };
   if (k) return { key: k };
   // Časté varianty s doplňkem, např. „Rtg FIDE“, „Elo int.“
   if (/^(rtg|elo)\b/.test(t) && /nat|nar|nwz|dwz/.test(t)) return { key: 'ratingNat' };

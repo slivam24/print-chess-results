@@ -156,7 +156,8 @@ export class Source {
     const info = parseInfo(doc);
     let data = null;
     if (dataset === 'main') {
-      data = { players: parseStartList(doc).players };
+      const sl = parseStartList(doc);
+      data = { players: sl.players, ratingInfo: sl.ratingInfo };
     } else {
       const d = DATASETS[dataset];
       data = d && d.parse ? d.parse(doc) : null;

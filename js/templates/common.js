@@ -151,6 +151,7 @@ export function infoVars(info, extra = {}) {
     zastupce: f.deputyArbiter || '',
     tempo: f.timeControl || '',
     kol: info && info.totalRounds ? String(info.totalRounds) : '',
+    rating: (f.avgRating && String(f.avgRating).match(/\d+/)?.[0]) || '',
     cislo: info && info.tnr ? String(info.tnr) : '',
     ...extra,
   };
@@ -181,7 +182,7 @@ export function renderHeader(profile, info, { outputTitle, outputSub, vars = {},
   const logoRight = h.logoPosition === 'right';
   const showBar = h.enabled !== false && (title || subtitle || right.length || logo);
   const bar = showBar
-    ? `<div class="hd-bar${compact ? ' compact' : ''}">
+    ? `<div class="hd-bar${compact ? ' compact' : ''}${h.align === 'left' ? '' : ' center'}">
         ${logo && !logoRight ? `<div class="hd-logo">${logo}</div>` : ''}
         <div class="hd-main">
           ${title ? `<div class="hd-title">${esc(title)}</div>` : ''}

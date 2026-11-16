@@ -58,6 +58,7 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     headerEveryPage: !!(profile.header && profile.header.everyPage),
     footer: footerFn,
     ...extra,
+    docClass: [profile.page.tableStyle === 'stripes' ? '' : 'tbl-grid', extra.docClass || ''].join(' ').trim(),
   };
   if (extra.header === null) layout.header = null;
   if (extra.footer === null) layout.footer = null;
