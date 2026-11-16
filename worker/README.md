@@ -1,5 +1,10 @@
 # Proxy pro chess-results.com (Cloudflare Worker)
 
+> **Stav:** Worker je nasazený jako `https://chess-print-proxy.slivam24.workers.dev` a propojený s GitHubem
+> (Cloudflare Workers Builds, kořenová složka `worker`, větev `main`) – po sloučení změny v `worker/` do `main`
+> se nasadí sám. Appka ho používá jako výchozí proxy (`DEFAULT_PROXY_URL` v `js/store.js`).
+> Návod níže je pro nasazení vlastní kopie.
+
 Appka běží v prohlížeči a chess-results.com nedovoluje jiným webům číst své stránky (CORS).
 Tento malý Worker stránky stáhne za appku a přidá potřebné hlavičky. Je zdarma
 (Cloudflare Workers Free: 100 000 požadavků denně – jeden tisk spotřebuje 1–3 požadavky).
@@ -29,9 +34,18 @@ Na samotnou adresu workeru odpoví textem `chess-print proxy OK`.
 7. Vpravo nahoře klikněte **Deploy** (a potvrďte).
 8. Adresu workeru najdete nahoře, vypadá jako `https://chess-print-proxy.<vas-ucet>.workers.dev`.
    Otevřete ji v prohlížeči – má se zobrazit `chess-print proxy OK`.
-9. V appce: **⚙ Nastavení → Připojení** → vložit adresu → **Otestovat** → **Uložit**.
+9. Adresu zapište do `DEFAULT_PROXY_URL` v `js/store.js` (vestavěná proxy), nebo ji v appce zadejte v **⚙ Nastavení → Připojení**.
+
+### Alternativa: propojení s GitHubem (automatické nasazování)
+
+Při vytváření Workeru zvolte **Continue with GitHub**, vyberte repozitář a nastavte:
+**Project name** `chess-print-proxy` (musí odpovídat `name` ve `wrangler.toml`), **Root directory** `worker`,
+**Deploy command** `npx wrangler deploy`, Build command prázdný. Každá změna ve větvi `main` se pak nasadí sama.
 
 ### Omezení na vaši appku (doporučeno)
+
+Při nasazení z GitHubu nebo přes wrangler platí hodnota z `wrangler.toml` (a přepíše tu z webového rozhraní).
+Při ručním vložení kódu ve webovém rozhraní ji nastavte takto:
 
 Worker → **Settings** → **Variables and Secrets** → **Add**:
 

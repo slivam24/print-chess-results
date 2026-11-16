@@ -4,6 +4,13 @@
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
 export const STATE_VERSION = 1;
+
+/**
+ * Vestavěná proxy (Cloudflare Worker z worker/worker.js nasazený pro tuto appku).
+ * Používá se, když uživatel v Nastavení → Připojení nezadá vlastní adresu.
+ * Při nasazení vlastní kopie appky zde změňte adresu na svůj Worker.
+ */
+export const DEFAULT_PROXY_URL = 'https://chess-print-proxy.slivam24.workers.dev';
 const MAX_RECENT = 12;
 
 export function uid() {
@@ -147,6 +154,11 @@ export class Store {
   subscribe(fn) {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
+  }
+
+  /** Adresa proxy, která se skutečně použije (vlastní, jinak vestavěná). */
+  get proxyUrl() {
+    return String(this.state.proxyUrl || '').trim() || DEFAULT_PROXY_URL;
   }
 
   get profile() {

@@ -213,3 +213,17 @@ describe('záhlaví bez údajů', () => {
     assert.doesNotMatch(doc.blocks[0].thead, />B\.</);
   });
 });
+
+describe('vestavěná proxy', () => {
+  test('bez vlastní adresy se použije vestavěná, vlastní má přednost', async () => {
+    const { Store, DEFAULT_PROXY_URL } = await import('../js/store.js');
+    const mem = new Map();
+    const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+    const st = new Store(storage);
+    assert.equal(st.proxyUrl, DEFAULT_PROXY_URL);
+    st.state.proxyUrl = '  http://localhost:8787/proxy ';
+    assert.equal(st.proxyUrl, 'http://localhost:8787/proxy');
+    st.state.proxyUrl = '';
+    assert.equal(st.proxyUrl, DEFAULT_PROXY_URL);
+  });
+});

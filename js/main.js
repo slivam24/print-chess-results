@@ -11,7 +11,7 @@ import { SettingsPanel } from './ui/settings.js';
 import { h, clear, $, options, debounce, readFileText } from './ui/dom.js';
 
 const store = new Store();
-const source = new Source({ getProxyUrl: () => store.state.proxyUrl });
+const source = new Source({ getProxyUrl: () => store.proxyUrl });
 
 const session = {
   tnr: null, // hlavní (zadaný) turnaj
@@ -43,7 +43,6 @@ const els = {
   sideMain: $('#side-main'),
   sideSettings: $('#side-settings'),
   pageRule: $('#page-rule'),
-  proxyHint: $('#proxy-hint'),
 };
 
 // ---------------------------------------------------------------------------
@@ -320,7 +319,6 @@ function autoRoundFor(tpl) {
 function renderProfileSelect() {
   clear(els.profileSelect);
   els.profileSelect.append(...options(store.state.profiles.map((p) => [p.id, p.name]), store.state.activeProfileId));
-  els.proxyHint.hidden = !!store.state.proxyUrl;
 }
 
 // ---------------------------------------------------------------------------
@@ -373,7 +371,7 @@ async function refreshPreview({ fresh = false } = {}) {
           }
           round = autoRound(tpl, info, pre);
           // Bez proxy (ručně vložená data) vezmeme nejnovější kolo, které je opravdu k dispozici
-          if (!store.state.proxyUrl) {
+          if (!store.proxyUrl) {
             const have = cachedRounds(tnr, tpl);
             if (have.length && !have.includes(round)) round = Math.max(...have);
           }

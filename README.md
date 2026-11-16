@@ -11,6 +11,7 @@ Jednou si nastavíte, jak mají výstupy vypadat, a pak už jen: **stáhnout →
 - **Profily** (např. „Otevřený turnaj“, „Liga“) s vlastním písmem, okraji, orientací, sloupci, záhlavím, logem a zápatím
 - Náhled přesně odpovídá tisku (A4, stránkování dělá appka sama)
 - Vše se pamatuje v prohlížeči, záloha do JSON jedním klikem
+- Proxy pro stahování z chess-results je součástí appky – nic se nenastavuje
 - Záložní režim bez proxy: ruční vložení uložených stránek
 
 Rozhraní je česky, appka nemá backend a nepotřebuje build.
@@ -41,8 +42,10 @@ Rozhraní je česky, appka nemá backend a nepotřebuje build.
  └────────────────────────┘             └────────────────────┘
 ```
 
-chess-results.com nemá API a prohlížeč jeho stránky kvůli CORS přímo číst nesmí. Proto je potřeba malá proxy –
-Cloudflare Worker (zdarma, 100 000 požadavků denně). Proxy propouští jen domény chess-results.com,
+chess-results.com nemá API a prohlížeč jeho stránky kvůli CORS přímo číst nesmí. Proto appka používá malou proxy –
+Cloudflare Worker (zdarma, 100 000 požadavků denně). Ta je **součástí appky**: kód je ve složce `worker/`, nasazený Worker
+`https://chess-print-proxy.slivam24.workers.dev` je v appce nastavený jako výchozí (`DEFAULT_PROXY_URL` v `js/store.js`)
+a Cloudflare ho automaticky znovu nasadí při každé změně ve složce `worker/` na větvi `main`. Proxy propouští jen domény chess-results.com,
 přidává CORS hlavičky a krátce (60 s) cachuje. Tlačítko „Aktualizovat data“ cache vždy obchází.
 
 Appka stahuje anglickou verzi stránek (stabilnější názvy sloupců), všechny texty výstupů jsou ale česky.
@@ -67,6 +70,9 @@ Soubor `.nojekyll` v kořeni zajišťuje, že GitHub soubory jen vystaví beze z
 ---
 
 ## Nasazení proxy (Cloudflare Worker)
+
+> Pro tuto appku je proxy už nasazená a vestavěná – tato sekce je potřeba jen pro vlastní kopii appky
+> (fork). Po nasazení vlastního Workeru změňte `DEFAULT_PROXY_URL` v `js/store.js`, nebo adresu zadejte v ⚙ Nastavení → Připojení.
 
 Podrobný návod krok za krokem je v [`worker/README.md`](worker/README.md). Zkráceně:
 
@@ -96,11 +102,11 @@ npx wrangler deploy
 
 Wrangler vypíše adresu workeru. Nastavení (`ALLOWED_ORIGINS`, `CACHE_SECONDS`) je v [`worker/wrangler.toml`](worker/wrangler.toml).
 
-### Doporučené zabezpečení
+### Zabezpečení
 
-Ve výchozím stavu smí proxy použít kdokoli (ale jen pro chess-results.com). Po nasazení appky ji omezte na svůj web:
-v Cloudflare → váš worker → **Settings → Variables and Secrets** přidejte proměnnou
-`ALLOWED_ORIGINS` = `https://slivam24.github.io` (více adres oddělte čárkou, např. i `http://localhost:8787` pro vývoj).
+Proxy smí používat jen stránky uvedené v `ALLOWED_ORIGINS` v [`worker/wrangler.toml`](worker/wrangler.toml)
+(teď `https://slivam24.github.io` a `http://localhost:8787` pro vývoj). Při nasazení z GitHubu tato hodnota přepíše
+proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v repozitáři.
 
 ---
 
@@ -108,7 +114,7 @@ v Cloudflare → váš worker → **Settings → Variables and Secrets** přidej
 
 ### Před turnajem (jednou)
 
-1. **⚙ Nastavení → Připojení**: vložte adresu proxy, **Otestovat**, **Uložit**.
+1. Proxy je vestavěná, není potřeba nic nastavovat. (V **⚙ Nastavení → Připojení** lze zadat vlastní.)
 2. **⚙ Nastavení → Profily**: vyberte nebo vytvořte profil (např. „Otevřený turnaj“). Profil můžete **duplikovat** a **přejmenovat**.
 3. **⚙ Nastavení → Záhlaví a zápatí**: název akce, pořadatel, rozhodčí, logo (obrázek se zmenší a uloží do prohlížeče), text zápatí.
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
@@ -174,8 +180,7 @@ Výsledky kola a křížová tabulka jsou připravené k doplnění jako další
 
 | Problém | Řešení |
 |---|---|
-| „Není nastavená adresa proxy“ | Nastavení → Připojení, viz [nasazení proxy](#nasazení-proxy-cloudflare-worker). |
-| „Proxy neodpovídá (síť nebo CORS)“ | Zkontrolujte adresu (bez `/` navíc), že worker běží (otevřete jeho adresu – má odpovědět „chess-print proxy OK“) a `ALLOWED_ORIGINS`. |
+| „Proxy neodpovídá (síť nebo CORS)“ | Otevřete <https://chess-print-proxy.slivam24.workers.dev> – má odpovědět „chess-print proxy OK“. Pokud ano, zkontrolujte v Cloudflare proměnnou `ALLOWED_ORIGINS` (musí obsahovat `https://slivam24.github.io`) a v Nastavení → Připojení, že není zadaná jiná adresa. |
 | „Los X. kola zatím není zveřejněn“ | Nahrajte kolo ze Swiss-Manageru na chess-results a klikněte na Aktualizovat data. |
 | Proxy nefunguje vůbec | **Vložit HTML ručně**: otevřete stránku turnaje na chess-results, uložte ji (`Ctrl+S`, „pouze HTML“) a nahrajte. Appka pozná turnaj, druh stránky i kolo. Potřebujete hlavní stránku turnaje a stránku losu/pořadí daného kola. |
 | Starý turnaj (déle než 2 týdny po skončení) | Proxy sama „klikne“ na *Show tournament details*. Při ručním vkládání to udělejte na chess-results před uložením. |
