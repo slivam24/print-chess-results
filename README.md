@@ -168,7 +168,8 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
 Ratingy: chess-results u některých turnajů uvádí jen jeden sloupec „Rtg“ (bez rozlišení národní/mezinárodní) – appka ho pak
-zobrazí jako „Rtg“; oba sloupce NRtg a IRtg se objeví, když je chess-results nabízí.
+zobrazí jako „Rtg“; oba sloupce NRtg a IRtg se objeví, když je chess-results nabízí. Ve výchozím stavu je chess-results
+nezobrazuje – zobrazení obou ratingů je potřeba pro turnaj povolit (při nahrávání ze Swiss-Manageru / v nastavení turnaje).
 Výsledky kola a křížová tabulka jsou připravené k doplnění jako další šablony – viz [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md).
 
 ---
