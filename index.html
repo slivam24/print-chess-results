@@ -53,6 +53,8 @@
 
     <aside class="side settings" id="side-settings" aria-label="Nastavení" hidden></aside>
 
+    <div class="splitter" id="splitter" role="separator" aria-orientation="vertical" aria-label="Šířka panelu (táhněte, nebo šipky vlevo/vpravo)" tabindex="0" title="Táhněte pro změnu šířky panelu, dvojklik = výchozí"></div>
+
     <main class="preview" aria-label="Náhled tisku">
       <div class="preview-bar">
         <div id="status" class="status" role="status" aria-live="polite"></div>
@@ -60,6 +62,7 @@
           <span id="page-count" class="muted"></span>
           <label class="zoom">Zvětšení
             <select id="zoom">
+              <option value="page">Celá stránka</option>
               <option value="fit">Na šířku</option>
               <option value="0.5">50 %</option>
               <option value="0.75">75 %</option>

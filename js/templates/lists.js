@@ -65,12 +65,12 @@ function sortPlayers(list, how) {
 export const startList = {
   id: 'startlist',
   name: 'Startovní listina',
-  description: 'Seznam hráčů podle startovních čísel, abecedy nebo ratingu.',
+  description: 'Hráči podle startovních čísel (nebo ratingu).',
   group: 'Seznamy',
   supports: (info) => !info.isTeam,
   roundMode: null,
   options: [
-    { key: 'sort', label: 'Řazení', type: 'select', def: 'startNo', choices: [['startNo', 'podle startovních čísel'], ['alpha', 'abecedně'], ['rating', 'podle ratingu']] },
+    { key: 'sort', label: 'Řazení', type: 'select', def: 'startNo', choices: [['startNo', 'podle startovních čísel'], ['rating', 'podle ratingu'], ['alpha', 'abecedně']] },
     categoryOption,
   ],
   columns: START_COLUMNS,
@@ -89,6 +89,49 @@ export const startList = {
     if (!players.length) blocks.push(noteBlock('Startovní listina je prázdná.'));
     const sub = `${players.length} hráčů${opts.category && opts.category !== '*split*' ? ` · kategorie ${opts.category}` : ''}`;
     return { title: opts.sort === 'alpha' ? 'Startovní listina – abecedně' : 'Startovní listina', sub, blocks, warnings: [] };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Abecední seznam hráčů (tiskne se před turnajem vedle startovní listiny)
+// ---------------------------------------------------------------------------
+
+const ALPHA_COLUMNS = [
+  { key: 'name', label: 'Jméno', cls: 'name', get: (p, ctx) => esc(fmtName(p.name, ctx.nameFormat)) },
+  { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (p) => esc(p.title) },
+  { key: 'startNo', label: 'St. č.', cls: 'c num', width: '3.2em', get: (p) => esc(p.startNo ?? '') },
+  { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', def: false, get: (p) => esc(p.fed) },
+  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'r num', width: '3.2em', get: (p) => fmtRating(p.rating) },
+  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', width: '3.6em', get: (p) => fmtRating(p.ratingNat) },
+  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'r num muted', def: false, get: (p) => esc(p.fideId ?? '') },
+  { key: 'group', hideEmpty: true, label: 'Kat.', cls: 'c', def: false, get: (p) => esc(p.group) },
+  { key: 'club', hideEmpty: true, label: 'Klub', cls: 'club', get: (p) => esc(p.club) },
+];
+
+export const alphaList = {
+  id: 'alphalist',
+  name: 'Abecední seznam hráčů',
+  description: 'Hráči podle abecedy se startovním číslem – k vyvěšení před turnajem.',
+  group: 'Seznamy',
+  supports: (info) => !info.isTeam,
+  roundMode: null,
+  options: [categoryOption],
+  columns: ALPHA_COLUMNS,
+  defaults: { orientation: 'portrait', columns: 1 },
+  needs: () => [{ dataset: 'main' }],
+  render({ data, opts, cols: allCols, nameFormat }) {
+    const players = data.main?.players || [];
+    const ctx = { nameFormat };
+    const cols = pruneEmpty(allCols, players, ctx);
+    const blocks = [];
+    const parts = byCategory(sortPlayers(players, 'alpha'), (p) => p.group, opts.category);
+    for (const part of parts) {
+      if (part.name && parts.length > 1) blocks.push(sectionTitle(part.name, `${part.items.length} hráčů`));
+      blocks.push({ type: 'table', className: 'grid startlist', colgroup: colgroup(cols), thead: theadRow(cols), rows: part.items.map((p) => bodyRow(cols, p, ctx)) });
+    }
+    if (!players.length) blocks.push(noteBlock('Seznam hráčů je prázdný.'));
+    const sub = `${players.length} hráčů${opts.category && opts.category !== '*split*' ? ` · kategorie ${opts.category}` : ''}`;
+    return { title: 'Abecední seznam hráčů', sub, blocks, warnings: [] };
   },
 };
 

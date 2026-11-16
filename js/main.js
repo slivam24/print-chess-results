@@ -112,6 +112,11 @@ async function loadTournament(input, { fresh = false, fromSnapshot = false } = {
     if (!getTemplate(session.templateId) || !getTemplate(session.templateId).supports(info)) {
       session.templateId = templatesFor(info)[0].id;
     }
+    // Před zveřejněním losu (a ne u kruhového systému, kde je los znám předem) začneme seznamy
+    const tpl0 = getTemplate(session.templateId);
+    if (changed && !parsed.art && !info.lastPairedRound && info.system !== 'roundrobin' && tpl0.roundMode === 'pairings') {
+      session.templateId = info.isTeam ? 'team-roster' : 'startlist';
+    }
     if (!fromSnapshot) store.addRecent(parsed.tnr, info.title);
     els.input.value = String(parsed.tnr);
     renderRecent();
@@ -451,12 +456,51 @@ function applyZoom() {
   const first = els.pages.querySelector('.page');
   if (!first) { els.pages.style.zoom = ''; return; }
   let scale = Number(z);
+  const availW = els.scroll.clientWidth - 48;
   if (z === 'fit') {
-    const avail = els.scroll.clientWidth - 48;
-    scale = Math.min(1.25, Math.max(0.3, avail / first.offsetWidth));
+    scale = Math.min(1.25, Math.max(0.2, availW / first.offsetWidth));
+  } else if (z === 'page') {
+    const availH = els.scroll.clientHeight - 48;
+    scale = Math.min(1.25, Math.max(0.2, Math.min(availW / first.offsetWidth, availH / first.offsetHeight)));
   }
   els.pages.style.zoom = String(scale);
-  store.update((s) => { s.ui.zoom = z; }, { silent: true });
+  store.update((s) => { s.ui.previewZoom = z; }, { silent: true });
+}
+
+/** Posuvník mezi panelem a náhledem – šířka panelu se pamatuje. */
+function setupSplitter() {
+  const handle = $('#splitter');
+  const app = document.querySelector('.app');
+  const clamp = (w) => Math.round(Math.max(320, Math.min(w, window.innerWidth - 320)));
+  const apply = (w, save) => {
+    const v = clamp(w);
+    app.style.setProperty('--side-w', `${v}px`);
+    if (save) store.update((s) => { s.ui.sideWidth = v; }, { silent: true });
+    applyZoom();
+  };
+  const initial = Number(store.state.ui.sideWidth) || Math.round(Math.min(620, Math.max(420, window.innerWidth * 0.42)));
+  apply(initial, false);
+  let dragging = false;
+  handle.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    handle.setPointerCapture(e.pointerId);
+    document.body.classList.add('resizing');
+  });
+  handle.addEventListener('pointermove', (e) => { if (dragging) apply(e.clientX, false); });
+  const stop = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove('resizing');
+    apply(e.clientX, true);
+  };
+  handle.addEventListener('pointerup', stop);
+  handle.addEventListener('pointercancel', stop);
+  handle.addEventListener('dblclick', () => apply(Math.round(window.innerWidth * 0.42), true));
+  handle.addEventListener('keydown', (e) => {
+    const cur = parseInt(getComputedStyle(app).getPropertyValue('--side-w'), 10) || initial;
+    if (e.key === 'ArrowLeft') { apply(cur - 40, true); e.preventDefault(); }
+    if (e.key === 'ArrowRight') { apply(cur + 40, true); e.preventDefault(); }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -566,7 +610,8 @@ function init() {
     if (!els.sideSettings.hidden) settingsPanel.render();
     scheduleRender();
   });
-  els.zoom.value = store.state.ui.zoom || 'fit';
+  els.zoom.value = store.state.ui.previewZoom || 'page';
+  setupSplitter();
   els.zoom.addEventListener('change', applyZoom);
   window.addEventListener('resize', debounce(applyZoom, 150));
   window.addEventListener('beforeunload', () => store.flush());
