@@ -106,7 +106,7 @@ export class SettingsPanel {
         }, 'Smazat')));
     });
     const nameInput = h('input', { type: 'text', value: this.profile.name, 'aria-label': 'Název profilu' });
-    card.append(
+    add(card, 
       h('h2', {}, 'Profily nastavení'),
       h('p', { class: 'small muted' }, 'Každý profil má vlastní vzhled, záhlaví a nastavení výstupů (např. „Otevřený turnaj“, „Liga“). Kliknutím na název profil přepnete.'),
       list,
@@ -132,7 +132,7 @@ export class SettingsPanel {
       type: 'text', value: fontKnown ? '' : p.page.fontFamily, placeholder: 'vlastní písmo, např. Roboto',
       oninput: (e) => { if (e.target.value.trim()) this.edit((pp) => { pp.page.fontFamily = e.target.value.trim(); }); },
     });
-    card.append(
+    add(card, 
       h('h2', {}, 'Stránka a písmo'),
       field('Orientace (výchozí pro všechny výstupy)', h('select', {
         onchange: (e) => this.edit((pp) => { pp.page.orientation = e.target.value; }),
@@ -180,7 +180,7 @@ export class SettingsPanel {
         }
       },
     });
-    card.append(
+    add(card, 
       h('h2', {}, 'Záhlaví'),
       check('Zobrazit záhlaví (název, logo, pořadatel)', 'enabled', 'header'),
       text('Nadpis', 'title', 'header', { ph: '{turnaj}' }),
@@ -211,7 +211,7 @@ export class SettingsPanel {
   renderTemplate(card) {
     const tpl = this.getTemplate();
     if (!tpl) {
-      card.append(h('p', { class: 'muted' }, 'Nejdřív vyberte výstup (vlevo v části „Co tisknout“).'));
+      add(card, h('p', { class: 'muted' }, 'Nejdřív vyberte výstup (vlevo v části „Co tisknout“).'));
       return;
     }
     const ts = templateSettings(this.profile, tpl);
@@ -219,7 +219,7 @@ export class SettingsPanel {
       pp.templates[tpl.id] = pp.templates[tpl.id] || {};
       fn(pp.templates[tpl.id]);
     }, opt);
-    card.append(
+    add(card, 
       h('h2', {}, `Výstup: ${tpl.name}`),
       field('Orientace', h('select', { onchange: (e) => setT((t) => { t.orientation = e.target.value; }) },
         options([['inherit', 'podle profilu'], ['portrait', 'na výšku'], ['landscape', 'na šířku']], ts.orientation))),
@@ -247,14 +247,14 @@ export class SettingsPanel {
           h('button', { class: 'btn icon small', type: 'button', title: 'Nahoru', disabled: i === 0, onclick: () => { const l = current(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; save(l); } }, '↑'),
           h('button', { class: 'btn icon small', type: 'button', title: 'Dolů', disabled: i === cols.length - 1, onclick: () => { const l = current(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; save(l); } }, '↓')));
       });
-      card.append(
+      add(card, 
         h('h3', {}, 'Sloupce'),
         h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, šipkami změníte pořadí, do pole můžete napsat vlastní nadpis.'),
         ul,
         h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
       );
     }
-    card.append(h('p', { class: 'help', style: { marginTop: '12px' } }, 'Volby výstupu (např. zobrazení výsledků) najdete vlevo v části „Možnosti“ – i ty se ukládají do profilu.'));
+    add(card, h('p', { class: 'help', style: { marginTop: '12px' } }, 'Volby výstupu (např. zobrazení výsledků) najdete vlevo v části „Možnosti“ – i ty se ukládají do profilu.'));
   }
 
   // --- Připojení -----------------------------------------------------------
@@ -262,7 +262,7 @@ export class SettingsPanel {
   renderConnection(card) {
     const input = h('input', { type: 'url', value: this.store.state.proxyUrl, placeholder: 'https://chess-print-proxy.vas-ucet.workers.dev' });
     const result = h('div', { class: 'small', style: { marginTop: '6px' } });
-    card.append(
+    add(card, 
       h('h2', {}, 'Připojení k chess-results'),
       h('p', { class: 'small' }, 'chess-results.com nejde z prohlížeče číst přímo (CORS). Appka proto stahuje stránky přes vaši malou proxy na Cloudflare Workers (zdarma). Postup nasazení je v README v sekci „Nasazení proxy“.'),
       field('Adresa proxy (platí pro všechny profily)', input),
@@ -307,7 +307,7 @@ export class SettingsPanel {
     });
     const d = new Date();
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    card.append(
+    add(card, 
       h('h2', {}, 'Záloha nastavení'),
       h('p', { class: 'small' }, 'Nastavení se ukládá v tomto prohlížeči (localStorage). Zálohu do souboru JSON doporučujeme po každé větší úpravě – obsahuje všechny profily, logo, adresu proxy a poslední turnaje.'),
       h('div', { class: 'row wrap' },
@@ -323,6 +323,11 @@ export class SettingsPanel {
       this.store.lastSaveError ? h('p', { class: 'manual-err small' }, 'Pozor: poslední uložení selhalo (plné úložiště prohlížeče?). Zkuste zmenšit logo.') : null,
     );
   }
+}
+
+/** append bez null/false (DOM by jinak vypsal text „null“). */
+function add(el, ...kids) {
+  el.append(...kids.flat().filter((k) => k != null && k !== false));
 }
 
 function field(label, control, inline = false) {

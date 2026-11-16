@@ -133,11 +133,25 @@ function templateFromArt(art, info) {
   return { 0: 'startlist', 1: 'ranking', 2: 'pairings', 3: 'startlist', 4: 'ranking' }[art] || null;
 }
 
+/** Kola, která jsou pro šablonu v mezipaměti (např. ručně vložená). */
+function cachedRounds(tnr, tpl) {
+  const sets = { pairings: ['pairings', 'boards', 'teamPairings'], ranking: ['ranking', 'teamRanking'] }[tpl.roundMode] || [];
+  const out = new Set();
+  for (const k of source.cache.keys()) {
+    const [t, ds, rd] = k.split('|');
+    if (Number(t) === tnr && sets.includes(ds) && rd) out.add(Number(rd));
+  }
+  return [...out];
+}
+
 function reportError(e, tnr, dataset, round) {
   console.error(e);
   const msg = e instanceof FetchError || e.message ? e.message : String(e);
   setStatus('Chyba při stahování', 'error');
   const items = [h('p', {}, '✖ ', msg)];
+  if (dataset && DATASETS[dataset]) {
+    items.push(h('p', {}, `Chybí data: ${DATASETS[dataset].label}${round && DATASETS[dataset].round ? `, ${round}. kolo` : ''}.`));
+  }
   if (e.hint) items.push(h('p', {}, e.hint));
   if (tnr && e instanceof FetchError) {
     const url = buildUrl(tnr, dataset || 'main', round);
@@ -358,6 +372,11 @@ async function refreshPreview({ fresh = false } = {}) {
             pre = { pairings: (await source.get(tnr, 'pairings', 1, { fresh })).data };
           }
           round = autoRound(tpl, info, pre);
+          // Bez proxy (ručně vložená data) vezmeme nejnovější kolo, které je opravdu k dispozici
+          if (!store.state.proxyUrl) {
+            const have = cachedRounds(tnr, tpl);
+            if (have.length && !have.includes(round)) round = Math.max(...have);
+          }
         } else {
           round = session.round;
         }

@@ -1,6 +1,6 @@
 // Registr tiskových šablon.
 // Nový výstup = nový modul se šablonou a jeden řádek v seznamu TEMPLATES.
-// Rozhraní šablony popisuje docs/SABLONY.md.
+// Rozhraní šablony popisuje docs/ARCHITEKTURA.md.
 
 import { pairingsTable, pairingsBoard, pairingsAlpha } from './pairings.js';
 import { startList, ranking, teamRanking, teamRoster } from './lists.js';
