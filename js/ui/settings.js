@@ -2,7 +2,7 @@
 
 import { h, clear, options, downloadText, readFileText, imageToDataUrl } from './dom.js';
 import { resolveColumns } from '../templates/common.js';
-import { templateSettings } from '../store.js';
+import { templateSettings, DEFAULT_PROXY_URL } from '../store.js';
 
 const FONTS = [
   ['Arial, Helvetica, sans-serif', 'Arial'],
@@ -260,26 +260,34 @@ export class SettingsPanel {
   // --- Připojení -----------------------------------------------------------
 
   renderConnection(card) {
-    const input = h('input', { type: 'url', value: this.store.state.proxyUrl, placeholder: 'https://chess-print-proxy.vas-ucet.workers.dev' });
+    const input = h('input', { type: 'url', value: this.store.state.proxyUrl, placeholder: DEFAULT_PROXY_URL });
     const result = h('div', { class: 'small', style: { marginTop: '6px' } });
-    add(card, 
+    const custom = !!String(this.store.state.proxyUrl || '').trim();
+    const save = (value) => {
+      this.store.update((s) => { s.proxyUrl = value; });
+      this.onChange({ proxyChanged: true });
+      this.render();
+    };
+    add(card,
       h('h2', {}, 'Připojení k chess-results'),
-      h('p', { class: 'small' }, 'chess-results.com nejde z prohlížeče číst přímo (CORS). Appka proto stahuje stránky přes vaši malou proxy na Cloudflare Workers (zdarma). Postup nasazení je v README v sekci „Nasazení proxy“.'),
-      field('Adresa proxy (platí pro všechny profily)', input),
-      h('div', { class: 'row' },
-        h('button', { class: 'btn primary', type: 'button', onclick: () => { this.store.update((s) => { s.proxyUrl = input.value.trim(); }); result.textContent = 'Uloženo.'; result.className = 'small manual-ok'; this.onChange({ proxyChanged: true }); } }, 'Uložit'),
+      h('p', { class: 'small' }, 'chess-results.com nejde z prohlížeče číst přímo (CORS), appka proto stahuje stránky přes proxy na Cloudflare Workers. Proxy je součástí appky – nic nastavovat nemusíte.'),
+      h('p', { class: 'help' }, custom ? 'Používá se vlastní proxy: ' : 'Používá se vestavěná proxy: ', h('code', {}, this.store.proxyUrl)),
+      field('Vlastní adresa proxy (prázdné = vestavěná)', input),
+      h('div', { class: 'row wrap' },
+        h('button', { class: 'btn primary', type: 'button', onclick: () => save(input.value.trim()) }, 'Uložit'),
         h('button', {
           class: 'btn', type: 'button',
           onclick: async () => {
             result.textContent = 'Zkouším…';
             result.className = 'small';
-            const r = await this.testProxy(input.value.trim());
+            const r = await this.testProxy(input.value.trim() || DEFAULT_PROXY_URL);
             result.textContent = r.message;
             result.className = `small ${r.ok ? 'manual-ok' : 'manual-err'}`;
           },
-        }, 'Otestovat')),
+        }, 'Otestovat'),
+        custom ? h('button', { class: 'btn', type: 'button', onclick: () => save('') }, 'Použít vestavěnou') : null),
       result,
-      h('p', { class: 'help', style: { marginTop: '12px' } }, 'Pro vývoj lze spustit lokální proxy příkazem „npm run dev“ – adresa je pak http://localhost:8787/proxy.'),
+      h('p', { class: 'help', style: { marginTop: '12px' } }, 'Vlastní proxy se hodí jen při nasazení vlastní kopie appky (návod v worker/README.md). Pro vývoj: „npm run dev“ → http://localhost:8787/proxy.'),
     );
   }
 
