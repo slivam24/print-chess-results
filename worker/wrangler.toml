@@ -4,9 +4,9 @@ main = "worker.js"
 compatibility_date = "2026-11-01"
 
 [vars]
-# Které weby smí proxy používat. "*" = kdokoli. Doporučeno po nasazení omezit,
-# např. "https://slivam24.github.io,http://localhost:8080"
-ALLOWED_ORIGINS = "*"
+# Které weby smí proxy používat (origin = schéma + doména, bez cesty), oddělené čárkou; "*" = kdokoli.
+# Pozor: při nasazení z GitHubu (Workers Builds) tato hodnota přepíše proměnnou z webového rozhraní Cloudflare.
+ALLOWED_ORIGINS = "https://slivam24.github.io,http://localhost:8787"
 # Jak dlouho (v sekundách) držet stažené stránky v cache.
 # Tlačítko „Aktualizovat data“ cache vždy obchází.
 CACHE_SECONDS = "60"

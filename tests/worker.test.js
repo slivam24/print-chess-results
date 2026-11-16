@@ -111,3 +111,17 @@ describe('handle (s podvrženým fetch)', () => {
     assert.equal((await res.text()).length, html.length);
   });
 });
+
+describe('wrangler.toml', () => {
+  test('proxy je omezená na appku (ne "*") a zahrnuje GitHub Pages i lokální vývoj', async () => {
+    const { readFileSync } = await import('node:fs');
+    const toml = readFileSync(new URL('../worker/wrangler.toml', import.meta.url), 'utf8');
+    const m = toml.match(/^ALLOWED_ORIGINS\s*=\s*"([^"]*)"/m);
+    assert.ok(m, 'ALLOWED_ORIGINS chybí');
+    const list = m[1].split(',').map((s) => s.trim());
+    assert.ok(!list.includes('*'), 'ALLOWED_ORIGINS nesmí být "*"');
+    assert.ok(list.includes('https://slivam24.github.io'));
+    assert.ok(list.includes('http://localhost:8787'));
+    assert.match(toml, /^name\s*=\s*"chess-print-proxy"/m);
+  });
+});
