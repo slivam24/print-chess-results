@@ -181,7 +181,11 @@ Výsledky kola a křížová tabulka jsou připravené k doplnění jako další
 
 - Vše se ukládá do `localStorage` prohlížeče (na jednom počítači a v jednom prohlížeči).
 - **Export zálohy** uloží JSON se všemi profily, logem, adresou proxy a posledními turnaji. **Import** vše nahradí obsahem zálohy.
-- Při přechodu na jiný počítač: export → import.
+- **Přenos profilů na jiný počítač** (⚙ Nastavení → Profily): „⬇ Export“ u profilu uloží jeden profil, „Exportovat
+  všechny profily“ všechny. Na druhém počítači „Importovat profily ze souboru…“ – profily se **přidají** ke stávajícím;
+  když tam stejný profil už je (podle předchozího přenosu nebo stejného názvu), **aktualizuje se**. Ostatní nastavení
+  (adresa proxy, poslední turnaje) zůstane. Před importem appka ukáže, co se přidá a co přepíše.
+- Celá záloha (⚙ Nastavení → Záloha) naopak při obnově nahradí úplně všechno.
 - Volby výstupů (např. „8 lístků na stránku“) se ukládají do aktivního profilu, takže liga a open mohou mít jiné.
 
 ---
