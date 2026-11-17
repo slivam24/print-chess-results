@@ -116,6 +116,8 @@ table.grid.sym { table-layout: fixed; }
 table.grid.sym td, table.grid.sym th { overflow: hidden; }
 /* Nadpis sloupce se v pevném rozložení raději zalomí, než aby byl oříznutý */
 table.grid.sym th, .nowrap-cells table.grid.sym th { white-space: normal; overflow-wrap: anywhere; }
+/* Tabulky „one-line“ (rozpis šachovnic): nic se nezalamuje, co se nevejde, skončí třemi tečkami */
+table.grid.sym.one-line th, table.grid.sym.one-line td, .nowrap-cells table.grid.sym.one-line th { white-space: nowrap; overflow-wrap: normal; text-overflow: ellipsis; }
 .nowrap-cells table.grid th, .nowrap-cells table.grid td { white-space: nowrap; }
 table.grid .res { font-weight: 700; white-space: nowrap; }
 table.grid .bye { font-style: italic; color: var(--grey); font-weight: 400; }
@@ -162,10 +164,8 @@ table.board-pairings .res { color: var(--grey); font-weight: 400; }
   border-bottom: 0;
   font-size: 1.1em;
 }
-.match-head .m-no { font-size: .85em; font-weight: 600; color: var(--ink); white-space: nowrap; }
-.match-head .m-team { flex: 1; font-weight: 700; }
-.match-head .m-team:last-child { text-align: right; }
-.match-head .m-vs { font-weight: 700; min-width: 12mm; text-align: center; }
+.match-head .m-no { font-weight: 700; color: var(--ink); white-space: nowrap; }
+.match-head .m-score { margin-left: auto; font-weight: 700; white-space: nowrap; }
 table.boards { border: .5pt solid #aaa; }
 table.boards td.write { border-left: .3pt solid #bbb; border-right: .3pt solid #bbb; }
 table.boards tr.total-row td { border-bottom: 0; background: #fff; font-size: .9em; }

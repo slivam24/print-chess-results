@@ -204,11 +204,10 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
     const boards = m.boards && m.boards.length ? m.boards : blankBoards(nBoards);
     const played = opts.showResults && matchPlayed(m);
     const mc = matchCols(cols, m);
+    // Názvy družstev jsou v hlavičce tabulky – nad ní stačí kolo a číslo zápasu (a skóre, je-li odehráno)
     const head = `<div class="match-head">
         <span class="m-no">Kolo ${esc(round.round ?? rq)}, Zápas ${esc(m.no ?? i + 1)}</span>
-        <span class="m-team">${esc(m.home?.name || '')}</span>
-        <span class="m-vs">${played ? esc(scoreText(m)) : '–'}</span>
-        <span class="m-team">${esc(m.away?.name || '')}</span>
+        ${played ? `<span class="m-score">${esc(scoreText(m))}</span>` : ''}
       </div>`;
     const rows = boards.map((b) => bodyRow(mc, b, ctx));
     if (!played) {
@@ -219,7 +218,8 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
     if (opts.matchPerPage && !(first && i === 0)) headBlock.breakBefore = true;
     else if (!(first && i === 0)) headBlock.spaceBefore = Math.max(0, Number(opts.matchGap) || 0);
     blocks.push(headBlock);
-    blocks.push({ type: 'table', className: 'grid boards sym', colgroup: colgroup(mc), thead: theadRow(mc), rows, keepTogether: true });
+    // one-line: názvy družstev i jména hráčů na jeden řádek (při „max. písmu“ se písmo zmenší, aby se vešly)
+    blocks.push({ type: 'table', className: 'grid boards sym one-line', colgroup: colgroup(mc), thead: theadRow(mc), rows, keepTogether: true });
     if (opts.signatures !== false) {
       blocks.push({ type: 'html', html: `<div class="signs three"><div class="sign">Kapitán – ${esc(m.home?.name || 'domácí')}</div><div class="sign">Kapitán – ${esc(m.away?.name || 'hosté')}</div><div class="sign">Rozhodčí</div></div>` });
     }
