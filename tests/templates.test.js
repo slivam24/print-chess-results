@@ -648,3 +648,9 @@ describe('automatická aktualizace', () => {
     assert.deepEqual(files, ['https://example.github.io/app/js/main.js', 'https://example.github.io/app/css/app.css']);
   });
 });
+
+test('rozpis šachovnic: řádek celkového skóre bez popisku „celkem“', () => {
+  const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: defaultProfile(), round: 3 });
+  const rows = doc.blocks.filter((b) => b.type === 'table').flatMap((b) => b.rows).join('');
+  assert.doesNotMatch(rows, /celkem/);
+});

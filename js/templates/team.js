@@ -211,7 +211,8 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
       </div>`;
     const rows = boards.map((b) => bodyRow(mc, b, ctx));
     if (!played) {
-      const total = mc.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : c.key === 'home' || c.key === 'away' ? '<td class="r muted">celkem</td>' : '<td></td>'));
+      // Řádek pro celkové skóre zápasu (jen dvojtečka ve sloupci výsledků)
+      const total = mc.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : '<td></td>'));
       rows.push(`<tr class="total-row">${total.join('')}</tr>`);
     }
     const headBlock = { type: 'html', html: head, keepWithNext: true };
