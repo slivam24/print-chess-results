@@ -214,7 +214,7 @@ function measureAndPack(host, blocks, o) {
   }
   const measured = measureBlocks(probeFirst.cols[0], blocks);
   const pages = pack(measured, { capFirst, capOther, columns: o.columns || 1, gap: measured.gap });
-  return { pages, capFirst, capOther, overflowX: measured.overflowX };
+  return { pages, capFirst, capOther, overflowX: measured.overflowX, measured };
 }
 
 /**
@@ -229,6 +229,8 @@ export function layoutDocument(target, blocks, o) {
 
   if (o.fit && o.fit.enabled) {
     opts = fitToOnePage(host, blocks, o);
+  } else if (o.fitPage && o.fitPage.enabled) {
+    opts = fitPageWithRows(host, blocks, o);
   } else if (o.fitWidth && o.fitWidth.enabled) {
     opts = fitToWidth(host, blocks, o);
   }
@@ -251,7 +253,7 @@ export function layoutDocument(target, blocks, o) {
     });
     target.appendChild(page);
   });
-  return { pageCount: total, fontSize: opts.fontSize, columns: opts.columns };
+  return { pageCount: total, fontSize: opts.fontSize, columns: opts.columns, rowHeight: opts.rowHeight || null };
 }
 
 /** Najde největší písmo (a případně počet sloupců), při kterém se vše vejde na 1 stránku. */
@@ -299,6 +301,59 @@ function fitToWidth(host, blocks, o) {
     if (fits(mid)) lo = mid; else hi = mid;
   }
   return { ...o, fontSize: lo };
+}
+
+const PX_PER_MM = 96 / 25.4;
+
+/**
+ * Vše na jednu stránku: největší písmo (nejvýš maxPt), při kterém se všechny sloupce vejdou
+ * na šířku a celý výstup na jednu stránku. Zbylé místo dole pak vyplní vyšší řádky tabulek
+ * (nejvýš maxRowFactor× přirozené výšky, aby pár řádků nebylo přes celou stránku).
+ */
+function fitPageWithRows(host, blocks, o) {
+  const minPt = o.fitPage.minPt || 6;
+  const maxPt = Math.max(minPt, o.fitPage.maxPt || 20);
+  // Nevejde-li se výstup na jednu stránku ani při nejmenším písmu, hledá se co největší písmo
+  // pro nejmenší možný počet stránek (ten, který dává nejmenší písmo)
+  const atMin = measureAndPack(host, blocks, { ...o, fontSize: minPt });
+  const maxPages = Math.max(1, atMin.pages.length);
+  const ok = (opts, limit = 1) => {
+    const r = measureAndPack(host, blocks, opts);
+    return r.pages.length <= limit && !r.overflowX;
+  };
+  // 1) Písmo
+  let font = minPt;
+  if (ok({ ...o, fontSize: maxPt }, maxPages)) font = maxPt;
+  else {
+    let lo = minPt;
+    let hi = maxPt;
+    while (hi - lo > 0.25) {
+      const mid = Math.round(((lo + hi) / 2) * 4) / 4;
+      if (ok({ ...o, fontSize: mid }, maxPages)) lo = mid; else hi = mid;
+    }
+    font = lo;
+  }
+  const base = { ...o, fontSize: font };
+  if (maxPages > 1) return base;
+  // 2) Výška řádků: přirozená výška řádku (nejvyšší z tabulek) → co nejvyšší, aby to pořád byla 1 stránka
+  const r0 = measureAndPack(host, blocks, base);
+  const rows = r0.measured.flatMap((m) => m.rowH || []);
+  if (!rows.length || r0.pages.length > 1) return base;
+  const natural = Math.max(...rows) / PX_PER_MM; // mm
+  const start = Math.max(natural, Number(o.rowHeight) || 0);
+  const maxRow = Math.max(start, natural * (o.fitPage.maxRowFactor || 2.5));
+  if (!ok({ ...base, rowHeight: Math.round(start * 10) / 10 })) return base;
+  let lo = start;
+  let hi = maxRow;
+  if (ok({ ...base, rowHeight: Math.round(hi * 10) / 10 })) lo = hi;
+  else {
+    while (hi - lo > 0.1) {
+      const mid = (lo + hi) / 2;
+      if (ok({ ...base, rowHeight: Math.round(mid * 10) / 10 })) lo = mid; else hi = mid;
+    }
+  }
+  const rowHeight = Math.floor(lo * 10) / 10;
+  return rowHeight > natural + 0.05 ? { ...base, rowHeight } : base;
 }
 
 /** CSS pravidlo @page pro tisk dané orientace. */

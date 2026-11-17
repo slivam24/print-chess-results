@@ -346,6 +346,17 @@ describe('okraje a písmo „co největší“', () => {
     const board = buildDocument({ tpl: getTemplate('pairings-board'), info: swiss.info, data: swiss.data, profile: p, round: 7 });
     assert.equal(board.layout.fitWidth, undefined);
   });
+  test('režim „1 strana A4“ zapne hledání písma i výšky řádků na jednu stránku; nástěnku nemění', () => {
+    const p = defaultProfile();
+    p.templates.ranking = { fontMode: 'page', fontMax: 18 };
+    const doc = buildDocument({ tpl: getTemplate('ranking'), info: swiss.info, data: swiss.data, profile: p, round: 6 });
+    assert.deepEqual(doc.layout.fitPage, { enabled: true, minPt: 6, maxPt: 18, maxRowFactor: 2.5 });
+    assert.equal(doc.layout.fitWidth, undefined);
+    assert.match(doc.layout.docClass, /nowrap-cells/);
+    p.templates['pairings-board'] = { fontMode: 'page' };
+    assert.equal(buildDocument({ tpl: getTemplate('pairings-board'), info: swiss.info, data: swiss.data, profile: p, round: 7 }).layout.fitPage, undefined);
+    assert.equal(templateSettings(p, getTemplate('ranking')).fontMode, 'page');
+  });
 });
 
 describe('symetrické šířky sloupců v tabulkách s dvojicemi', () => {

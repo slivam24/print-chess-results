@@ -384,8 +384,9 @@ export function templateSettings(profile, tpl) {
     orientation: saved.orientation || 'inherit',
     fontSize: saved.fontSize ?? null,
     rowHeight: Number(saved.rowHeight) > 0 ? Number(saved.rowHeight) : null,
-    // 'fixed' = pevná velikost; 'max' = co největší písmo, při kterém se všechny sloupce vejdou na šířku
-    fontMode: saved.fontMode === 'max' ? 'max' : 'fixed',
+    // 'fixed' = pevná velikost; 'max' = co největší písmo, při kterém se všechny sloupce vejdou na šířku;
+    // 'page' = navíc vše na jednu stránku (písmo i výška řádků co největší)
+    fontMode: ['max', 'page'].includes(saved.fontMode) ? saved.fontMode : 'fixed',
     fontMax: Number(saved.fontMax) > 0 ? Number(saved.fontMax) : 20,
     pageColumns: saved.pageColumns ?? (tpl.defaults && tpl.defaults.columns) ?? 1,
     options: opts,
