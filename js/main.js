@@ -62,6 +62,20 @@ function showWarnings(list, kind = '') {
   els.warnings.hidden = false;
 }
 
+/** Výstupy pro turnaj bez těch, které má aktivní profil schované. */
+function visibleTemplates(info) {
+  const hidden = new Set(store.profile.hiddenTemplates || []);
+  const list = templatesFor(info).filter((t) => !hidden.has(t.id));
+  return list.length ? list : templatesFor(info);
+}
+
+/** Když je zvolený výstup schovaný nebo nepodporovaný, přepne na první viditelný. */
+function ensureVisibleTemplate() {
+  if (!session.rootInfo) return;
+  const vis = visibleTemplates(session.rootInfo);
+  if (!vis.some((t) => t.id === session.templateId)) session.templateId = vis[0].id;
+}
+
 function currentTemplate() {
   const t = getTemplate(session.templateId);
   if (t && session.rootInfo && !t.supports(session.rootInfo)) return null;
@@ -110,7 +124,7 @@ async function loadTournament(input, { fresh = false, fromSnapshot = false } = {
       if (hint) session.templateId = hint;
     }
     if (!getTemplate(session.templateId) || !getTemplate(session.templateId).supports(info)) {
-      session.templateId = templatesFor(info)[0].id;
+      session.templateId = visibleTemplates(info)[0].id;
     }
     // Před zveřejněním losu (a ne u kruhového systému, kde je los znám předem) začneme seznamy
     const tpl0 = getTemplate(session.templateId);
@@ -233,8 +247,9 @@ function renderTemplateList() {
   clear(els.tplList);
   const info = session.rootInfo;
   if (!info) { els.tplList.append(h('p', { class: 'muted small' }, 'Nejdřív stáhněte turnaj.')); return; }
+  ensureVisibleTemplate();
   let lastGroup = null;
-  for (const t of templatesFor(info)) {
+  for (const t of visibleTemplates(info)) {
     if (t.group !== lastGroup) {
       els.tplList.append(h('div', { class: 'tpl-group' }, t.group));
       lastGroup = t.group;
@@ -253,7 +268,38 @@ function renderTemplateList() {
   renderOptions();
 }
 
+/** Rychlé přepnutí orientace a písma „co největší“ přímo nad náhledem (ukládá se do profilu). */
+function renderQuickLayout() {
+  const box = $('#quick-layout');
+  if (!box) return;
+  clear(box);
+  const tpl = currentTemplate();
+  if (!tpl || !session.rootInfo) return;
+  const ts = templateSettings(store.profile, tpl);
+  const orient = ts.orientation && ts.orientation !== 'inherit' ? ts.orientation : store.profile.page.orientation;
+  const isMax = ts.fontMode === 'max';
+  const set = (orientation) => {
+    const active = isMax && orient === orientation;
+    store.update((s) => {
+      const p = s.profiles.find((x) => x.id === s.activeProfileId);
+      p.templates[tpl.id] = p.templates[tpl.id] || {};
+      p.templates[tpl.id].orientation = orientation;
+      p.templates[tpl.id].fontMode = active ? 'fixed' : 'max';
+    }, { silent: true });
+    renderQuickLayout();
+    if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
+    scheduleRender();
+  };
+  const btn = (orientation, icon, label) => h('button', {
+    type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(isMax && orient === orientation),
+    title: isMax && orient === orientation ? 'Kliknutím vrátíte pevnou velikost písma' : `Přepnout ${label.toLowerCase()} a zvětšit písmo na maximum`,
+    onclick: () => set(orientation),
+  }, `${icon} ${label} · max. písmo`);
+  box.append(btn('portrait', '↕', 'Na výšku'), btn('landscape', '↔', 'Na šířku'));
+}
+
 function renderOptions() {
+  renderQuickLayout();
   clear(els.options);
   const tpl = currentTemplate();
   const info = session.rootInfo;
@@ -596,6 +642,8 @@ function init() {
     onChange: (ev = {}) => {
       renderProfileSelect();
       if (ev.proxyChanged) renderRecent();
+      // nabídka výstupů a rychlá tlačítka se mohla změnit (schované výstupy, orientace, písmo)
+      if (session.rootInfo) renderTemplateList();
       scheduleRender();
     },
   });
@@ -608,7 +656,7 @@ function init() {
   els.btnSettings.addEventListener('click', () => (els.sideSettings.hidden ? openSettings() : closeSettings()));
   els.profileSelect.addEventListener('change', (e) => {
     store.setActiveProfile(e.target.value);
-    renderOptions();
+    renderTemplateList();
     if (!els.sideSettings.hidden) settingsPanel.render();
     scheduleRender();
   });

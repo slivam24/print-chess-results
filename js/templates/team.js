@@ -92,11 +92,11 @@ const BOARD_COLUMNS = [
   { key: 'board', label: 'Š.', cls: 'c num strong', width: '2.4em', get: (b) => esc(b.board ?? '') },
   { key: 'homeColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.home.color) },
   { key: 'home', label: 'Domácí', cls: 'name', get: (b, ctx) => playerHtml(b.home, ctx) },
-  { key: 'homeRating', label: 'Elo', cls: 'r num', width: SYM_W.rating, get: (b) => fmtRating(b.home.rating) },
+  { key: 'homeRating', label: 'Elo', cls: 'c num', width: SYM_W.rating, get: (b) => fmtRating(b.home.rating) },
   { key: 'result', label: 'Výsledek', cls: 'c res write', width: '5.5em', get: (b, ctx) => (ctx.opts.showResults ? esc(fmtResult(b.result)) : '') },
   { key: 'awayColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.away.color) },
   { key: 'away', label: 'Hosté', cls: 'name', get: (b, ctx) => playerHtml(b.away, ctx) },
-  { key: 'awayRating', label: 'Elo', cls: 'r num', width: SYM_W.rating, get: (b) => fmtRating(b.away.rating) },
+  { key: 'awayRating', label: 'Elo', cls: 'c num', width: SYM_W.rating, get: (b) => fmtRating(b.away.rating) },
 ];
 
 /** Doplní rating a titul hráčů ze soupisek (stránka šachovnic rating neuvádí). */

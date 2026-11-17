@@ -133,7 +133,8 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 1. Ve Swiss-Manageru vylosujte kolo a nahrajte ho na chess-results.
 2. V appce zadejte **číslo turnaje** (např. `1495793`) nebo vložte **odkaz** z chess-results a klikněte **Stáhnout**.
    Odkaz na konkrétní stránku (např. `…art=2&rd=7`) rovnou předvybere výstup a kolo. Poslední turnaje jsou pod polem jako štítky.
-3. Vyberte **co tisknout** – náhled se zobrazí vpravo. Šířku levého panelu změníte tažením svislé lišty mezi panelem
+3. Vyberte **co tisknout** – náhled se zobrazí vpravo. Tlačítky **↕ Na výšku · max. písmo** a **↔ Na šířku · max. písmo**
+   nad náhledem jedním klikem přepnete orientaci a písmo zvětšíte na maximum (opětovným klikem zpět na pevné písmo). Šířku levého panelu změníte tažením svislé lišty mezi panelem
    a náhledem (dvojklik = výchozí šířka); náhled ukazuje celou stránku, větší zobrazení vyberete v „Zvětšení“. Kolo je ve výchozím stavu **automaticky** poslední vylosované.
 4. **🖨 Tisknout** (nebo `Ctrl+P`). V tiskovém dialogu nechte měřítko 100 % a okraje „Výchozí“.
 5. Po nahrání výsledků a dalšího losu klikněte **⟳ Aktualizovat data** a tiskněte znovu.
@@ -170,6 +171,8 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 | **Pořadí družstev** | družstva | po kole, vysvětlivky |
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
+Méně používané výstupy (kdo kde hraje, rozhodcovský list, výsledkové lístky) jsou ve výchozím stavu schované – zapnete je
+v ⚙ Nastavení → Nabídka výstupů.
 Ratingy: chess-results u některých turnajů uvádí jen jeden sloupec „Rtg“ (bez rozlišení národní/mezinárodní) – appka ho pak
 zobrazí jako „Rtg“; oba sloupce NRtg a IRtg se objeví, když je chess-results nabízí. Ve výchozím stavu je chess-results
 nezobrazuje – zobrazení obou ratingů je potřeba pro turnaj povolit (při nahrávání ze Swiss-Manageru / v nastavení turnaje).

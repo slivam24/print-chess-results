@@ -369,3 +369,26 @@ describe('volno bez čísla šachovnice (jako Swiss-Manager)', () => {
     });
   }
 });
+
+describe('los kola: sloupec Výs., čísla na střed, schované výstupy', () => {
+  test('sloupec výsledku se jmenuje „Výs.“ a před kolem má pomlčku, u volna nic', () => {
+    const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile: defaultProfile(), round: 7 });
+    const t = doc.blocks[0];
+    assert.match(t.thead, /<th class="c res">Výs\.<\/th>/);
+    assert.ok(t.rows.filter((r) => !/class="bye"/.test(r)).every((r) => /<td class="c res">–<\/td>/.test(r)));
+    assert.ok(t.rows.filter((r) => /class="bye"/.test(r)).every((r) => /<td class="c res"><\/td>/.test(r)));
+  });
+  test('s volbou „Zobrazit výsledky“ je ve sloupci výsledek', () => {
+    const p = defaultProfile();
+    p.templates.pairings = { options: { showResults: true } };
+    const data = { ...swiss.data, pairings: parsePairings(fixture('swiss-pairings-r6')) };
+    const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data, profile: p, round: 6 });
+    assert.match(doc.blocks[0].rows[0], /<td class="c res">0 – 1<\/td>/);
+  });
+  test('žádný číselný sloupec není zarovnaný vpravo', () => {
+    for (const t of TEMPLATES) for (const c of t.columns || []) assert.doesNotMatch(c.cls || '', /\br\b/, `${t.id}.${c.key}`);
+  });
+  test('výchozí profil schovává kdo kde hraje, rozhodcovský list a výsledkové lístky', () => {
+    assert.deepEqual(defaultProfile().hiddenTemplates.sort(), ['arbiter-sheet', 'pairings-alpha', 'scoresheets']);
+  });
+});
