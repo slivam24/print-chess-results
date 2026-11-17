@@ -18,7 +18,9 @@ const SYNONYMS = {
   club: ['club/city', 'club', 'klub/misto', 'klub', 'oddil', 'verein/ort', 'verein', 'club/ort'],
   points: ['pts.', 'pts', 'points', 'body', 'b.', 'pkt.', 'pkt', 'punkte'],
   result: ['result', 'res.', 'res', 'vysledek', 'vysl.', 'ergebnis', 'erg.'],
-  group: ['gr', 'gr.', 'group', 'skup.', 'skup', 'skupina', 'gruppe', 'typ', 'type', 'kat.', 'kategorie', 'category'],
+  // „Typ“ (U16, S50, …) a „Gr“ (skupina) jsou ve Swiss-Manageru dva různé sloupce
+  type: ['typ', 'type', 'typ hrace', 'spielertyp'],
+  group: ['gr', 'gr.', 'group', 'skup.', 'skup', 'skupina', 'gruppe', 'kat.', 'kategorie', 'category'],
   sex: ['sex', 'pohl.', 'm/f', 's'],
   team: ['team', 'druzstvo', 'mannschaft', 'tym'],
   games: ['games', 'partie', 'partien', 'gam.', 'sp.'],

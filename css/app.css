@@ -279,3 +279,20 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
   .profile-pick select { min-width: 120px; }
   .topbar { flex-wrap: wrap; }
 }
+
+/* Editor kategorií (Pořadí + kategorie) */
+.cat-editor { margin: 6px 0 10px; }
+.cat-head { margin-bottom: 6px; font-size: 13px; }
+.cat-card { border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; margin: 6px 0; background: #fbfcfd; }
+.cat-card.off { opacity: .55; }
+.cat-top { display: flex; gap: 6px; align-items: center; }
+.cat-top .cat-name { flex: 1; min-width: 0; }
+.cat-top .btn { padding: 2px 7px; }
+.cat-dim { display: flex; gap: 8px; align-items: baseline; margin-top: 6px; }
+.cat-dim-label { flex: 0 0 62px; font-size: 12px; color: var(--muted); }
+.cat-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.cat-chip { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: 12px; cursor: pointer; color: var(--ink); }
+.cat-chip:hover { border-color: var(--accent); }
+.cat-chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cat-chip.missing { border-style: dashed; }
+.cat-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }

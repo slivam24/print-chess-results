@@ -94,3 +94,9 @@ test('migrace v5: profil s uloženým seznamem schovaných výstupů schová i n
   const t = normalizeState({ version: 5, profiles: [{ id: 'a', name: 'A', hiddenTemplates: [] }] });
   assert.deepEqual(t.profiles[0].hiddenTemplates, []);
 });
+
+test('migrace v6: startovní listina zapne dřív vypnutý sloupec skupiny', async () => {
+  const { normalizeState } = await import('../js/store.js');
+  const s = normalizeState({ version: 5, profiles: [{ id: 'a', name: 'A', templates: { startlist: { columns: [{ key: 'name' }, { key: 'group', on: false }] } } }] });
+  assert.equal(s.profiles[0].templates.startlist.columns[1].on, true);
+});

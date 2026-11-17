@@ -2,7 +2,7 @@
 // Neobsahuje DOM, takže jde testovat v Node.js.
 
 import { templateSettings } from './store.js';
-import { visibleColumns, renderHeader, renderFooter } from './templates/common.js';
+import { visibleColumns, renderHeader, renderFooter, ratingLabels, ratingPresence } from './templates/common.js';
 
 /** Které kolo použít, když uživatel zvolí „automaticky“. */
 export function autoRound(tpl, info, data = {}) {
@@ -35,7 +35,7 @@ export function datasetsFor(tpl, info, round, opts) {
 export function buildDocument({ tpl, info, data, profile, round, optionsOverride }) {
   const ts = templateSettings(profile, tpl);
   const opts = { ...ts.options, ...(optionsOverride || {}) };
-  const cols = visibleColumns(tpl.columns || [], ts.columns);
+  const cols = ratingLabels(visibleColumns(tpl.columns || [], ts.columns), ratingPresence(data));
   const orientation = ts.orientation && ts.orientation !== 'inherit' ? ts.orientation : profile.page.orientation;
   const page = { orientation, margins: profile.page.margins };
   const out = tpl.render({

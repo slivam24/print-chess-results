@@ -115,7 +115,7 @@ describe('startovní listina', () => {
     assert.equal(players.length, 57);
     assert.deepEqual(players[0], {
       startNo: 1, title: '', name: 'Vavřinec, Tomáš', fideId: 318353, fed: 'CZE', rating: 1960,
-      ratingNat: null, club: 'Klub Šachistů Říčany 1925', group: '', sex: '',
+      ratingNat: null, club: 'Klub Šachistů Říčany 1925', type: '', group: '', sex: '',
     });
     assert.ok(players.every((p) => p.name && p.startNo));
   });
@@ -128,6 +128,18 @@ describe('startovní listina', () => {
     assert.equal(players[1].ratingNat, 2349);
     const groups = new Set(players.map((p) => p.group));
     assert.deepEqual([...groups].sort(), ['Top (A)', 'U1800 (B)']);
+  });
+
+  test('„Typ“ (U16, S50…) a „Gr“ (skupina) jsou dva různé údaje', () => {
+    const { players } = parseStartList(fixture('groups-main'));
+    assert.equal(players[0].type, 'H20');
+    assert.equal(players[0].group, '');
+    const html = '<table class="CRs1"><tr class="CRng1b"><th>Rk.</th><th>SNo</th><th></th><th>Name</th><th>Typ</th><th>sex</th><th>Gr</th><th>Pts.</th></tr>'
+      + '<tr class="CRng1"><td>1</td><td>4</td><td></td><td>Hráč, Jedna</td><td>U16</td><td>w</td><td>A</td><td>5</td></tr></table>';
+    const rk = parseRanking(parseHtml(`<html><body>${html}</body></html>`));
+    assert.equal(rk.rows[0].type, 'U16');
+    assert.equal(rk.rows[0].sex, 'w');
+    assert.equal(rk.rows[0].group, 'A');
   });
 
   test('hráči družstev se šachovnicí', () => {

@@ -114,11 +114,13 @@ export const roundResults = {
   options: [                             // volby ve „3. Možnosti“, ukládají se do profilu
     { key: 'showByes', label: 'Uvést volno', type: 'bool', def: true },
     // type: 'bool' | 'select' (choices: [[hodnota, popisek]]) | 'number' (min, max) | 'text' | 'category'
+    //       | 'categories' (editor vlastních kategorií: [{ name, types, groups, sex, on }])
   ],
   columns: [                             // sloupce, které si uživatel může přeuspořádat a skrýt
     { key: 'board', label: 'Š.', cls: 'c num', get: (row, ctx) => String(row.board) },
     // def: false = ve výchozím stavu skrytý; hideEmpty: true = skrýt, když je všude prázdný
     // get vrací už escapované HTML (použijte esc() z common.js)
+    // nadpisy sloupců rating*/…Rating (RtgF / RtgN / Elo) nastaví render.js podle zveřejněných ratingů
   ],
   defaults: { orientation: 'portrait', columns: 1 },
   needs: ({ info, round, opts }) => [{ dataset: 'main' }, { dataset: 'pairings', round }],

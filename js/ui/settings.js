@@ -480,6 +480,8 @@ const COLUMN_NAMES = {
   wFed: 'Federace bílého', bFed: 'Federace černého', homeColor: 'Barva domácího', awayColor: 'Barva hosta',
   homeRating: 'Elo domácího', awayRating: 'Elo hosta', homeNo: 'Č. domácích', awayNo: 'Č. hostů',
   check: 'Kontrola (✓)', note: 'Poznámka', startNo: 'Startovní číslo', no: 'Číslo',
+  rating: 'Rating FIDE', ratingNat: 'Národní rating', type: 'Typ hráče (U16, S50…)', group: 'Skupina', sex: 'Pohlaví',
+  rank: 'Pořadí', rankAll: 'Celkové pořadí (u kategorií)',
 };
 
 function describeColumn(def) {

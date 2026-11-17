@@ -3,7 +3,7 @@
 
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
-export const STATE_VERSION = 5;
+export const STATE_VERSION = 6;
 
 /**
  * Vestavěná proxy (Cloudflare Worker z worker/worker.js nasazený pro tuto appku).
@@ -95,6 +95,14 @@ export function normalizeProfile(p) {
 export function normalizeState(raw) {
   if (!isObj(raw)) throw new Error('Soubor neobsahuje nastavení appky.');
   const d = defaultState();
+  // Verze < 6: startovní listina nově ukazuje Typ a Skupinu – sloupec „Kat.“, který
+  // dřív býval ve výchozím stavu vypnutý, zapneme (prázdný se stejně skryje)
+  if (raw.version && raw.version < 6) {
+    for (const p of Array.isArray(raw.profiles) ? raw.profiles : []) {
+      const cols = p && p.templates && p.templates.startlist && p.templates.startlist.columns;
+      if (Array.isArray(cols)) for (const c of cols) if (c && c.key === 'group' && c.on === false) c.on = true;
+    }
+  }
   // Verze < 5: schovat i „Los kola – nástěnka“ (jen když profil už měl seznam schovaných výstupů;
   // starší profily bez něj dostanou celý výchozí seznam)
   if (raw.version && raw.version < 5) {
