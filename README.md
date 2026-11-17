@@ -161,6 +161,13 @@ Průvodce v **⚙ Nastavení → Tisk** připraví vše ke zkopírování:
 - Tiskárnu a nastavení (barva, oboustranně…) si prohlížeč pamatuje z posledního tisku přes dialog – proto jednou vytiskněte
   normálně (Okraje „Výchozí“, Měřítko „Výchozí“). Orientaci a okraje určuje appka podle výstupu.
 
+### Více turnajů najednou (záložky)
+
+Když se hraje víc turnajů současně, každý má v horní liště vlastní **záložku**. Nový turnaj otevřete tlačítkem **+**
+(nebo zadáním dalšího čísla turnaje). Už otevřený turnaj se jen přepne. Každá záložka si pamatuje **svůj profil**
+(vybraný v horní liště), zvolený výstup, kolo a skupinu. Záložky i stažená data zůstanou po zavření prohlížeče.
+Křížkem záložku zavřete.
+
 ### Více skupin / turnajů
 
 Pokud má turnaj na chess-results „Výběr turnaje“ (např. A/B/C, H18+H20 a D18+D20, ligy), objeví se výběr **Skupina / turnaj**

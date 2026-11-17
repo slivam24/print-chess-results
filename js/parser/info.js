@@ -26,7 +26,9 @@ function parseTitle(doc) {
   let title = text(h2);
   // Na stránce bez detailů je první h2 přímo název seznamu – zkusíme <title>.
   const docTitle = text(doc.querySelector('title'));
-  const fromTitle = docTitle.replace(/^.*?chess-results\.com\s*-\s*/i, '').trim();
+  let fromTitle = docTitle.replace(/^.*?chess-results\.com\s*-\s*/i, '').trim();
+  // Obecný název serveru (např. stránka „Record not found“) není název turnaje
+  if (/^(tournament-?database|turnier-?datenbank|datab[aá]ze turnaj[uů])$/i.test(fromTitle)) fromTitle = '';
   if (!title || (fromTitle && !doc.querySelector('td.CRnowrap'))) title = fromTitle || title;
   return title;
 }
@@ -93,6 +95,8 @@ export function parseInfo(doc, { tnr } = {}) {
     lastUpdateText: null,
     groups: [],
     menu: [],
+    // chess-results vrátí obecnou stránku „Record not found“ (turnaj smazaný, skrytý nebo neexistuje)
+    notFound: !doc.querySelector('h2') && /record not found|datensatz nicht gefunden|z[aá]znam (nebyl )?nenalezen/i.test(text(doc.body || doc.documentElement)),
   };
 
   // Informační tabulka: řádky se dvěma buňkami (popisek | hodnota).
