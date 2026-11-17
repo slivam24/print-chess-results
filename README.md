@@ -133,8 +133,11 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 1. Ve Swiss-Manageru vylosujte kolo a nahrajte ho na chess-results.
 2. V appce zadejte **číslo turnaje** (např. `1495793`) nebo vložte **odkaz** z chess-results a klikněte **Stáhnout**.
    Odkaz na konkrétní stránku (např. `…art=2&rd=7`) rovnou předvybere výstup a kolo. Poslední turnaje jsou pod polem jako štítky.
-3. Vyberte **co tisknout** – náhled se zobrazí vpravo. Tlačítky **↕ Na výšku · max. písmo** a **↔ Na šířku · max. písmo**
-   nad náhledem jedním klikem přepnete orientaci a písmo zvětšíte na maximum (opětovným klikem zpět na pevné písmo). Šířku levého panelu změníte tažením svislé lišty mezi panelem
+3. Vyberte **co tisknout** – náhled se zobrazí vpravo. Tlačítka nad náhledem jedním klikem přepnou orientaci a velikost
+   (opětovným klikem zpět na pevné písmo):
+   **Max. písmo ↕ / ↔** – co největší písmo, aby se vešly všechny sloupce (tabulka může pokračovat na další stránce);
+   **1 strana A4 ↕ / ↔** – písmo i výška řádků co největší, aby se vše vešlo na jednu stránku A4 a vyplnilo ji
+   (když se výstup nevejde ani při 6 pt, vytiskne se na co nejméně stránek). Šířku levého panelu změníte tažením svislé lišty mezi panelem
    a náhledem (dvojklik = výchozí šířka); náhled ukazuje celou stránku, větší zobrazení vyberete v „Zvětšení“. Kolo je ve výchozím stavu **automaticky** poslední vylosované.
 4. **🖨 Tisknout** (nebo `Ctrl+P`). V tiskovém dialogu nechte měřítko 100 % a okraje „Výchozí“.
    Tisk **jedním klikem bez dialogu** si zapnete podle průvodce v ⚙ Nastavení → Tisk (viz níže).

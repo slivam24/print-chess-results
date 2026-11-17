@@ -66,6 +66,11 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     layout.fitWidth = { enabled: true, minPt: 6, maxPt: ts.fontMax };
     layout.docClass = `${layout.docClass} nowrap-cells`.trim();
   }
+  // „Na 1 stránku“: písmo i výška řádků co největší, aby se vše vešlo na jednu stránku A4
+  if (ts.fontMode === 'page' && !(extra.fit && extra.fit.enabled)) {
+    layout.fitPage = { enabled: true, minPt: 6, maxPt: ts.fontMax, maxRowFactor: 2.5 };
+    layout.docClass = `${layout.docClass} nowrap-cells`.trim();
+  }
   if (extra.header === null) layout.header = null;
   if (extra.footer === null) layout.footer = null;
   return { ...out, layout, opts };

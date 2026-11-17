@@ -278,25 +278,39 @@ function renderQuickLayout() {
   if (!tpl || !session.rootInfo) return;
   const ts = templateSettings(store.profile, tpl);
   const orient = ts.orientation && ts.orientation !== 'inherit' ? ts.orientation : store.profile.page.orientation;
-  const isMax = ts.fontMode === 'max';
-  const set = (orientation) => {
-    const active = isMax && orient === orientation;
+  // mode: 'max' = co největší písmo (tabulka může pokračovat), 'page' = vše na 1 stránku A4 (písmo i výška řádků)
+  const set = (orientation, mode) => {
+    const active = ts.fontMode === mode && orient === orientation;
     store.update((s) => {
       const p = s.profiles.find((x) => x.id === s.activeProfileId);
       p.templates[tpl.id] = p.templates[tpl.id] || {};
       p.templates[tpl.id].orientation = orientation;
-      p.templates[tpl.id].fontMode = active ? 'fixed' : 'max';
+      p.templates[tpl.id].fontMode = active ? 'fixed' : mode;
     }, { silent: true });
     renderQuickLayout();
     if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
     scheduleRender();
   };
-  const btn = (orientation, icon, label) => h('button', {
-    type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(isMax && orient === orientation),
-    title: isMax && orient === orientation ? 'Kliknutím vrátíte pevnou velikost písma' : `Přepnout ${label.toLowerCase()} a zvětšit písmo na maximum`,
-    onclick: () => set(orientation),
-  }, `${icon} ${label} · max. písmo`);
-  box.append(btn('portrait', '↕', 'Na výšku'), btn('landscape', '↔', 'Na šířku'));
+  const btn = (orientation, mode, icon, label) => {
+    const on = ts.fontMode === mode && orient === orientation;
+    const what = mode === 'page' ? '1 strana A4' : 'max. písmo';
+    const title = on
+      ? 'Kliknutím vrátíte pevnou velikost písma'
+      : mode === 'page'
+        ? `Přepnout ${label.toLowerCase()} a zvětšit písmo i výšku řádků tak, aby se vše vešlo na jednu stránku A4`
+        : `Přepnout ${label.toLowerCase()} a zvětšit písmo na maximum (tabulka může pokračovat na další stránce)`;
+    return h('button', {
+      type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(on), title, 'aria-label': `${label} · ${what}`, onclick: () => set(orientation, mode),
+    }, `${icon} ${label}`);
+  };
+  box.append(
+    h('div', { class: 'quick-group', role: 'group', 'aria-label': 'Max. písmo' },
+      h('span', { title: 'Co největší písmo, aby se vešly všechny sloupce; tabulka může pokračovat na další stránce' }, 'Max. písmo'),
+      btn('portrait', 'max', '↕', 'Na výšku'), btn('landscape', 'max', '↔', 'Na šířku')),
+    h('div', { class: 'quick-group', role: 'group', 'aria-label': '1 strana A4' },
+      h('span', { title: 'Písmo i výška řádků co největší, aby se vše vešlo na jednu stránku A4' }, '1 strana A4'),
+      btn('portrait', 'page', '↕', 'Na výšku'), btn('landscape', 'page', '↔', 'Na šířku')),
+  );
 }
 
 function renderOptions() {
@@ -467,7 +481,13 @@ function layoutAll(docs) {
     pages += res.pageCount;
     orientation = d.layout.orientation;
     for (const w of d.warnings) warnings.push(d.groupName ? `${d.groupName}: ${w}` : w);
-    if (d.layout.fitWidth && d.layout.fitWidth.enabled) {
+    if (d.layout.fitPage && d.layout.fitPage.enabled) {
+      const pt = String(res.fontSize).replace('.', ',');
+      container.dataset.fit = res.pageCount > 1
+        ? `${pt} pt`
+        : `${pt} pt${res.rowHeight ? `, řádek ${String(res.rowHeight).replace('.', ',')} mm` : ''} (1 strana)`;
+      if (res.pageCount > 1) warnings.push(`${d.groupName ? `${d.groupName}: ` : ''}Výstup se nevejde na jednu stránku ani při nejmenším písmu (${d.layout.fitPage.minPt} pt) – je na ${res.pageCount} stránkách s co největším písmem.`);
+    } else if (d.layout.fitWidth && d.layout.fitWidth.enabled) {
       container.dataset.fit = `${String(res.fontSize).replace('.', ',')} pt (co největší)`;
     } else if (d.layout.fit && d.layout.fit.enabled) {
       container.dataset.fit = `${res.fontSize} pt, ${res.columns} sl.`;
