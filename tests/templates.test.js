@@ -630,6 +630,7 @@ describe('družstva: startovní pořadí, všechna kola, rozpis k rozstříhán�
     const r = prefillLineups({ home: { name: 'A' }, away: { name: 'B' }, boards }, players, 2);
     assert.deepEqual(r.filled, ['A']);
     assert.deepEqual(r.match.boards.map((b) => b.home.name), ['A1', 'A2']);
+    assert.deepEqual(r.match.boards.map((b) => b.home.rosterNo), [1, 2]);
     assert.ok(r.match.boards.every((b) => !b.away.name));
     assert.ok(boards.every((b) => !b.home.name)); // původní data se nezmění
   });
@@ -653,4 +654,14 @@ test('rozpis šachovnic: řádek celkového skóre bez popisku „celkem“', ()
   const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: defaultProfile(), round: 3 });
   const rows = doc.blocks.filter((b) => b.type === 'table').flatMap((b) => b.rows).join('');
   assert.doesNotMatch(rows, /celkem/);
+});
+
+test('rozpis šachovnic: sloupec s pořadím na soupisce u obou družstev', () => {
+  const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: defaultProfile(), round: 3 });
+  const t = doc.blocks.find((b) => b.type === 'table');
+  assert.equal((t.thead.match(/>Soup\.</g) || []).length, 2);
+  // hráči ze zveřejněné sestavy dostanou pořadí ze soupisky
+  const m = team.data.boards.rounds[0].matches[0];
+  const p = team.data.teamPlayers.players.find((x) => x.team === m.home.name && x.name === m.boards[0].home.name);
+  if (p && p.board != null) assert.match(t.rows[0], new RegExp(`<td class="c num">${p.board}</td>`));
 });
