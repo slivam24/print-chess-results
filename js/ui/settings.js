@@ -4,6 +4,7 @@ import { h, clear, options, downloadText, readFileText, imageToDataUrl } from '.
 import { resolveColumns } from '../templates/common.js';
 import { templateSettings, DEFAULT_PROXY_URL } from '../store.js';
 import { TEMPLATES } from '../templates/index.js';
+import { renderPrintSetup } from './printSetup.js';
 
 const FONTS = [
   ['Arial, Helvetica, sans-serif', 'Arial'],
@@ -31,6 +32,7 @@ const TABS = [
   ['header', 'Záhlaví a zápatí'],
   ['template', 'Výstup'],
   ['outputs', 'Nabídka výstupů'],
+  ['print', 'Tisk'],
   ['connection', 'Připojení'],
   ['backup', 'Záloha'],
 ];
@@ -83,6 +85,7 @@ export class SettingsPanel {
       header: () => this.renderHeader(card),
       template: () => this.renderTemplate(card),
       outputs: () => this.renderOutputs(card),
+      print: () => renderPrintSetup(card, { appUrl: `${location.origin}${location.pathname}`, onTestPrint: () => window.print() }),
       connection: () => this.renderConnection(card),
       backup: () => this.renderBackup(card),
     }[this.tab];

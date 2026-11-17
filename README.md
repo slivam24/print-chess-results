@@ -137,6 +137,7 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
    nad náhledem jedním klikem přepnete orientaci a písmo zvětšíte na maximum (opětovným klikem zpět na pevné písmo). Šířku levého panelu změníte tažením svislé lišty mezi panelem
    a náhledem (dvojklik = výchozí šířka); náhled ukazuje celou stránku, větší zobrazení vyberete v „Zvětšení“. Kolo je ve výchozím stavu **automaticky** poslední vylosované.
 4. **🖨 Tisknout** (nebo `Ctrl+P`). V tiskovém dialogu nechte měřítko 100 % a okraje „Výchozí“.
+   Tisk **jedním klikem bez dialogu** si zapnete podle průvodce v ⚙ Nastavení → Tisk (viz níže).
 5. Po nahrání výsledků a dalšího losu klikněte **⟳ Aktualizovat data** a tiskněte znovu.
 
 Appka ukazuje, **kdy byl turnaj na chess-results naposledy aktualizován** a **kdy jste data stáhli**.
@@ -144,6 +145,18 @@ Pokud los zvoleného kola ještě není zveřejněný, zobrazí žluté upozorn�
 Po zavření a otevření prohlížeče se poslední turnaj zobrazí hned z uložených dat (pro aktuální stav klikněte na Aktualizovat).
 
 Tip: odkaz `…/?t=1495793` otevře turnaj rovnou.
+
+### Tisk jedním klikem (bez dialogu)
+
+Webová stránka sama tiskárnu vybrat nesmí, prohlížeč ale umí tisknout bez dialogu na naposledy použitou tiskárnu.
+Průvodce v **⚙ Nastavení → Tisk** připraví vše ke zkopírování:
+
+- **Chrome / Edge:** zástupce, který spustí appku s přepínačem `--kiosk-printing`
+  (např. `"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing "https://slivam24.github.io/print-chess-results/"`).
+  Funguje, jen když prohlížeč předtím úplně zavřete. Kdo Chrome používá i na jiné věci, může zástupce udělat pro Edge.
+- **Firefox:** v `about:config` nastavit `print.always_print_silent` na `true` (platí pro všechny stránky).
+- Tiskárnu a nastavení (barva, oboustranně…) si prohlížeč pamatuje z posledního tisku přes dialog – proto jednou vytiskněte
+  normálně (Okraje „Výchozí“, Měřítko „Výchozí“). Orientaci a okraje určuje appka podle výstupu.
 
 ### Více skupin / turnajů
 
