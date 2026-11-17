@@ -258,11 +258,74 @@ export class Store {
       throw new Error('Soubor není platný JSON.');
     }
     if (raw && raw.app && raw.app !== 'chess-print') throw new Error('Soubor nepochází z této appky.');
+    if (raw && raw.kind === 'profiles') {
+      throw new Error('Toto je soubor s profily – importujte ho v Nastavení → Profily (přidá je ke stávajícím).');
+    }
     const s = normalizeState(raw);
     this.state = s;
     this.flush();
     for (const l of this.listeners) l(this.state);
     return s;
+  }
+
+  // --- Přenos profilů mezi počítači ----------------------------------------
+
+  /** JSON s vybranými profily (bez adresy proxy a posledních turnajů). ids = null → všechny. */
+  exportProfiles(ids = null) {
+    const profiles = this.state.profiles.filter((p) => !ids || ids.includes(p.id));
+    return JSON.stringify({
+      app: 'chess-print', kind: 'profiles', stateVersion: STATE_VERSION, exportedAt: new Date().toISOString(), profiles,
+    }, null, 2);
+  }
+
+  /**
+   * Co by import udělal: u každého profilu ze souboru „replace“ (stejný profil už tu je –
+   * podle id, jinak podle názvu) nebo „add“. Přijme soubor s profily i celou zálohu.
+   */
+  previewProfileImport(text) {
+    let raw;
+    try {
+      raw = JSON.parse(text);
+    } catch {
+      throw new Error('Soubor není platný JSON.');
+    }
+    if (!raw || (raw.app && raw.app !== 'chess-print')) throw new Error('Soubor nepochází z této appky.');
+    if (!Array.isArray(raw.profiles) || !raw.profiles.length) throw new Error('Soubor neobsahuje žádné profily.');
+    // Projdou stejnými převody jako nastavení (starší verze souboru → aktuální)
+    const version = raw.kind === 'profiles' ? raw.stateVersion : raw.version;
+    const { profiles } = normalizeState({ version: version || 1, profiles: JSON.parse(JSON.stringify(raw.profiles)) });
+    const norm = (s) => String(s || '').trim().toLocaleLowerCase('cs');
+    return profiles.map((p) => {
+      const byId = this.state.profiles.find((x) => x.id === p.id);
+      const byName = byId ? null : this.state.profiles.find((x) => norm(x.name) === norm(p.name));
+      const target = byId || byName;
+      return { profile: p, action: target ? 'replace' : 'add', targetId: target ? target.id : null };
+    });
+  }
+
+  /** Přidá / aktualizuje profily ze souboru. Ostatní profily a nastavení zůstanou. */
+  importProfiles(text) {
+    const plan = this.previewProfileImport(text);
+    const result = { added: [], replaced: [] };
+    this.update((s) => {
+      for (const { profile, action, targetId } of plan) {
+        const p = JSON.parse(JSON.stringify(profile));
+        if (action === 'replace') {
+          const i = s.profiles.findIndex((x) => x.id === targetId);
+          // Převezme id ze souboru, aby se příští přenos spároval přímo podle id
+          if (s.profiles.some((x, j) => j !== i && x.id === p.id)) p.id = uid();
+          if (s.activeProfileId === targetId) s.activeProfileId = p.id;
+          s.profiles[i] = p;
+          result.replaced.push(p.name);
+        } else {
+          if (s.profiles.some((x) => x.id === p.id)) p.id = uid();
+          s.profiles.push(p);
+          result.added.push(p.name);
+        }
+      }
+    });
+    this.flush();
+    return result;
   }
 
   reset() {

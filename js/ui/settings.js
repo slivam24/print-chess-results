@@ -98,6 +98,7 @@ export class SettingsPanel {
         h('button', { class: 'btn icon small', type: 'button', title: 'Posunout nahoru', disabled: i === 0, onclick: () => { this.store.moveProfile(p.id, -1); this.render(); } }, '↑'),
         h('button', { class: 'btn icon small', type: 'button', title: 'Posunout dolů', disabled: i === s.profiles.length - 1, onclick: () => { this.store.moveProfile(p.id, 1); this.render(); } }, '↓'),
         h('button', { class: 'btn small', type: 'button', title: 'Vytvořit kopii profilu', onclick: () => { this.store.duplicateProfile(p.id); this.onChange(); this.render(); } }, 'Duplikovat'),
+        h('button', { class: 'btn small', type: 'button', title: 'Uložit profil do souboru (pro jiný počítač)', onclick: () => downloadText(`chess-print-profil-${fileSlug(p.name)}-${today()}.json`, this.store.exportProfiles([p.id])) }, '⬇ Export'),
         h('button', {
           class: 'btn small danger', type: 'button', title: 'Smazat profil', disabled: s.profiles.length <= 1,
           onclick: () => {
@@ -115,6 +116,49 @@ export class SettingsPanel {
       h('h3', {}, 'Přejmenovat aktivní profil'),
       h('div', { class: 'row' }, nameInput,
         h('button', { class: 'btn', type: 'button', onclick: () => { this.store.renameProfile(this.profile.id, nameInput.value); this.onChange(); this.render(); } }, 'Uložit')),
+      this.renderProfileTransfer(),
+    );
+  }
+
+  /** Přenos profilů mezi počítači: export do souboru a import (přidá / aktualizuje). */
+  renderProfileTransfer() {
+    const msg = h('div', { class: 'small', style: { marginTop: '6px' } });
+    const file = h('input', {
+      type: 'file', accept: '.json,application/json',
+      onchange: async (e) => {
+        const f = e.target.files[0];
+        e.target.value = '';
+        if (!f) return;
+        try {
+          const text = await readFileText(f);
+          const plan = this.store.previewProfileImport(text);
+          const lines = plan.map((x) => `• ${x.profile.name} – ${x.action === 'replace' ? 'přepíše stávající profil' : 'přidá se jako nový'}`);
+          if (!confirm(`Importovat profily ze souboru?\n\n${lines.join('\n')}\n\nOstatní profily a nastavení zůstanou beze změny.`)) return;
+          const r = this.store.importProfiles(text);
+          this.onChange();
+          this.render();
+          // render() vytvoří nový panel – zprávu ukážeme v něm
+          const out = this.root.querySelector('.transfer-msg');
+          if (out) {
+            out.textContent = `Hotovo. ${r.added.length ? `Přidáno: ${r.added.join(', ')}. ` : ''}${r.replaced.length ? `Aktualizováno: ${r.replaced.join(', ')}.` : ''}`;
+            out.className = 'small manual-ok transfer-msg';
+          }
+        } catch (err) {
+          msg.textContent = `Import se nepovedl: ${err.message}`;
+          msg.className = 'small manual-err transfer-msg';
+        }
+      },
+    });
+    msg.className = 'small transfer-msg';
+    file.style.display = 'none';
+    file.setAttribute('aria-label', 'Soubor s profily');
+    return h('div', {},
+      h('h3', {}, 'Přenos profilů na jiný počítač'),
+      h('p', { class: 'small muted' }, 'Export uloží profil (vzhled, záhlaví s logem, nastavení výstupů a sloupců) do souboru JSON. Na druhém počítači ho tady importujte – profil se přidá ke stávajícím, a pokud tam stejný profil už je, aktualizuje se. Tlačítko „⬇ Export“ u profilu výše uloží jen ten jeden.'),
+      h('div', { class: 'row wrap' },
+        h('button', { class: 'btn', type: 'button', onclick: () => downloadText(`chess-print-profily-${today()}.json`, this.store.exportProfiles()) }, '⬇ Exportovat všechny profily'),
+        h('label', { class: 'btn', style: { cursor: 'pointer' } }, '⬆ Importovat profily ze souboru…', file)),
+      msg,
     );
   }
 
@@ -382,6 +426,16 @@ function add(el, ...kids) {
 
 function field(label, control, inline = false) {
   return h('label', { class: `field${inline ? ' inline' : ''}` }, label, control);
+}
+
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+/** Název souboru bez diakritiky a mezer. */
+function fileSlug(s) {
+  return String(s || 'profil').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'profil';
 }
 
 function clampNum(v, min, max, def) {
