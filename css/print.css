@@ -135,7 +135,8 @@ table.grid tr.bye-row td { background: #fff; }
 .tbl-grid table.grid thead th { font-weight: 700; color: #000; }
 
 /* Rozhodcovský list – kolonky pro psaní */
-table.arbiter td.write { border-left: .3pt solid #bbb; background: #fff !important; }
+table.arbiter td.write { background: #fff !important; }
+.print-doc:not(.tbl-grid) table.arbiter td.write { border-left: .3pt solid #bbb; }
 table.arbiter tbody tr td { background: #fff; }
 .signs { display: flex; gap: 8mm; justify-content: space-between; align-items: flex-end; margin-top: 6mm; font-size: .9em; }
 .signs .sign { min-width: 50mm; border-top: .5pt solid var(--ink); text-align: center; padding-top: 1mm; margin-top: 10mm; color: var(--grey); }
@@ -166,9 +167,16 @@ table.board-pairings .res { color: var(--grey); font-weight: 400; }
 }
 .match-head .m-no { font-weight: 700; color: var(--ink); white-space: nowrap; }
 .match-head .m-score { margin-left: auto; font-weight: 700; white-space: nowrap; }
-table.boards { border: .5pt solid #aaa; }
-table.boards td.write { border-left: .3pt solid #bbb; border-right: .3pt solid #bbb; }
-table.boards tr.total-row td { border-bottom: 0; background: #fff; font-size: .9em; }
+/* Rozpis šachovnic: rámeček kreslí buňky, aby řádek celkového skóre mohl být bez ohraničení */
+table.grid.boards { border: 0; }
+.print-doc:not(.tbl-grid) table.boards td.write { border-left: .3pt solid #bbb; border-right: .3pt solid #bbb; }
+table.grid.boards thead th { border-top: .8pt solid #000; }
+table.grid.boards tr:not(.total-row) > :first-child { border-left: .8pt solid #000; }
+table.grid.boards tr:not(.total-row) > :last-child { border-right: .8pt solid #000; }
+table.grid.boards tr.last-row td { border-bottom: .8pt solid #000; }
+/* Řádek celkového skóre: jen jeden rámeček pod sloupcem výsledků */
+table.grid.boards tr.total-row td { border: 0 !important; background: transparent !important; }
+table.grid.boards tr.total-row td.res { border: .8pt solid #000 !important; }
 .blank-line { display: inline-block; width: 90%; border-bottom: .4pt dotted #777; height: 1em; }
 
 /* --- Výsledkové lístky ----------------------------------------------- */
