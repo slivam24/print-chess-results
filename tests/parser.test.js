@@ -313,3 +313,12 @@ describe('detekce druhu stránky (ruční vložení)', () => {
     assert.equal(r.empty, true);
   });
 });
+
+describe('neexistující turnaj', () => {
+  test('stránka „Record not found“ se pozná a název serveru se nebere jako název turnaje', () => {
+    const i = parseInfo(fixture('not-found'));
+    assert.equal(i.notFound, true);
+    assert.equal(i.title, '');
+    assert.equal(parseInfo(fixture('swiss-main')).notFound, false);
+  });
+});

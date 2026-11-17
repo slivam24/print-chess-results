@@ -65,7 +65,8 @@ export function defaultState() {
     activeProfileId: open.id,
     profiles: [open, league],
     recent: [],
-    ui: { previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings' },
+    // tabs: otevřené turnaje v horní liště – [{ tnr, title, profileId, templateId, round, group }]
+    ui: { previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings', tabs: [], activeTab: null },
   };
 }
 
@@ -355,22 +356,60 @@ export class Store {
 
   // --- Poslední stažená data (rychlé obnovení po načtení stránky) ---------
 
-  saveSnapshot(tnr, snapshot) {
+  /**
+   * Uloží stažená data turnaje (každý turnaj zvlášť). keep = turnaje, jejichž data se mají
+   * ponechat (otevřené záložky) – data ostatních se smažou, aby nedošlo místo.
+   */
+  saveSnapshot(tnr, snapshot, keep = null) {
+    const st = this.storage;
+    if (!st) return;
+    const value = JSON.stringify({ tnr, savedAt: new Date().toISOString(), data: snapshot });
+    const prune = (all) => {
+      for (const k of snapshotKeys(st)) {
+        const t = Number(k.slice(SNAP_KEY.length + 1));
+        if (t !== tnr && (all || (keep && !keep.includes(t)))) safeRemove(st, k);
+      }
+      if (all || keep) safeRemove(st, SNAP_KEY); // starý formát (jeden turnaj)
+    };
+    prune(false);
     try {
-      this.storage && this.storage.setItem(SNAP_KEY, JSON.stringify({ tnr, savedAt: new Date().toISOString(), data: snapshot }));
+      st.setItem(`${SNAP_KEY}:${tnr}`, value);
     } catch {
-      // Plná kvóta – data se jen nebudou pamatovat, nevadí.
+      // Plná kvóta – uvolníme data ostatních turnajů a zkusíme znovu; jinak se data jen nebudou pamatovat
+      prune(true);
+      try { st.setItem(`${SNAP_KEY}:${tnr}`, value); } catch { /* nevadí */ }
     }
   }
 
-  loadSnapshot() {
+  /** Uložená data turnaje (bez tnr: starý formát s jedním turnajem). */
+  loadSnapshot(tnr = null) {
     try {
-      const raw = this.storage && this.storage.getItem(SNAP_KEY);
-      return raw ? JSON.parse(raw) : null;
+      const raw = this.storage && this.storage.getItem(tnr != null ? `${SNAP_KEY}:${tnr}` : SNAP_KEY);
+      if (raw) return JSON.parse(raw);
+      if (tnr != null) {
+        const old = this.loadSnapshot(null);
+        return old && old.tnr === tnr ? old : null;
+      }
+      return null;
     } catch {
       return null;
     }
   }
+}
+
+function snapshotKeys(st) {
+  const out = [];
+  try {
+    for (let i = 0; i < (st.length || 0); i++) {
+      const k = st.key(i);
+      if (k && k.startsWith(`${SNAP_KEY}:`)) out.push(k);
+    }
+  } catch { /* úložiště bez výčtu klíčů */ }
+  return out;
+}
+
+function safeRemove(st, k) {
+  try { st.removeItem && st.removeItem(k); } catch { /* nevadí */ }
 }
 
 /** Nastavení konkrétní šablony v profilu (sloučené s výchozími hodnotami šablony). */

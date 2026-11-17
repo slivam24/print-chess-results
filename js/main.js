@@ -112,15 +112,35 @@ async function loadTournament(input, { fresh = false, fromSnapshot = false } = {
     if (fresh) source.invalidate(parsed.tnr);
     const main = await source.get(parsed.tnr, 'main', null, { fresh });
     const info = main.info;
-    if (!info.title && !(main.data.players || []).length && !info.menu.length) {
-      throw new FetchError(`Turnaj ${parsed.tnr} se na chess-results nepodařilo najít.`);
+    if (info.notFound || (!info.title && !(main.data.players || []).length && !info.menu.length)) {
+      source.invalidate(parsed.tnr);
+      throw new FetchError(`Turnaj ${parsed.tnr} se na chess-results nepodařilo najít${info.notFound ? ' („Record not found“) – možná byl smazán, skrytý, nebo má nové číslo' : ''}.`);
     }
     const changed = session.tnr !== parsed.tnr;
+    // Jiný turnaj = jiná záložka: uložíme stav té dosavadní a otevřeme / přepneme na záložku turnaje
+    let restored = false;
+    if (changed) {
+      syncTab();
+      const tab = tabList().find((t) => t.tnr === parsed.tnr);
+      if (tab) {
+        applyTab(tab);
+        restored = true;
+      } else {
+        store.update((s) => {
+          s.ui.tabs = [...(s.ui.tabs || []), {
+            tnr: parsed.tnr, title: info.title || '', profileId: s.activeProfileId, templateId: session.templateId, round: 'auto', group: parsed.tnr,
+          }];
+        }, { silent: true });
+      }
+    }
     session.tnr = parsed.tnr;
     session.rootInfo = info;
-    if (changed) {
+    if (changed && !restored) {
       session.group = parsed.tnr;
-      session.round = parsed.rd || 'auto';
+      session.round = 'auto';
+    }
+    if (changed) {
+      if (parsed.rd) session.round = parsed.rd;
       const hint = templateFromArt(parsed.art, info);
       if (hint) session.templateId = hint;
     }
@@ -129,7 +149,7 @@ async function loadTournament(input, { fresh = false, fromSnapshot = false } = {
     }
     // Před zveřejněním losu (a ne u kruhového systému, kde je los znám předem) začneme seznamy
     const tpl0 = getTemplate(session.templateId);
-    if (changed && !parsed.art && !info.lastPairedRound && info.system !== 'roundrobin' && tpl0.roundMode === 'pairings') {
+    if (changed && !restored && !parsed.art && !info.lastPairedRound && info.system !== 'roundrobin' && tpl0.roundMode === 'pairings') {
       session.templateId = info.isTeam ? 'team-roster' : 'startlist';
     }
     if (!fromSnapshot) store.addRecent(parsed.tnr, info.title);
@@ -137,8 +157,10 @@ async function loadTournament(input, { fresh = false, fromSnapshot = false } = {
     renderRecent();
     renderTournamentInfo();
     renderTemplateList();
+    syncTab();
+    renderTabs();
     await refreshPreview({ fresh });
-    if (!fromSnapshot) store.saveSnapshot(parsed.tnr, source.snapshot(parsed.tnr));
+    if (!fromSnapshot) saveSnapshot(parsed.tnr);
   } catch (e) {
     reportError(e, parsed.tnr);
   } finally {
@@ -150,6 +172,123 @@ function templateFromArt(art, info) {
   if (art == null) return null;
   if (info.isTeam) return { 2: 'team-matches', 3: 'team-boards', 46: 'team-ranking', 32: 'team-roster', 16: 'team-roster' }[art] || null;
   return { 0: 'startlist', 1: 'ranking', 2: 'pairings', 3: 'startlist', 4: 'ranking' }[art] || null;
+}
+
+// ---------------------------------------------------------------------------
+// Záložky turnajů (horní lišta): každý otevřený turnaj si pamatuje profil, výstup, kolo a skupinu
+// ---------------------------------------------------------------------------
+
+const EMPTY_PAGES_HTML = els.pages.innerHTML;
+
+function tabList() {
+  return store.state.ui.tabs || [];
+}
+
+/** Uloží stav aktuálního turnaje do jeho záložky. */
+function syncTab() {
+  if (!session.tnr) return;
+  store.update((s) => {
+    const t = (s.ui.tabs || []).find((x) => x.tnr === session.tnr);
+    if (!t) return;
+    Object.assign(t, {
+      templateId: session.templateId,
+      round: session.round,
+      group: session.group,
+      profileId: s.activeProfileId,
+      title: (session.rootInfo && session.rootInfo.title) || t.title,
+    });
+    s.ui.activeTab = session.tnr;
+  }, { silent: true });
+}
+
+/** Nastaví appku podle záložky (profil, výstup, kolo, skupina). */
+function applyTab(tab) {
+  if (tab.profileId && store.state.profiles.some((p) => p.id === tab.profileId)) store.setActiveProfile(tab.profileId);
+  renderProfileSelect();
+  if (tab.templateId && getTemplate(tab.templateId)) session.templateId = tab.templateId;
+  session.round = tab.round ?? 'auto';
+  session.group = tab.group ?? tab.tnr;
+  if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
+}
+
+function saveSnapshot(tnr) {
+  store.saveSnapshot(tnr, source.snapshot(tnr), tabList().map((t) => t.tnr));
+}
+
+/** Přepne na záložku turnaje (data z paměti, z uložených dat, nebo stáhne znovu). */
+async function switchTab(tnr) {
+  if (tnr === session.tnr || session.busy) return;
+  let fromSnapshot = !!source.peek(tnr, 'main');
+  let snap = null;
+  if (!fromSnapshot) {
+    snap = store.loadSnapshot(tnr);
+    if (snap && snap.data) { source.restore(snap.data); fromSnapshot = true; }
+  }
+  await loadTournament({ tnr }, { fromSnapshot });
+  if (snap && session.tnr === tnr && !els.status.classList.contains('error')) {
+    setStatus(`Zobrazena data z ${fmtDateTime(snap.savedAt)} – pro aktuální stav klikněte na „Aktualizovat data“.`);
+  }
+}
+
+function closeTab(tnr) {
+  const list = tabList();
+  const i = list.findIndex((t) => t.tnr === tnr);
+  if (i < 0) return;
+  if (tnr === session.tnr) syncTab();
+  store.update((s) => {
+    s.ui.tabs = s.ui.tabs.filter((t) => t.tnr !== tnr);
+    if (s.ui.activeTab === tnr) s.ui.activeTab = null;
+  }, { silent: true });
+  if (tnr === session.tnr) {
+    const rest = tabList();
+    const next = rest[Math.min(i, rest.length - 1)];
+    showEmpty();
+    if (next) switchTab(next.tnr);
+  }
+  renderTabs();
+}
+
+/** Prázdná plocha – nový turnaj (záložka vznikne po stažení). */
+function showEmpty() {
+  syncTab();
+  session.tnr = null;
+  session.rootInfo = null;
+  session.group = null;
+  session.round = 'auto';
+  session.renderSeq += 1;
+  els.input.value = '';
+  els.pages.innerHTML = EMPTY_PAGES_HTML;
+  els.pages.style.cssText = '';
+  els.pageCount.textContent = '';
+  els.btnPrint.disabled = true;
+  setStatus('');
+  showWarnings([]);
+  renderTournamentInfo();
+  renderTemplateList();
+  renderOptions();
+  renderTabs();
+}
+
+function renderTabs() {
+  const box = $('#tabs');
+  if (!box) return;
+  clear(box);
+  const profName = (id) => (store.state.profiles.find((p) => p.id === id) || store.profile).name;
+  for (const t of tabList()) {
+    const active = t.tnr === session.tnr;
+    const label = t.title || `Turnaj ${t.tnr}`;
+    box.append(h('div', { class: `tab${active ? ' active' : ''}`, role: 'presentation' },
+      h('button', {
+        type: 'button', class: 'tab-main', role: 'tab', 'aria-selected': String(active),
+        title: `${label} (${t.tnr}) · profil ${profName(t.profileId)}`,
+        onclick: () => switchTab(t.tnr),
+      }, h('span', { class: 'tab-title' }, label), h('span', { class: 'tab-prof' }, profName(t.profileId))),
+      h('button', { type: 'button', class: 'tab-close', title: 'Zavřít turnaj', 'aria-label': `Zavřít ${label}`, onclick: () => closeTab(t.tnr) }, '×')));
+  }
+  box.append(h('button', {
+    type: 'button', class: 'tab-new', title: 'Otevřít další turnaj', 'aria-label': 'Otevřít další turnaj',
+    onclick: () => { showEmpty(); els.input.focus(); },
+  }, '+'));
 }
 
 /** Kola, která jsou pro šablonu v mezipaměti (např. ručně vložená). */
@@ -458,6 +597,7 @@ async function loadDatasets(tnr, info, tpl, round, opts, { fresh }) {
 async function refreshPreview({ fresh = false } = {}) {
   const tpl = currentTemplate();
   const seq = ++session.renderSeq;
+  syncTab();
   if (!tpl || !session.rootInfo) return;
   setStatus('Připravuji náhled…', 'loading');
   showWarnings([]);
@@ -503,7 +643,7 @@ async function refreshPreview({ fresh = false } = {}) {
   }
   if (seq !== session.renderSeq) return;
   layoutAll(docs);
-  if (fresh) store.saveSnapshot(session.tnr, source.snapshot(session.tnr));
+  if (fresh) saveSnapshot(session.tnr);
 }
 
 let lastDocs = [];
@@ -557,7 +697,7 @@ async function refreshData() {
     session.rootInfo = main.info;
     renderOptions();
     await refreshPreview({ fresh: true });
-    store.saveSnapshot(session.tnr, source.snapshot(session.tnr));
+    saveSnapshot(session.tnr);
   } catch (e) {
     reportError(e, session.tnr);
   } finally {
@@ -722,6 +862,8 @@ function init() {
     onClose: closeSettings,
     onChange: (ev = {}) => {
       renderProfileSelect();
+      syncTab();
+      renderTabs(); // název profilu v záložce
       if (ev.proxyChanged) renderRecent();
       // nabídka výstupů a rychlá tlačítka se mohla změnit (schované výstupy, orientace, písmo)
       if (session.rootInfo) renderTemplateList();
@@ -738,6 +880,8 @@ function init() {
   els.btnSettings.addEventListener('click', () => (els.sideSettings.hidden ? openSettings() : closeSettings()));
   els.profileSelect.addEventListener('change', (e) => {
     store.setActiveProfile(e.target.value);
+    syncTab();
+    renderTabs();
     renderTemplateList();
     if (!els.sideSettings.hidden) settingsPanel.render();
     scheduleRender();
@@ -753,16 +897,24 @@ function init() {
   renderProfileSelect();
   renderRecent();
 
-  // Odkaz s ?t=číslo otevře turnaj rovnou
+  // Starší verze appky si pamatovala jen jeden turnaj – udělá se z něj záložka
+  if (!tabList().length) {
+    const old = store.loadSnapshot();
+    if (old && old.tnr) {
+      store.update((s) => {
+        s.ui.tabs = [{ tnr: old.tnr, title: '', profileId: s.activeProfileId, templateId: session.templateId, round: 'auto', group: old.tnr }];
+        s.ui.activeTab = old.tnr;
+      }, { silent: true });
+    }
+  }
+  renderTabs();
+  // Odkaz s ?t=číslo otevře turnaj rovnou (v nové záložce, nebo přepne na otevřenou)
   const qp = new URLSearchParams(location.search).get('t');
-  const snap = store.loadSnapshot();
+  const startTab = tabList().find((t) => t.tnr === store.state.ui.activeTab) || tabList()[0];
   if (qp) {
     loadTournament(qp);
-  } else if (snap && snap.tnr && snap.data) {
-    source.restore(snap.data);
-    loadTournament({ tnr: snap.tnr }, { fromSnapshot: true }).then(() => {
-      setStatus(`Zobrazena data z ${fmtDateTime(snap.savedAt)} – pro aktuální stav klikněte na „Aktualizovat data“.`);
-    });
+  } else if (startTab) {
+    switchTab(startTab.tnr);
   }
 }
 

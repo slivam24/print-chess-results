@@ -61,6 +61,21 @@ body.resizing { cursor: col-resize; user-select: none; }
 .brand { font-weight: 700; font-size: 17px; white-space: nowrap; }
 .brand-icon { font-size: 20px; }
 .topbar-spacer { flex: 1; }
+/* Záložky otevřených turnajů */
+.tabs-bar { flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+.tab { display: flex; align-items: stretch; flex: 0 1 auto; min-width: 90px; max-width: 240px; border: 1px solid #44536e; border-radius: 6px; background: transparent; }
+.tab.active { background: #fff; border-color: #fff; }
+.tab-main { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; flex: 1; padding: 3px 4px 3px 9px; border: 0; background: none; color: #dfe6f1; cursor: pointer; font: inherit; text-align: left; }
+.tab-title { font-size: 13px; font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-prof { font-size: 11px; color: #9fb0c8; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab.active .tab-main { color: var(--ink); }
+.tab.active .tab-prof { color: var(--muted); }
+.tab:not(.active):hover { background: #2b3a56; }
+.tab-close { border: 0; background: none; color: #9fb0c8; cursor: pointer; padding: 0 8px; font-size: 16px; line-height: 1; border-radius: 0 6px 6px 0; }
+.tab.active .tab-close { color: var(--muted); }
+.tab-close:hover { color: #fff; background: #a12222; }
+.tab-new { flex: none; width: 30px; height: 30px; border: 1px dashed #5b6c88; border-radius: 6px; background: none; color: #dfe6f1; font-size: 18px; line-height: 1; cursor: pointer; }
+.tab-new:hover { background: #2b3a56; border-style: solid; }
 .profile-pick { display: flex; align-items: center; gap: 8px; color: #c9d3e3; font-size: 13px; }
 .profile-pick select { min-width: 180px; }
 .topbar .btn.ghost { color: #fff; border-color: #44536e; background: transparent; }
