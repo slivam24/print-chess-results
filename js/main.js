@@ -508,17 +508,31 @@ async function refreshData() {
 
 function applyZoom() {
   const z = els.zoom.value;
-  const first = els.pages.querySelector('.page');
-  if (!first) { els.pages.style.zoom = ''; return; }
-  let scale = Number(z);
-  const availW = els.scroll.clientWidth - 48;
+  const pages = els.pages;
+  const first = pages.querySelector('.page');
+  // Zmenšení přes transform (ne CSS zoom): rozvržení stránek zůstane přesně jako při tisku,
+  // CSS zoom by výšky řádků zaokrouhloval jinak a konec tabulky mohl „přetéct“ přes okraj.
+  Object.assign(pages.style, { zoom: '', transform: '', transformOrigin: '', marginLeft: '', marginRight: '', marginBottom: '' });
+  if (!first) return;
+  const cs = getComputedStyle(els.scroll);
+  const availW = els.scroll.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  const availH = els.scroll.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+  let scale = Number(z) || 1;
   if (z === 'fit') {
     scale = Math.min(1.25, Math.max(0.2, availW / first.offsetWidth));
   } else if (z === 'page') {
-    const availH = els.scroll.clientHeight - 48;
     scale = Math.min(1.25, Math.max(0.2, Math.min(availW / first.offsetWidth, availH / first.offsetHeight)));
   }
-  els.pages.style.zoom = String(scale);
+  const w = pages.offsetWidth;
+  const hgt = pages.offsetHeight;
+  Object.assign(pages.style, {
+    transform: `scale(${scale})`,
+    transformOrigin: '0 0',
+    // Okraje upraví místo, které stránky zabírají, na zmenšenou velikost (a vycentrují je)
+    marginLeft: `${Math.max(0, (availW - w * scale) / 2)}px`,
+    marginRight: `${w * scale - w}px`,
+    marginBottom: `${hgt * scale - hgt}px`,
+  });
   store.update((s) => { s.ui.previewZoom = z; }, { silent: true });
 }
 
