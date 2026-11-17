@@ -634,3 +634,17 @@ describe('družstva: startovní pořadí, všechna kola, rozpis k rozstříhán�
     assert.ok(boards.every((b) => !b.home.name)); // původní data se nezmění
   });
 });
+
+describe('automatická aktualizace', () => {
+  test('kontroluje jen soubory appky (js, css) ze stejného webu', async () => {
+    const { appFiles } = await import('../js/ui/update.js');
+    const files = appFiles([
+      { name: 'https://example.github.io/app/js/main.js' },
+      { name: 'https://example.github.io/app/css/app.css' },
+      { name: 'https://example.github.io/app/js/main.js' },
+      { name: 'https://chess-print-proxy.example.dev/?url=x' },
+      { name: 'https://fonts.example.com/x.css' },
+    ], 'https://example.github.io');
+    assert.deepEqual(files, ['https://example.github.io/app/js/main.js', 'https://example.github.io/app/css/app.css']);
+  });
+});

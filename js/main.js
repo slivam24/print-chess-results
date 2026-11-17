@@ -9,6 +9,7 @@ import { categoriesOf } from './templates/lists.js';
 import { fmtDateTime } from './templates/common.js';
 import { SettingsPanel } from './ui/settings.js';
 import { renderCategoryEditor } from './ui/categories.js';
+import { checkForUpdate } from './ui/update.js';
 import { h, clear, $, options, debounce, readFileText } from './ui/dom.js';
 
 const store = new Store();
@@ -922,6 +923,8 @@ function init() {
 }
 
 init();
+// Novější verze appky na serveru? (prohlížeč mohl spustit starou z mezipaměti)
+setTimeout(() => { checkForUpdate({ onReload: (t) => setStatus(t, 'loading') }); }, 800);
 
 // Pro ladění v konzoli
 window.chessPrint = { store, source, session, TEMPLATES };
