@@ -300,6 +300,7 @@ export const rankingCat = {
   options: [
     { key: 'categories', label: 'Kategorie', type: 'categories', def: [] },
     { key: 'catLayout', label: 'Tisk kategorií', type: 'select', def: 'flow', choices: [['flow', 'za sebou (co se vejde na stránku)'], ['pages', 'každá kategorie na samostatné stránce']] },
+    { key: 'keepTogether', label: 'Nerozdělovat kategorii na více stránek', type: 'bool', def: true },
     { key: 'withOverall', label: 'Před kategoriemi i celkové pořadí', type: 'bool', def: false },
     { key: 'legend', label: 'Vysvětlivky pomocných hodnocení', type: 'bool', def: false },
   ],
@@ -331,7 +332,8 @@ export const rankingCat = {
       const title = { ...sectionTitle(name || desc || `Kategorie ${i + 1}`, name && desc && name !== desc ? desc : '') };
       if (opts.catLayout === 'pages' && blocks.length) title.breakBefore = true;
       blocks.push(title);
-      blocks.push(list.length ? table(list, true) : noteBlock(desc ? 'V této kategorii není žádný hráč.' : 'Kategorie nemá vybraný žádný typ ani skupinu.'));
+      // Celá kategorie na jedné stránce (rozdělí se jen ta, která se nevejde ani na celou stránku)
+      blocks.push(list.length ? { ...table(list, true), keepTogether: opts.keepTogether !== false } : noteBlock(desc ? 'V této kategorii není žádný hráč.' : 'Kategorie nemá vybraný žádný typ ani skupinu.'));
     });
     if (opts.legend) {
       const lg = tbLegend(rk.tiebreaks);

@@ -451,6 +451,13 @@ describe('pořadí + kategorie', () => {
     assert.ok(doc.blocks.some((b) => b.html && /Nejlepší do 16 let.*U16, U12, U10/.test(b.html)));
     assert.ok(!doc.blocks.some((b) => b.breakBefore));
   });
+  test('kategorie se ve výchozím stavu nerozdělí na více stránek, lze vypnout', () => {
+    const cats = [{ name: 'Do 16', types: ['U16', 'U12', 'U10'] }];
+    assert.equal(build({ categories: cats }).blocks.find((b) => b.type === 'table').keepTogether, true);
+    assert.equal(build({ categories: cats, keepTogether: false }).blocks.find((b) => b.type === 'table').keepTogether, false);
+    // celkové pořadí se dělit smí
+    assert.ok(!build({ categories: cats, withOverall: true }).blocks.find((b) => b.type === 'table').keepTogether);
+  });
   test('každá kategorie na samostatné stránce, pohlaví a prázdná kategorie', () => {
     const doc = build({ catLayout: 'pages', categories: [
       { name: 'Ženy do 16', types: ['U16', 'U12', 'U10'], sex: ['w'] },
