@@ -148,6 +148,7 @@ export function parseStartList(doc) {
         rating: typeof r.rating === 'number' ? r.rating : null,
         ratingNat: typeof r.ratingNat === 'number' ? r.ratingNat : null,
         club: r.club || '',
+        type: r.type || '',
         group: r.group || '',
         sex: r.sex || '',
       };
@@ -201,7 +202,9 @@ export function parseRanking(doc) {
         rating: typeof r.rating === 'number' ? r.rating : null,
         ratingNat: typeof r.ratingNat === 'number' ? r.ratingNat : null,
         club: r.club || '',
+        type: r.type || '',
         group: r.group || '',
+        sex: r.sex || '',
         points: r.points ?? null,
         tb: r.tb.map((x) => x ?? ''),
       };

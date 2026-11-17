@@ -8,6 +8,7 @@ import { layoutDocument, pageRule } from './layout.js';
 import { categoriesOf } from './templates/lists.js';
 import { fmtDateTime } from './templates/common.js';
 import { SettingsPanel } from './ui/settings.js';
+import { renderCategoryEditor } from './ui/categories.js';
 import { h, clear, $, options, debounce, readFileText } from './ui/dom.js';
 
 const store = new Store();
@@ -344,6 +345,12 @@ function renderOptions() {
     } else if (o.type === 'text') {
       els.options.append(h('label', { class: 'field' }, o.label,
         h('input', { type: 'text', value: v || '', oninput: (e) => setOpt(o.key, e.target.value) })));
+    } else if (o.type === 'categories') {
+      const tnr = targetTnrs()[0];
+      const players = source.peek(tnr, 'main')?.data?.players || [];
+      const box = h('div', { class: 'cat-editor' });
+      els.options.append(box);
+      renderCategoryEditor(box, { value: v, players, onChange: (cats) => setOpt(o.key, cats) });
     } else if (o.type === 'category') {
       const tnr = targetTnrs()[0];
       const players = source.peek(tnr, 'main')?.data?.players || [];

@@ -243,22 +243,32 @@ describe('abecední seznam hráčů', () => {
 });
 
 describe('vzhled podle Swiss-Manageru', () => {
-  test('abecední seznam: sloupce Č., St.č., titul, Jméno, NRtg, IRtg, FED, Klub a pořadová čísla', () => {
+  test('abecední seznam: sloupce Č., St.č., titul, Jméno, RtgN, RtgF, FED, Klub a pořadová čísla', () => {
     const info = parseInfo(fixture('categories-main'));
     const sl = parseStartList(fixture('categories-main'));
     const doc = buildDocument({ tpl: getTemplate('alphalist'), info, data: { main: { players: sl.players, ratingInfo: sl.ratingInfo } }, profile: defaultProfile() });
     const head = doc.blocks[0].thead.replace(/<[^>]+>/g, '|').split('|').filter(Boolean);
-    assert.deepEqual(head, ['Č.', 'St.č.', 'Jméno', 'NRtg', 'IRtg', 'FED', 'Klub']);
+    assert.deepEqual(head, ['Č.', 'St.č.', 'Jméno', 'RtgN', 'RtgF', 'FED', 'Klub']);
     assert.match(doc.blocks[0].rows[0], /^<tr><td class="c num">1<\/td><td class="c num">17<\/td>/); // Č. 1, St.č. 17
     assert.match(doc.blocks[0].rows[0], /Barabas Aleš/); // výchozí formát „Příjmení Jméno“
     assert.match(doc.blocks[0].rows.join(''), /GM<\/td><td class="name">Druska Juraj/);
   });
-  test('jen obecný „Rtg“ → sloupec se jmenuje Rtg, ne IRtg', () => {
+  test('jen jeden zveřejněný rating → sloupec se jmenuje Elo (všude)', () => {
     const sl = parseStartList(fixture('swiss-main'));
     assert.deepEqual(sl.ratingInfo, { generic: true, international: false, national: false });
     const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: { main: { players: sl.players, ratingInfo: sl.ratingInfo } }, profile: defaultProfile() });
-    assert.match(doc.blocks[0].thead, />Rtg</);
-    assert.doesNotMatch(doc.blocks[0].thead, /IRtg|NRtg/);
+    assert.match(doc.blocks[0].thead, />Elo</);
+    assert.doesNotMatch(doc.blocks[0].thead, /RtgF|RtgN/);
+    const pr = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile: defaultProfile(), round: 7 });
+    assert.match(pr.blocks.find((b) => b.thead).thead, />Elo</);
+  });
+  test('vlastní nadpis ratingu z profilu má přednost', () => {
+    const p = defaultProfile();
+    p.templates.alphalist = { columnsVersion: 2, columns: [{ key: 'rating', label: 'Elo FIDE' }] };
+    const sl = parseStartList(fixture('categories-main'));
+    const doc = buildDocument({ tpl: getTemplate('alphalist'), info: swiss.info, data: { main: { players: sl.players } }, profile: p });
+    assert.match(doc.blocks[0].thead, />Elo FIDE</);
+    assert.match(doc.blocks[0].thead, />RtgN</);
   });
   test('styl mřížky a centrovaný nadpis jsou výchozí, pruhy lze zvolit', () => {
     const p = defaultProfile();
@@ -392,3 +402,61 @@ describe('los kola: sloupec Výs., čísla na střed, schované výstupy', () =>
     assert.deepEqual(defaultProfile().hiddenTemplates.sort(), ['arbiter-sheet', 'pairings-alpha', 'pairings-board', 'scoresheets']);
   });
 });
+
+describe('pořadí + kategorie', () => {
+  const players = [
+    ['Hráč, Jedna', 'U10', 1], ['Hráč, Dva', 'U16', 2], ['Hráč, Tři', '', 3], ['Hráč, Čtyři', 'S50', 4],
+    ['Hráč, Pět', 'U12', 5], ['Hráč, Šest', 'S65', 6],
+  ].map(([name, type, n]) => ({ startNo: n, name, type, group: '', sex: n === 5 ? 'w' : '', rating: 1500 + n, ratingNat: 1000, club: 'Klub', title: '', fed: 'CZE' }));
+  // Pořadí: bez typů (typy doplní startovní listina)
+  const ranking = {
+    round: 7, final: false, tiebreaks: [{ label: 'Buchholz' }],
+    rows: [6, 2, 5, 1, 4, 3].map((n, i) => ({ rank: i + 1, startNo: n, name: players[n - 1].name, title: '', fed: '', rating: 1500 + n, ratingNat: null, club: '', type: '', group: '', sex: '', points: 7 - i, tb: ['1'] })),
+  };
+  const data = { main: { players }, ranking };
+  const build = (opts) => {
+    const p = defaultProfile();
+    p.templates['ranking-cat'] = { options: opts };
+    return buildDocument({ tpl: getTemplate('ranking-cat'), info: swiss.info, data, profile: p, round: 7 });
+  };
+  const heads = (b) => b.thead.replace(/<[^>]+>/g, '|').split('|').filter(Boolean);
+
+  test('bez kategorií = celé pořadí s Typem (doplněným ze startovní listiny)', () => {
+    const doc = build({});
+    const t = doc.blocks.find((b) => b.type === 'table');
+    assert.deepEqual(heads(t), ['Poř.', 'Jméno', 'RtgF', 'RtgN', 'Typ', 'Klub', 'Body']);
+    assert.equal(t.rows.length, 6);
+    assert.match(t.rows[0], /Šest.*S65/);
+  });
+  test('kategorie „do 16 let“ (U16, U12, U10) a „nad 50“ (S50, S65) – vlastní pořadí + celkové', () => {
+    const doc = build({ categories: [
+      { name: 'Nejlepší do 16 let', types: ['U16', 'U12', 'U10'] },
+      { name: 'Nejlepší nad 50 let', types: ['S50', 'S65'] },
+      { name: 'Vypnutá', types: ['U10'], on: false },
+    ] });
+    const tables = doc.blocks.filter((b) => b.type === 'table');
+    assert.equal(tables.length, 2);
+    assert.deepEqual(heads(tables[0]), ['Poř.', 'Celk.', 'Jméno', 'RtgF', 'RtgN', 'Typ', 'Klub', 'Body']);
+    // do 16: Dva (2.), Pět (3.), Jedna (4.)
+    assert.deepEqual(tables[0].rows.map((r) => r.match(/<td[^>]*>(\d+)<\/td><td[^>]*>(\d+)<\/td>/).slice(1).join('/')), ['1/2', '2/3', '3/4']);
+    assert.deepEqual(tables[1].rows.map((r) => r.match(/Hráč ([^<]+)/)[1]), ['Šest', 'Čtyři']);
+    assert.ok(doc.blocks.some((b) => b.html && /Nejlepší do 16 let.*U16, U12, U10/.test(b.html)));
+    assert.ok(!doc.blocks.some((b) => b.breakBefore));
+  });
+  test('každá kategorie na samostatné stránce, pohlaví a prázdná kategorie', () => {
+    const doc = build({ catLayout: 'pages', categories: [
+      { name: 'Ženy do 16', types: ['U16', 'U12', 'U10'], sex: ['w'] },
+      { name: 'Prázdná' },
+    ] });
+    assert.equal(doc.blocks.filter((b) => b.breakBefore).length, 1);
+    const t = doc.blocks.find((b) => b.type === 'table');
+    assert.equal(t.rows.length, 1);
+    assert.match(t.rows[0], /Pět/);
+    assert.ok(doc.blocks.some((b) => b.html && /nemá vybraný/.test(b.html)));
+  });
+  test('startovní listina ukazuje Typ ve výchozím stavu', () => {
+    const doc = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: { main: { players } }, profile: defaultProfile() });
+    assert.ok(heads(doc.blocks[0]).includes('Typ'));
+  });
+});
+

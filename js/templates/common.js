@@ -92,6 +92,7 @@ export function resolveColumns(defs, saved) {
       ...d,
       on: s.on !== false,
       label: s.label || d.label,
+      customLabel: !!s.label,
       ...(w ? { width: `${w}mm`, userWidth: w } : {}),
       ...(fs ? { fontSize: fs } : {}),
     });
@@ -109,6 +110,42 @@ export function resolveColumns(defs, saved) {
     seen.add(d.key);
   });
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Nadpisy sloupců s ratingem: „RtgF“ (FIDE) a „RtgN“ (národní); když turnaj
+// zveřejňuje jen jeden rating, stačí „Elo“.
+// ---------------------------------------------------------------------------
+
+const RATING_KIND = {
+  rating: 'F', wRating: 'F', bRating: 'F', homeRating: 'F', awayRating: 'F',
+  ratingNat: 'N', wRatingNat: 'N', bRatingNat: 'N',
+};
+
+/** Zjistí, které ratingy data obsahují (hledá vlastnosti rating / ratingNat > 0). */
+export function ratingPresence(data) {
+  const found = { F: false, N: false };
+  const seen = new Set();
+  const walk = (v, depth) => {
+    if (!v || typeof v !== 'object' || depth > 6 || seen.has(v) || (found.F && found.N)) return;
+    seen.add(v);
+    if (Array.isArray(v)) { for (const x of v) walk(x, depth + 1); return; }
+    if (typeof v.rating === 'number' && v.rating > 0) found.F = true;
+    if (typeof v.ratingNat === 'number' && v.ratingNat > 0) found.N = true;
+    for (const k in v) if (v[k] && typeof v[k] === 'object') walk(v[k], depth + 1);
+  };
+  walk(data, 0);
+  return found;
+}
+
+/** Přepíše výchozí nadpisy ratingových sloupců podle toho, co turnaj zveřejňuje. Vlastní nadpis z profilu zůstane. */
+export function ratingLabels(cols, presence) {
+  const both = presence && presence.F && presence.N;
+  return cols.map((c) => {
+    const kind = RATING_KIND[c.key];
+    if (!kind || c.customLabel) return c;
+    return { ...c, label: both ? (kind === 'F' ? 'RtgF' : 'RtgN') : 'Elo' };
+  });
 }
 
 export function visibleColumns(defs, saved) {

@@ -149,7 +149,10 @@ Tip: odkaz `…/?t=1495793` otevře turnaj rovnou.
 
 Pokud má turnaj na chess-results „Výběr turnaje“ (např. A/B/C, H18+H20 a D18+D20, ligy), objeví se výběr **Skupina / turnaj**
 s možností **Všechny skupiny** – každá skupina se vytiskne s vlastním záhlavím od nové stránky.
-Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u startovní listiny a pořadí vyfiltrovat nebo vytisknout **každou zvlášť**.
+Kategorie uvnitř jednoho turnaje (sloupce „Typ“ a „Gr“, např. U10, U12) lze u startovní listiny a pořadí vyfiltrovat nebo vytisknout **každou zvlášť**.
+Pro vyhlášení cen slouží **Pořadí + kategorie**: vytvoříte si kategorie (např. „Nejlepší do 16 let“ = typy U16, U12, U10,
+„Nejlepší nad 50 let“ = S50, S65), zaškrtnete, které tisknout, a každá dostane vlastní pořadí se sloupcem celkového pořadí.
+Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znovu.
 
 ---
 
@@ -162,9 +165,10 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 | **Los kola – kdo kde hraje** | jednotlivci | hráči podle abecedy → šachovnice, barva, soupeř; na jednu stránku |
 | **Rozhodcovský list kola** | jednotlivci | prázdné kolonky výsledek / ✓ / poznámka, výška řádku, předvyplnění známých výsledků, podpis |
 | **Výsledkové lístky** | jednotlivci | 4–12 lístků na stránku, body, podpisy, vlastní krátký název |
-| **Startovní listina** | jednotlivci | řazení (st. čísla / rating), kategorie |
-| **Abecední seznam hráčů** | jednotlivci | jako ve Swiss-Manageru: Č., St.č., titul, Jméno, NRtg, IRtg, FED, Klub; česká abeceda (CH za H), kategorie |
+| **Startovní listina** | jednotlivci | řazení (st. čísla / rating), kategorie; Typ a Skupina hráče, pokud je chess-results uvádí |
+| **Abecední seznam hráčů** | jednotlivci | jako ve Swiss-Manageru: Č., St.č., titul, Jméno, RtgN, RtgF, FED, Klub; česká abeceda (CH za H), kategorie |
 | **Pořadí** | jednotlivci | po zvoleném kole, kategorie (vč. přepočtu pořadí v kategorii), vysvětlivky pomocných hodnocení |
+| **Pořadí + kategorie** | jednotlivci | pořadí s Typem a Skupinou; vlastní kategorie složené z typů / skupin / pohlaví, každá s vlastním pořadím; za sebou, nebo každá na samostatné stránce; volitelně i celkové pořadí |
 | **Los zápasů družstev** | družstva | výsledky, velké písmo na nástěnku |
 | **Rozpis hráčů na šachovnicích** | družstva | každý zápas se sestavami a barvami, Elo ze soupisek, podpisy kapitánů a rozhodčího, zápas na stránku; když sestavy nejsou zveřejněné, vytiskne prázdné řádky k vyplnění |
 | **Soupisky družstev** | družstva | družstvo na stránku, jen seznam družstev |
@@ -173,8 +177,8 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
 Méně používané výstupy (los na nástěnku, kdo kde hraje, rozhodcovský list, výsledkové lístky) jsou ve výchozím stavu schované – zapnete je
 v ⚙ Nastavení → Nabídka výstupů.
-Ratingy: chess-results u některých turnajů uvádí jen jeden sloupec „Rtg“ (bez rozlišení národní/mezinárodní) – appka ho pak
-zobrazí jako „Rtg“; oba sloupce NRtg a IRtg se objeví, když je chess-results nabízí. Ve výchozím stavu je chess-results
+Ratingy: když turnaj zveřejňuje oba ratingy, sloupce se jmenují **RtgF** (FIDE) a **RtgN** (národní); když jen jeden
+(nebo jen obecný „Rtg“), stačí nadpis **Elo**. Vlastní nadpis sloupce z nastavení má vždy přednost. Ve výchozím stavu je chess-results
 nezobrazuje – zobrazení obou ratingů je potřeba pro turnaj povolit (při nahrávání ze Swiss-Manageru / v nastavení turnaje).
 Výsledky kola a křížová tabulka jsou připravené k doplnění jako další šablony – viz [docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md).
 
