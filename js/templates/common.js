@@ -40,11 +40,11 @@ export function fmtRating(r) {
 export function fmtResult(res) {
   if (!res || !res.played) return '';
   if (res.black == null) return res.white ?? res.text;
-  // Kontumace (chess-results „+ - -“) jako „K1 – 0“, „K0 – 1“, „K0 – 0“
+  // Kontumace (chess-results „+ - -“) jako „1K – 0K“, „0K – 1K“, „0K – 0K“
   const isForfeit = [res.white, res.black].some((x) => x === '+' || x === '-');
   if (isForfeit) {
-    const k = (x) => (x === '+' ? '1' : x === '-' ? '0' : x);
-    return `K${k(res.white)} – ${k(res.black)}`;
+    const k = (x) => `${x === '+' ? '1' : x === '-' ? '0' : x}K`;
+    return `${k(res.white)} – ${k(res.black)}`;
   }
   return `${res.white} – ${res.black}`;
 }
@@ -181,7 +181,7 @@ export const SYM_W = {
   ratingNat: '4.2em',
   fed: '3.2em',
   points: '2.6em',
-  result: '4.4em', // vejde se i kontumace „K1 – 0“
+  result: '5em', // vejde se i kontumace „1K – 0K“
   color: '2em',
 };
 
