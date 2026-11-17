@@ -72,7 +72,15 @@ function tableHtml(b, rows) {
 function measureBlocks(col, blocks) {
   const out = [];
   out.overflowX = false;
-  const colW = col.getBoundingClientRect().width;
+  const cs = getComputedStyle(col);
+  const colW = col.getBoundingClientRect().width - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  // Mezera pod blokem (padding-bottom .blk) – poslední blok ve sloupci ji nemá, proto se měří zvlášť
+  const g1 = el('div', 'blk');
+  const g2 = el('div', 'blk');
+  col.append(g1, g2);
+  out.gap = Math.max(0, g1.getBoundingClientRect().height - g2.getBoundingClientRect().height);
+  col.removeChild(g1);
+  col.removeChild(g2);
   for (const b of blocks) {
     if (b.type === 'break') { out.push({ b, h: 0 }); continue; }
     const wrap = el('div', `blk ${b.blockClass || ''}`.trim());
@@ -103,11 +111,14 @@ function measureBlocks(col, blocks) {
   return out;
 }
 
-/** Rozloží změřené bloky do stránek a sloupců (čistý výpočet bez DOM). */
-export function pack(measured, { capFirst, capOther, columns }) {
+/**
+ * Rozloží změřené bloky do stránek a sloupců (čistý výpočet bez DOM).
+ * gap = mezera pod každým blokem kromě posledního ve sloupci.
+ */
+export function pack(measured, { capFirst, capOther, columns, gap = 0 }) {
   const pages = [[]];
   let colIdx = 0;
-  let used = 0;
+  let used = 0; // obsazená výška včetně mezery pod posledním blokem
   const cap = () => (pages.length === 1 ? capFirst : capOther);
   const curCol = () => {
     const p = pages[pages.length - 1];
@@ -121,6 +132,8 @@ export function pack(measured, { capFirst, capOther, columns }) {
     used = 0;
     if (colIdx >= columns) newPage();
   };
+  // Vejde se do sloupce blok výšky h (bez mezery pod ním)?
+  const fits = (h) => used + h <= cap() - SAFETY_PX;
   const minHeight = (m) => {
     if (!m) return 0;
     if (m.b.type === 'table') {
@@ -139,39 +152,39 @@ export function pack(measured, { capFirst, capOther, columns }) {
 
     if (b.type === 'html') {
       let need = m.h;
-      if (b.keepWithNext) need += minHeight(measured[i + 1]);
-      if (used > 0 && used + need > cap() - SAFETY_PX) newCol();
+      if (b.keepWithNext && measured[i + 1]) need += gap + minHeight(measured[i + 1]);
+      if (used > 0 && !fits(need)) newCol();
       curCol().push({ kind: 'html', b });
-      used += m.h;
+      used += m.h + gap;
       continue;
     }
 
     // Tabulka
     if (b.keepTogether && m.h <= cap()) {
-      if (used > 0 && used + m.h > cap() - SAFETY_PX) newCol();
+      if (used > 0 && !fits(m.h)) newCol();
       curCol().push({ kind: 'table', b, from: 0, to: b.rows.length });
-      used += m.h;
+      used += m.h + gap;
       continue;
     }
     let start = 0;
     if (!b.rows.length) {
-      if (used > 0 && used + m.h > cap() - SAFETY_PX) newCol();
+      if (used > 0 && !fits(m.h)) newCol();
       curCol().push({ kind: 'table', b, from: 0, to: 0 });
-      used += m.h;
+      used += m.h + gap;
       continue;
     }
     while (start < b.rows.length) {
       const base = m.extra + m.theadH;
-      if (used > 0 && used + base + m.rowH[start] > cap() - SAFETY_PX) { newCol(); continue; }
+      if (used > 0 && !fits(base + m.rowH[start])) { newCol(); continue; }
       let h = base;
       let end = start;
-      while (end < b.rows.length && used + h + m.rowH[end] <= cap() - SAFETY_PX) {
+      while (end < b.rows.length && fits(h + m.rowH[end])) {
         h += m.rowH[end];
         end += 1;
       }
       if (end === start) { h += m.rowH[start]; end = start + 1; } // řádek vyšší než sloupec
       curCol().push({ kind: 'table', b, from: start, to: end });
-      used += h;
+      used += h + gap;
       start = end;
       if (start < b.rows.length) newCol();
     }
@@ -181,20 +194,26 @@ export function pack(measured, { capFirst, capOther, columns }) {
   return pages;
 }
 
+/** Výška obsahu sloupce (bez vnitřního okraje). */
+function contentHeight(col) {
+  const cs = getComputedStyle(col);
+  return col.getBoundingClientRect().height - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+}
+
 function measureAndPack(host, blocks, o) {
   applyDocStyle(host, o);
   host.innerHTML = '';
   const probeFirst = buildPage(o, { withHeader: true, pageNo: 99, pageCount: 99 });
   host.appendChild(probeFirst.page);
-  const capFirst = probeFirst.cols[0].getBoundingClientRect().height;
+  const capFirst = contentHeight(probeFirst.cols[0]);
   let capOther = capFirst;
   if (o.header && !o.headerEveryPage) {
     const probeOther = buildPage(o, { withHeader: false, pageNo: 99, pageCount: 99 });
     host.appendChild(probeOther.page);
-    capOther = probeOther.cols[0].getBoundingClientRect().height;
+    capOther = contentHeight(probeOther.cols[0]);
   }
   const measured = measureBlocks(probeFirst.cols[0], blocks);
-  const pages = pack(measured, { capFirst, capOther, columns: o.columns || 1 });
+  const pages = pack(measured, { capFirst, capOther, columns: o.columns || 1, gap: measured.gap });
   return { pages, capFirst, capOther, overflowX: measured.overflowX };
 }
 

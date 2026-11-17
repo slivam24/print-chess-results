@@ -191,6 +191,14 @@ describe('stránkování (výpočet bez DOM)', () => {
     assert.equal(pages.length, 3);
     assert.equal(pages[2][0].length, 2); // nadpis přešel s následujícím blokem
   });
+  test('mezera pod bloky se započítá (kromě posledního ve sloupci)', () => {
+    const html = (h) => ({ b: { type: 'html' }, h });
+    // 3 × 90 + 2 mezery po 10 = 290 ≤ 298 → jedna stránka
+    assert.equal(pack([html(90), html(90), html(90)], { capFirst: 300, capOther: 300, columns: 1, gap: 10 }).length, 1);
+    // 3 × 95 + 2 × 10 = 305 > 298 → třetí blok na další stránku (bez mezer by se vešel)
+    assert.equal(pack([html(95), html(95), html(95)], { capFirst: 300, capOther: 300, columns: 1, gap: 10 }).length, 2);
+    assert.equal(pack([html(95), html(95), html(95)], { capFirst: 300, capOther: 300, columns: 1 }).length, 1);
+  });
   test('keepTogether nerozdělí zápas', () => {
     const t = { ...tbl(8), b: { type: 'table', rows: Array(8).fill(''), keepTogether: true } };
     const pages = pack([{ b: { type: 'html' }, h: 250 }, t], { capFirst: 300, capOther: 300, columns: 1 });

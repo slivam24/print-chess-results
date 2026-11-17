@@ -41,7 +41,7 @@
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
   column-gap: var(--col-gap);
 }
-.pg-col { min-width: 0; min-height: 0; overflow: hidden; }
+.pg-col { min-width: 0; min-height: 0; overflow: hidden; padding: 1px; } /* 1px: krajní čáry tabulek se neořežou */
 .pg-foot {
   flex: none;
   display: flex;
@@ -202,7 +202,7 @@ table.boards tr.total-row td { border-bottom: 0; background: #fff; font-size: .9
   .app { display: block; height: auto; }
   .topbar, .side, .preview-bar, .warnings, .dialog, .empty-state { display: none !important; }
   .preview, .preview-scroll { display: block; overflow: visible !important; padding: 0 !important; }
-  .pages { zoom: 1 !important; width: auto; margin: 0; }
+  .pages { zoom: 1 !important; transform: none !important; width: auto; margin: 0 !important; }
   .pages .print-doc + .print-doc { margin-top: 0; }
   .pages .page {
     box-shadow: none;
