@@ -199,6 +199,19 @@ describe('stránkování (výpočet bez DOM)', () => {
     assert.equal(pack([html(95), html(95), html(95)], { capFirst: 300, capOther: 300, columns: 1, gap: 10 }).length, 2);
     assert.equal(pack([html(95), html(95), html(95)], { capFirst: 300, capOther: 300, columns: 1 }).length, 1);
   });
+  test('mezera nad blokem (spaceBefore) se nepřidá na začátku stránky; „tight“ blok nemá mezeru pod sebou', () => {
+    const html = (h, b = {}) => ({ b: { type: 'html', ...b }, h });
+    // 2 × 100 + mezera 10 mm (≈ 37,8 px) = 237,8 ≤ 298
+    assert.equal(pack([html(100), html(100, { spaceBefore: 10 })], { capFirst: 300, capOther: 300, columns: 1 }).length, 1);
+    // 2 × 100 + 30 mm (≈ 113 px) > 298 → na další stránku, tam bez mezery
+    const pages = pack([html(100), html(100, { spaceBefore: 30 })], { capFirst: 300, capOther: 300, columns: 1 });
+    assert.equal(pages.length, 2);
+    assert.equal(pages[1][0][0].space, false);
+    // tight: 3 × 98 = 294 ≤ 298 jen bez mezer
+    assert.equal(pack([html(98, { blockClass: 'tight' }), html(98, { blockClass: 'tight' }), html(98)], { capFirst: 300, capOther: 300, columns: 1, gap: 10 }).length, 1);
+    // „sec-tight“ není „tight“ – mezeru pod sebou má
+    assert.equal(pack([html(98, { blockClass: 'sec-tight' }), html(98, { blockClass: 'sec-tight' }), html(98)], { capFirst: 300, capOther: 300, columns: 1, gap: 10 }).length, 2);
+  });
   test('keepTogether nerozdělí zápas', () => {
     const t = { ...tbl(8), b: { type: 'table', rows: Array(8).fill(''), keepTogether: true } };
     const pages = pack([{ b: { type: 'html' }, h: 250 }, t], { capFirst: 300, capOther: 300, columns: 1 });
@@ -242,6 +255,16 @@ describe('každý s každým: los všech kol najednou', () => {
     p.templates.pairings = { options: { roundPerPage: true } };
     const paged = buildDocument({ tpl: getTemplate('pairings'), info, data, profile: p, round: 'all' });
     assert.equal(paged.blocks.filter((b) => b.breakBefore).length, data.pairings.rounds.length - 1);
+  });
+  test('mezera mezi koly: výchozí 6 mm, nastavitelná, první kolo bez mezery', () => {
+    const titles = (opts) => {
+      const p = defaultProfile();
+      p.templates.pairings = { options: opts };
+      return buildDocument({ tpl: getTemplate('pairings'), info, data, profile: p, round: 'all' }).blocks.filter((b) => b.type === 'html');
+    };
+    assert.deepEqual(titles({}).map((b) => b.spaceBefore), [undefined, ...Array(data.pairings.rounds.length - 1).fill(6)]);
+    assert.ok(titles({ roundGap: 0 }).slice(1).every((b) => b.spaceBefore === 0));
+    assert.ok(titles({ roundGap: 20 }).slice(1).every((b) => b.spaceBefore === 20));
   });
 });
 
@@ -521,5 +544,34 @@ describe('tisk jedním klikem', () => {
     assert.equal(launchCommand({ os: 'win', browser: 'chrome' }, url), `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk-printing "${url}"`);
     assert.match(launchCommand({ os: 'win', browser: 'edge' }, url), /msedge\.exe" --kiosk-printing/);
     assert.equal(launchCommand({ os: 'mac', browser: 'chrome' }, url), `open -na "Google Chrome" --args --kiosk-printing "${url}"`);
+  });
+});
+
+describe('záhlaví a zápatí výstupu', () => {
+  const build = (t) => {
+    const p = defaultProfile();
+    p.templates.ranking = t;
+    return buildDocument({ tpl: getTemplate('ranking'), info: swiss.info, data: swiss.data, profile: p, round: 6 });
+  };
+  test('podle profilu: záhlaví na první stránce, zápatí zapnuté', () => {
+    const d = build({});
+    assert.match(d.layout.header, /hd-bar/);
+    assert.equal(d.layout.headerEveryPage, false);
+    assert.equal(typeof d.layout.footer, 'function');
+  });
+  test('na každé stránce / jen název výstupu / vypnuto', () => {
+    assert.equal(build({ header: 'every' }).layout.headerEveryPage, true);
+    const t = build({ header: 'title' }).layout.header;
+    assert.doesNotMatch(t, /hd-bar/);
+    assert.match(t, /hd-output-title/);
+    assert.equal(build({ header: 'off' }).layout.header, null);
+    assert.equal(build({ footer: 'off' }).layout.footer, null);
+  });
+  test('výstup může zapnout zápatí vypnuté v profilu; lístky záhlaví nemají', () => {
+    const p = defaultProfile();
+    p.footer.enabled = false;
+    p.templates.ranking = { footer: 'on' };
+    assert.equal(typeof buildDocument({ tpl: getTemplate('ranking'), info: swiss.info, data: swiss.data, profile: p, round: 6 }).layout.footer, 'function');
+    assert.equal(getTemplate('scoresheets').pageChrome, false);
   });
 });

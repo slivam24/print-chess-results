@@ -5,7 +5,7 @@
 // takže co je vidět v náhledu, to se vytiskne.
 //
 // Bloky:
-//   { type: 'html',  html, keepWithNext?, breakBefore? }
+//   { type: 'html',  html, keepWithNext?, breakBefore?, spaceBefore? (mm), blockClass? ('tight' = bez mezery pod blokem) }
 //   { type: 'table', className?, colgroup?, thead, rows: [ '<tr>…</tr>' ], keepTogether?, breakBefore? }
 //   { type: 'break' }
 
@@ -143,6 +143,11 @@ export function pack(measured, { capFirst, capOther, columns, gap = 0 }) {
     return m.h;
   };
 
+  // Mezera pod blokem (blok s třídou „tight“ ji nemá) a volitelná mezera nad blokem
+  // (spaceBefore v mm – nepřidává se na začátku sloupce/stránky)
+  const gapOf = (m) => (String(m.b.blockClass || '').split(/\s+/).includes('tight') ? 0 : gap);
+  const spaceOf = (m) => (used > 0 && m.b.spaceBefore > 0 ? m.b.spaceBefore * PX_PER_MM : 0);
+
   for (let i = 0; i < measured.length; i++) {
     const m = measured[i];
     const b = m.b;
@@ -152,39 +157,37 @@ export function pack(measured, { capFirst, capOther, columns, gap = 0 }) {
 
     if (b.type === 'html') {
       let need = m.h;
-      if (b.keepWithNext && measured[i + 1]) need += gap + minHeight(measured[i + 1]);
-      if (used > 0 && !fits(need)) newCol();
-      curCol().push({ kind: 'html', b });
-      used += m.h + gap;
+      if (b.keepWithNext && measured[i + 1]) need += gapOf(m) + minHeight(measured[i + 1]);
+      let sp = spaceOf(m);
+      if (used > 0 && !fits(sp + need)) { newCol(); sp = 0; }
+      curCol().push({ kind: 'html', b, space: sp > 0 });
+      used += sp + m.h + gapOf(m);
       continue;
     }
 
     // Tabulka
-    if (b.keepTogether && m.h <= cap()) {
-      if (used > 0 && !fits(m.h)) newCol();
-      curCol().push({ kind: 'table', b, from: 0, to: b.rows.length });
-      used += m.h + gap;
+    if ((b.keepTogether && m.h <= cap()) || !b.rows.length) {
+      let sp = spaceOf(m);
+      if (used > 0 && !fits(sp + m.h)) { newCol(); sp = 0; }
+      curCol().push({ kind: 'table', b, from: 0, to: b.rows.length, space: sp > 0 });
+      used += sp + m.h + gapOf(m);
       continue;
     }
     let start = 0;
-    if (!b.rows.length) {
-      if (used > 0 && !fits(m.h)) newCol();
-      curCol().push({ kind: 'table', b, from: 0, to: 0 });
-      used += m.h + gap;
-      continue;
-    }
+    let sp = spaceOf(m);
     while (start < b.rows.length) {
       const base = m.extra + m.theadH;
-      if (used > 0 && !fits(base + m.rowH[start])) { newCol(); continue; }
+      if (used > 0 && !fits(sp + base + m.rowH[start])) { newCol(); sp = 0; continue; }
       let h = base;
       let end = start;
-      while (end < b.rows.length && fits(h + m.rowH[end])) {
+      while (end < b.rows.length && fits(sp + h + m.rowH[end])) {
         h += m.rowH[end];
         end += 1;
       }
       if (end === start) { h += m.rowH[start]; end = start + 1; } // řádek vyšší než sloupec
-      curCol().push({ kind: 'table', b, from: start, to: end });
-      used += h + gap;
+      curCol().push({ kind: 'table', b, from: start, to: end, space: sp > 0 });
+      used += sp + h + gapOf(m);
+      sp = 0;
       start = end;
       if (start < b.rows.length) newCol();
     }
@@ -246,6 +249,7 @@ export function layoutDocument(target, blocks, o) {
     cols.forEach((items, ci) => {
       for (const it of items) {
         const wrap = el('div', `blk ${it.b.blockClass || ''}`.trim());
+        if (it.space) wrap.style.marginTop = `${it.b.spaceBefore}mm`;
         if (it.kind === 'html') wrap.innerHTML = it.b.html;
         else wrap.innerHTML = tableHtml(it.b, it.b.rows.slice(it.from, it.to));
         colEls[ci].appendChild(wrap);

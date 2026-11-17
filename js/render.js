@@ -4,6 +4,17 @@
 import { templateSettings } from './store.js';
 import { visibleColumns, renderHeader, renderFooter, ratingLabels, ratingPresence } from './templates/common.js';
 
+/**
+ * Záhlaví výstupu: 'first' (jen 1. stránka), 'every' (každá stránka), 'title' (jen název výstupu,
+ * bez hlavičky turnaje), 'off' (žádné). 'inherit' v nastavení výstupu = podle profilu.
+ */
+export function headerMode(profile, ts) {
+  if (ts && ts.header && ts.header !== 'inherit') return ts.header;
+  const h = profile.header || {};
+  if (h.enabled === false) return 'title';
+  return h.everyPage ? 'every' : 'first';
+}
+
 /** Které kolo použít, když uživatel zvolí „automaticky“. */
 export function autoRound(tpl, info, data = {}) {
   if (!tpl.roundMode) return null;
@@ -42,12 +53,14 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     info, data, round, opts, cols, nameFormat: profile.nameFormat || 'original', profile, page,
   });
   const extra = tpl.layout ? tpl.layout(opts, page) || {} : {};
-  const headerHtml = 'header' in extra && extra.header === null
+  const vars = { kolo: round && round !== 'all' ? String(round) : '' };
+  const hMode = headerMode(profile, ts);
+  const headerHtml = ('header' in extra && extra.header === null) || hMode === 'off'
     ? null
-    : renderHeader(profile, info, { outputTitle: out.title, outputSub: out.sub, vars: { kolo: round && round !== 'all' ? String(round) : '' } });
-  const footerFn = 'footer' in extra && extra.footer === null
+    : renderHeader(hMode === 'title' ? { ...profile, header: { ...profile.header, enabled: false } } : profile, info, { outputTitle: out.title, outputSub: out.sub, vars });
+  const footerFn = ('footer' in extra && extra.footer === null) || ts.footer === 'off'
     ? null
-    : renderFooter(profile, info, { vars: { kolo: round && round !== 'all' ? String(round) : '' } });
+    : renderFooter(ts.footer === 'on' ? { ...profile, footer: { ...profile.footer, enabled: true } } : profile, info, { vars });
   const layout = {
     orientation,
     margins: profile.page.margins,
@@ -56,7 +69,7 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     columns: ts.pageColumns || 1,
     rowHeight: ts.rowHeight,
     header: headerHtml,
-    headerEveryPage: !!(profile.header && profile.header.everyPage),
+    headerEveryPage: hMode === 'every',
     footer: footerFn,
     ...extra,
     docClass: [profile.page.tableStyle === 'stripes' ? '' : 'tbl-grid', extra.docClass || ''].join(' ').trim(),

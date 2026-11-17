@@ -176,7 +176,7 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 
 | Výstup | Pro | Volby |
 |---|---|---|
-| **Los kola** | jednotlivci | výsledky ano/ne, volno a nenasazení, sloupce (č., titul, Elo, nár. Elo, klub, federace, body…); u turnaje každý s každým v nabídce kola **všechna kola najednou** (kolo se nerozdělí na dvě stránky, volitelně každé kolo na samostatné stránce) |
+| **Los kola** | jednotlivci | výsledky ano/ne, volno a nenasazení, sloupce (č., titul, Elo, nár. Elo, klub, federace, body…); u turnaje každý s každým v nabídce kola **všechna kola najednou** (kolo se nerozdělí na dvě stránky, nastavitelná mezera mezi koly v mm, volitelně každé kolo na samostatné stránce) |
 | **Los kola – nástěnka** | jednotlivci | vše na jednu stránku, písmo se zvětší na maximum, při mnoha dvojicích dělení do sloupců, tituly, max. velikost písma |
 | **Los kola – kdo kde hraje** | jednotlivci | hráči podle abecedy → šachovnice, barva, soupeř; na jednu stránku |
 | **Rozhodcovský list kola** | jednotlivci | prázdné kolonky výsledek / ✓ / poznámka, výška řádku, předvyplnění známých výsledků, podpis |
@@ -191,6 +191,8 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 | **Pořadí družstev** | družstva | po kole, vysvětlivky |
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
+U každého výstupu jde ve „3. Možnosti“ nastavit **Záhlaví** (jen na první stránce / na každé stránce / jen název výstupu /
+vypnuto) a **Zápatí** (na každé stránce / vypnuto); „podle profilu“ = nastavení z ⚙ Nastavení → Záhlaví a zápatí.
 Méně používané výstupy (los na nástěnku, kdo kde hraje, rozhodcovský list, výsledkové lístky) jsou ve výchozím stavu schované – zapnete je
 v ⚙ Nastavení → Nabídka výstupů.
 Ratingy: když turnaj zveřejňuje oba ratingy, sloupce se jmenují **RtgF** (FIDE) a **RtgN** (národní); když jen jeden
