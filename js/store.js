@@ -389,6 +389,9 @@ export function templateSettings(profile, tpl) {
     fontMode: ['max', 'page'].includes(saved.fontMode) ? saved.fontMode : 'fixed',
     fontMax: Number(saved.fontMax) > 0 ? Number(saved.fontMax) : 20,
     pageColumns: saved.pageColumns ?? (tpl.defaults && tpl.defaults.columns) ?? 1,
+    // Záhlaví / zápatí výstupu: 'inherit' = podle profilu (Nastavení → Záhlaví a zápatí)
+    header: ['first', 'every', 'title', 'off'].includes(saved.header) ? saved.header : 'inherit',
+    footer: ['on', 'off'].includes(saved.footer) ? saved.footer : 'inherit',
     options: opts,
   };
 }

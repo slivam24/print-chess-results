@@ -3,7 +3,7 @@
 import { Store, templateSettings } from './store.js';
 import { Source, parseTournamentInput, buildUrl, DATASETS, FetchError } from './source.js';
 import { TEMPLATES, getTemplate, templatesFor } from './templates/index.js';
-import { buildDocument, autoRound, datasetsFor } from './render.js';
+import { buildDocument, autoRound, datasetsFor, headerMode } from './render.js';
 import { layoutDocument, pageRule } from './layout.js';
 import { categoriesOf } from './templates/lists.js';
 import { fmtDateTime } from './templates/common.js';
@@ -363,7 +363,14 @@ function renderOptions() {
         h('select', { onchange: (e) => setOpt(o.key, e.target.value) }, options(o.choices, v))));
     } else if (o.type === 'number') {
       els.options.append(h('label', { class: 'field inline' }, o.label,
-        h('input', { type: 'number', min: o.min, max: o.max, value: v, oninput: (e) => setOpt(o.key, Number(e.target.value) || o.def) })));
+        h('input', {
+          type: 'number', min: o.min, max: o.max, step: o.step, value: v,
+          oninput: (e) => {
+            const n = Number(e.target.value);
+            if (e.target.value === '' || !Number.isFinite(n)) return;
+            setOpt(o.key, Math.min(o.max ?? n, Math.max(o.min ?? n, n)));
+          },
+        })));
     } else if (o.type === 'text') {
       els.options.append(h('label', { class: 'field' }, o.label,
         h('input', { type: 'text', value: v || '', oninput: (e) => setOpt(o.key, e.target.value) })));
@@ -382,6 +389,28 @@ function renderOptions() {
         h('select', { onchange: (e) => setOpt(o.key, e.target.value) },
           options([['', 'všechny dohromady'], ...cats.map((c) => [c, c]), ['*split*', 'každá kategorie zvlášť']], v))));
     }
+  }
+  // Záhlaví a zápatí tohoto výstupu (přepíše nastavení profilu)
+  if (tpl.pageChrome !== false) {
+    const setTpl = (key, value) => {
+      store.update((s) => {
+        const p = s.profiles.find((x) => x.id === s.activeProfileId);
+        p.templates[tpl.id] = p.templates[tpl.id] || {};
+        p.templates[tpl.id][key] = value;
+      }, { silent: true });
+      if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
+      scheduleRender();
+    };
+    const HEADER = { first: 'jen na první stránce', every: 'na každé stránce', title: 'jen název výstupu (bez hlavičky turnaje)', off: 'vypnuto' };
+    const profHeader = headerMode(store.profile, null);
+    const profFooter = store.profile.footer && store.profile.footer.enabled === false ? 'vypnuto' : 'na každé stránce';
+    els.options.append(h('div', { class: 'row wrap chrome-opts' },
+      h('label', { class: 'field' }, 'Záhlaví',
+        h('select', { onchange: (e) => setTpl('header', e.target.value) },
+          options([['inherit', `podle profilu (${HEADER[profHeader]})`], ...Object.entries(HEADER)], ts.header))),
+      h('label', { class: 'field' }, 'Zápatí',
+        h('select', { onchange: (e) => setTpl('footer', e.target.value) },
+          options([['inherit', `podle profilu (${profFooter})`], ['on', 'na každé stránce'], ['off', 'vypnuto']], ts.footer)))));
   }
   els.options.append(h('button', {
     type: 'button', class: 'btn small', style: { marginTop: '6px' },

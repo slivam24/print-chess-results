@@ -105,8 +105,10 @@ function renderAllRounds({ data, opts, cols: allCols, nameFormat }) {
   const cols = pruneEmpty(allCols, lists.flat(), ctx);
   const blocks = [];
   rounds.forEach((r, i) => {
-    const title = sectionTitle(`${r.round ?? i + 1}. kolo`, roundSub(r));
+    const title = { ...sectionTitle(`${r.round ?? i + 1}. kolo`, roundSub(r)), blockClass: 'sec-tight' };
     if (opts.roundPerPage && i > 0) title.breakBefore = true;
+    // Mezera mezi koly (mm) – na začátku stránky se nepřidává
+    else if (i > 0) title.spaceBefore = Math.max(0, Number(opts.roundGap) || 0);
     blocks.push(title);
     blocks.push({
       type: 'table',
@@ -115,6 +117,7 @@ function renderAllRounds({ data, opts, cols: allCols, nameFormat }) {
       thead: theadRow(cols),
       rows: lists[i].map((p) => bodyRow(cols, p, ctx, p.black ? '' : 'bye-row')),
       keepTogether: true, // kolo se nerozdělí na dvě stránky
+      blockClass: 'tight', // mezeru pod kolem určuje volba „Mezera mezi koly“
     });
   });
   return {
@@ -137,6 +140,7 @@ export const pairingsTable = {
   options: [
     ...baseOptions,
     { key: 'roundPerPage', label: 'Každé kolo na samostatné stránce', type: 'bool', def: false, onlyAllRounds: true },
+    { key: 'roundGap', label: 'Mezera mezi koly (mm)', type: 'number', def: 6, min: 0, max: 60, step: 1, onlyAllRounds: true },
   ],
   columns: PAIRING_COLUMNS,
   defaults: { orientation: 'portrait', fontSize: null, columns: 1 },

@@ -104,6 +104,7 @@ export const scoreSlips = {
   name: 'Výsledkové lístky',
   description: 'Prázdné lístky pro hráče k vyplnění výsledku – několik na stránku, k rozstříhání.',
   group: 'Pro rozhodčí',
+  pageChrome: false, // lístky nemají záhlaví ani zápatí stránky
   supports: (info) => !info.isTeam,
   roundMode: 'pairings',
   options: [

@@ -61,6 +61,8 @@
 /* Bloky: odsazení je uvnitř bloku, aby se započítalo do měření */
 .blk { display: flow-root; padding-bottom: 2.5mm; }
 .blk:last-child { padding-bottom: 0; }
+.blk.tight { padding-bottom: 0; }
+.blk.sec-tight .sec-title { margin-top: 0; }
 
 /* --- Záhlaví --------------------------------------------------------- */
 .hd-bar {
