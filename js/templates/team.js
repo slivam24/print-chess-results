@@ -216,7 +216,7 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
         <span class="m-no">Kolo ${esc(round.round ?? rq)}, Zápas ${esc(m.no ?? i + 1)}</span>
         ${played ? `<span class="m-score">${esc(scoreText(m))}</span>` : ''}
       </div>`;
-    const rows = boards.map((b) => bodyRow(mc, b, ctx));
+    const rows = boards.map((b, bi) => bodyRow(mc, b, ctx, bi === boards.length - 1 ? 'last-row' : ''));
     if (!played) {
       // Řádek pro celkové skóre zápasu (jen dvojtečka ve sloupci výsledků)
       const total = mc.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : '<td></td>'));
