@@ -322,3 +322,18 @@ describe('neexistující turnaj', () => {
     assert.equal(parseInfo(fixture('swiss-main')).notFound, false);
   });
 });
+
+describe('šachovnice družstev: hlavička zápasu se sloupcem Rtg', () => {
+  test('„Rtg“ se nepřilepí k názvu družstva', () => {
+    const html = '<html><body><table class="CRs1">'
+      + '<tr class="CRg1b"><td class="none" colspan="9">Round 1 on 2026/11/18</td></tr>'
+      + '<tr class="CRng1b"><th>Bo.</th><th>1</th><th>Družstvo A</th><th>Rtg</th><th>-</th><th>6</th><th>Družstvo B</th><th>Rtg</th><th>0 : 0</th></tr>'
+      + '<tr class="CRng2"><td>1.1</td><td></td><td>no player</td><td>0</td><td>-</td><td></td><td>no player</td><td>0</td><td></td></tr>'
+      + '</table></body></html>';
+    const m = parseBoardPairings(parseHtml(html)).rounds[0].matches[0];
+    assert.equal(m.home.name, 'Družstvo A');
+    assert.equal(m.away.name, 'Družstvo B');
+    assert.equal(m.home.no, 1);
+    assert.equal(m.away.no, 6);
+  });
+});

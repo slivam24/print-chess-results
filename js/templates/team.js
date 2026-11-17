@@ -1,6 +1,8 @@
 // Výstupy pro soutěže družstev: los zápasů a rozpis hráčů na šachovnicích.
 
-import { esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, colorLabel, theadRow, colgroup, bodyRow, noteBlock, SYM_W } from './common.js';
+import {
+  esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, colorLabel, theadRow, colgroup, bodyRow, noteBlock, sectionTitle, pruneEmpty, SYM_W,
+} from './common.js';
 
 function roundSub(round) {
   if (!round) return '';
@@ -21,6 +23,16 @@ export function teamRound(data, rq) {
   }
   return null;
 }
+
+/** Čísla kol, která data obsahují (pro „všechna kola najednou“). */
+export function teamRoundNumbers(data) {
+  const set = new Set();
+  for (const d of [data.boards, data.teamPairings]) for (const r of (d && d.rounds) || []) if (r.round != null && r.matches.length) set.add(r.round);
+  return [...set].sort((a, b) => a - b);
+}
+
+/** Každý s každým: los všech kol družstev najednou. */
+const allRoundsTeam = (info) => info.isTeam && info.system === 'roundrobin';
 
 function matchPlayed(m) {
   if ((m.boards || []).some((b) => b.result && b.result.played)) return true;
@@ -45,7 +57,7 @@ const needs = ({ round }) => [{ dataset: 'boards', round }, { dataset: 'teamPair
 // ---------------------------------------------------------------------------
 
 const MATCH_COLUMNS = [
-  { key: 'no', label: 'Zápas', cls: 'c num', width: '3.4em', get: (m) => esc(m.no ?? '') },
+  { key: 'no', label: 'Zápas', cls: 'c num', width: '4.4em', get: (m) => esc(m.no ?? '') },
   { key: 'homeNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (m) => esc(m.home?.no ?? '') },
   { key: 'home', label: 'Domácí', cls: 'name strong', get: (m) => esc(m.home?.name || '') },
   { key: 'score', label: 'Výsledek', cls: 'c res', width: '6em', get: (m, ctx) => (ctx.opts.showResults && matchPlayed(m) ? esc(scoreText(m)) : '–') },
@@ -60,17 +72,38 @@ export const teamMatches = {
   group: 'Družstva',
   supports: (info) => info.isTeam,
   roundMode: 'pairings',
+  allRounds: allRoundsTeam,
   options: [
     { key: 'showResults', label: 'Zobrazit výsledky (pokud jsou známy)', type: 'bool', def: false },
     { key: 'bigOnePage', label: 'Velké písmo na jednu stránku (nástěnka)', type: 'bool', def: false },
+    { key: 'roundPerPage', label: 'Každé kolo na samostatné stránce', type: 'bool', def: false, onlyAllRounds: true },
+    { key: 'roundGap', label: 'Mezera mezi koly (mm)', type: 'number', def: 6, min: 0, max: 60, step: 1, onlyAllRounds: true },
   ],
   columns: MATCH_COLUMNS,
   defaults: { orientation: 'portrait', columns: 1 },
   needs,
   layout: (opts) => (opts.bigOnePage ? { fit: { enabled: true, minPt: 8, maxPt: 32, autoColumns: false }, docClass: 'board-doc' } : {}),
   render({ data, round: rq, opts, cols }) {
-    const round = teamRound(data, rq);
     const ctx = { opts };
+    if (rq === 'all') {
+      const nums = teamRoundNumbers(data);
+      const blocks = [];
+      nums.forEach((n, i) => {
+        const r = teamRound(data, n);
+        const title = { ...sectionTitle(`${n}. kolo`, roundSub(r)), blockClass: 'sec-tight' };
+        if (opts.roundPerPage && i > 0) title.breakBefore = true;
+        else if (i > 0) title.spaceBefore = Math.max(0, Number(opts.roundGap) || 0);
+        blocks.push(title);
+        blocks.push({ type: 'table', className: 'grid matches sym', colgroup: colgroup(cols), thead: theadRow(cols), rows: r.matches.map((m) => bodyRow(cols, m, ctx)), keepTogether: true, blockClass: 'tight' });
+      });
+      return {
+        title: 'Los všech kol',
+        sub: nums.length ? `${nums.length} kol` : '',
+        blocks: blocks.length ? blocks : [noteBlock('Los zatím není na chess-results zveřejněn.')],
+        warnings: nums.length ? [] : ['Los zatím není na chess-results zveřejněn.'],
+      };
+    }
+    const round = teamRound(data, rq);
     const blocks = round
       ? [{ type: 'table', className: 'grid matches sym', colgroup: colgroup(cols), thead: theadRow(cols), rows: round.matches.map((m) => bodyRow(cols, m, ctx)) }]
       : [noteBlock('Pro toto kolo nejsou k dispozici žádné zápasy.')];
@@ -122,53 +155,169 @@ function blankBoards(n) {
   }));
 }
 
+/**
+ * Sestavy nejsou zveřejněné: družstvo, které má na soupisce přesně tolik hráčů jako šachovnic,
+ * může nastoupit jen v jednom složení – doplníme ho podle pořadí na soupisce.
+ */
+export function prefillLineups(match, players, nBoards) {
+  if (!players || !players.length || !match.away) return { match, filled: [] };
+  const filled = [];
+  const roster = (team) => players.filter((p) => p.team === team).sort((a, b) => (Number(a.board) || 999) - (Number(b.board) || 999));
+  const boards = (match.boards && match.boards.length ? match.boards : blankBoards(nBoards)).map((b) => ({ ...b, home: { ...b.home }, away: { ...b.away } }));
+  for (const side of ['home', 'away']) {
+    const team = match[side]?.name;
+    if (boards.some((b) => b[side].name)) continue; // sestava je známá
+    const list = roster(team);
+    if (list.length !== boards.length) continue;
+    boards.forEach((b, i) => {
+      const p = list[i];
+      b[side] = { ...b[side], empty: false, name: p.name, title: p.title || '', rating: p.rating ?? null };
+    });
+    filled.push(team);
+  }
+  return { match: { ...match, boards }, filled };
+}
+
+/** Sloupce s hráči nadepsané názvy družstev (vlastní nadpis z nastavení má přednost). */
+function matchCols(cols, m) {
+  return cols.map((c) => {
+    if (c.customLabel) return c;
+    if (c.key === 'home') return { ...c, label: m.home?.name || c.label };
+    if (c.key === 'away') return { ...c, label: m.away?.name || c.label };
+    return c;
+  });
+}
+
+function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
+  const blocks = [];
+  const filledTeams = new Set();
+  let i = 0;
+  for (const m0 of round.matches) {
+    if (!m0.away) continue;
+    let m = opts.ratings === false ? m0 : enrichBoards(m0, data.teamPlayers?.players);
+    const nBoards = m.boards && m.boards.length ? m.boards.length : Number(opts.blankBoards) || 8;
+    if (opts.prefill !== false && !(m.boards || []).some((b) => b.home.name || b.away.name)) {
+      const r = prefillLineups(m, data.teamPlayers?.players, nBoards);
+      m = r.match;
+      r.filled.forEach((t) => filledTeams.add(t));
+    }
+    const boards = m.boards && m.boards.length ? m.boards : blankBoards(nBoards);
+    const played = opts.showResults && matchPlayed(m);
+    const mc = matchCols(cols, m);
+    const head = `<div class="match-head">
+        <span class="m-no">Kolo ${esc(round.round ?? rq)}, Zápas ${esc(m.no ?? i + 1)}</span>
+        <span class="m-team">${esc(m.home?.name || '')}</span>
+        <span class="m-vs">${played ? esc(scoreText(m)) : '–'}</span>
+        <span class="m-team">${esc(m.away?.name || '')}</span>
+      </div>`;
+    const rows = boards.map((b) => bodyRow(mc, b, ctx));
+    if (!played) {
+      const total = mc.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : c.key === 'home' || c.key === 'away' ? '<td class="r muted">celkem</td>' : '<td></td>'));
+      rows.push(`<tr class="total-row">${total.join('')}</tr>`);
+    }
+    const headBlock = { type: 'html', html: head, keepWithNext: true };
+    if (opts.matchPerPage && !(first && i === 0)) headBlock.breakBefore = true;
+    else if (!(first && i === 0)) headBlock.spaceBefore = Math.max(0, Number(opts.matchGap) || 0);
+    blocks.push(headBlock);
+    blocks.push({ type: 'table', className: 'grid boards sym', colgroup: colgroup(mc), thead: theadRow(mc), rows, keepTogether: true });
+    if (opts.signatures !== false) {
+      blocks.push({ type: 'html', html: `<div class="signs three"><div class="sign">Kapitán – ${esc(m.home?.name || 'domácí')}</div><div class="sign">Kapitán – ${esc(m.away?.name || 'hosté')}</div><div class="sign">Rozhodčí</div></div>` });
+    }
+    i += 1;
+  }
+  return { blocks, filledTeams };
+}
+
 export const teamBoards = {
   id: 'team-boards',
   name: 'Rozpis hráčů na šachovnicích',
-  description: 'Každý zápas se sestavami na šachovnicích, barvami a místem pro výsledky a podpisy kapitánů.',
+  description: 'Každý zápas se sestavami na šachovnicích, barvami a místem pro výsledky a podpisy kapitánů – k rozstříhání.',
   group: 'Družstva',
   supports: (info) => info.isTeam,
   roundMode: 'pairings',
+  allRounds: allRoundsTeam,
   options: [
     { key: 'showResults', label: 'Zobrazit výsledky (pokud jsou známy)', type: 'bool', def: false },
     { key: 'matchPerPage', label: 'Každý zápas na samostatnou stránku', type: 'bool', def: false },
+    { key: 'matchGap', label: 'Mezera mezi zápasy (mm)', type: 'number', def: 12, min: 0, max: 80, step: 1 },
     { key: 'signatures', label: 'Podpisy kapitánů a rozhodčího', type: 'bool', def: true },
+    { key: 'prefill', label: 'Doplnit sestavu ze soupisky, když má družstvo přesně tolik hráčů jako šachovnic', type: 'bool', def: true },
     { key: 'blankBoards', label: 'Počet šachovnic, když sestavy nejsou známy', type: 'number', def: 8, min: 1, max: 20 },
     { key: 'ratings', label: 'Doplnit Elo ze soupisek', type: 'bool', def: true },
   ],
   columns: BOARD_COLUMNS,
-  defaults: { orientation: 'portrait', columns: 1 },
-  needs: ({ round, opts }) => [...needs({ round }), ...(opts && opts.ratings === false ? [] : [{ dataset: 'teamPlayers', optional: true }])],
+  // Rozpis se stříhá na jednotlivé zápasy – ve výchozím stavu bez záhlaví a zápatí stránky
+  defaults: { orientation: 'portrait', columns: 1, header: 'off', footer: 'off' },
+  needs: ({ round, opts }) => [
+    ...needs({ round }),
+    ...(opts && opts.ratings === false && opts.prefill === false ? [] : [{ dataset: 'teamPlayers', optional: true }]),
+  ],
   render({ data, round: rq, opts, cols, nameFormat }) {
-    const round = teamRound(data, rq);
     const ctx = { opts, nameFormat };
-    const blocks = [];
-    if (!round) {
-      blocks.push(noteBlock('Pro toto kolo nejsou k dispozici žádné zápasy.'));
-      return { title: `Rozpis šachovnic – ${rq}. kolo`, sub: '', blocks, warnings: teamWarnings(round, rq) };
+    const rounds = rq === 'all' ? teamRoundNumbers(data).map((n) => teamRound(data, n)).filter(Boolean) : [teamRound(data, rq)].filter(Boolean);
+    if (!rounds.length) {
+      return { title: `Rozpis šachovnic – ${rq === 'all' ? 'všechna kola' : `${rq}. kolo`}`, sub: '', blocks: [noteBlock('Pro toto kolo nejsou k dispozici žádné zápasy.')], warnings: teamWarnings(null, rq) };
     }
-    round.matches.forEach((m0, i) => {
-      if (!m0.away) return;
-      const m = opts.ratings === false ? m0 : enrichBoards(m0, data.teamPlayers?.players);
-      const boards = m.boards && m.boards.length ? m.boards : blankBoards(Number(opts.blankBoards) || 8);
-      const played = opts.showResults && matchPlayed(m);
-      const head = `<div class="match-head">
-          <span class="m-no">Zápas ${esc(m.no ?? i + 1)}</span>
-          <span class="m-team">${esc(m.home?.name || '')}</span>
-          <span class="m-vs">${played ? esc(scoreText(m)) : '–'}</span>
-          <span class="m-team">${esc(m.away?.name || '')}</span>
-        </div>`;
-      const rows = boards.map((b) => bodyRow(cols, b, ctx));
-      if (!played) {
-        const total = cols.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : c.key === 'home' || c.key === 'away' ? '<td class="r muted">celkem</td>' : '<td></td>'));
-        rows.push(`<tr class="total-row">${total.join('')}</tr>`);
-      }
-      blocks.push({ type: 'html', html: head, keepWithNext: true, breakBefore: opts.matchPerPage && i > 0 });
-      blocks.push({ type: 'table', className: 'grid boards sym', colgroup: colgroup(cols), thead: theadRow(cols), rows, keepTogether: true });
-      if (opts.signatures !== false) {
-        blocks.push({ type: 'html', html: '<div class="signs three"><div class="sign">Kapitán domácích</div><div class="sign">Kapitán hostů</div><div class="sign">Rozhodčí</div></div>' });
-      }
+    const blocks = [];
+    const filled = new Set();
+    let notPublished = false;
+    rounds.forEach((round, ri) => {
+      const r = boardsBlocks(round, rq, data, opts, cols, ctx, ri === 0);
+      if (rq === 'all' && ri > 0 && !opts.matchPerPage && r.blocks[0]) r.blocks[0] = { ...r.blocks[0], breakBefore: true, spaceBefore: undefined };
+      blocks.push(...r.blocks);
+      r.filledTeams.forEach((t) => filled.add(t));
+      if (!round.lineupsPublished) notPublished = true;
     });
-    return { title: `Rozpis šachovnic – ${rq}. kolo`, sub: roundSub(round), blocks, warnings: teamWarnings(round, rq) };
+    const warnings = [];
+    if (notPublished) {
+      warnings.push(filled.size
+        ? `Sestavy zatím nejsou zveřejněné – doplněny ze soupisky u družstev, která mají přesně tolik hráčů jako šachovnic (${[...filled].join(', ')}); ostatní šachovnice zůstanou prázdné k vyplnění.`
+        : 'Sestavy družstev zatím nejsou zveřejněné – šachovnice zůstanou prázdné k ručnímu vyplnění.');
+    }
+    return {
+      title: rq === 'all' ? 'Rozpis šachovnic – všechna kola' : `Rozpis šachovnic – ${rq}. kolo`,
+      sub: rq === 'all' ? '' : roundSub(rounds[0]),
+      blocks,
+      warnings,
+    };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Startovní pořadí družstev
+// ---------------------------------------------------------------------------
+
+const TEAM_START_COLUMNS = [
+  { key: 'no', label: 'č.', cls: 'c num strong', width: '2.8em', get: (t) => esc(t.no ?? '') },
+  { key: 'name', label: 'Družstvo', cls: 'name', get: (t) => esc(t.name) },
+  { key: 'players', label: 'Hráčů', cls: 'c num', width: '3.6em', hideEmpty: true, get: (t) => esc(t.players ?? '') },
+  { key: 'ratingAvg', label: 'Ø Elo', cls: 'c num', width: '4em', hideEmpty: true, get: (t) => fmtRating(t.ratingAvg) },
+];
+
+export const teamStartList = {
+  id: 'team-startlist',
+  name: 'Startovní pořadí družstev',
+  description: 'Družstva podle startovních (losovacích) čísel s průměrným Elo.',
+  group: 'Seznamy',
+  supports: (info) => info.isTeam,
+  roundMode: null,
+  options: [],
+  columns: TEAM_START_COLUMNS,
+  defaults: { orientation: 'portrait', columns: 1 },
+  needs: () => [{ dataset: 'teams' }, { dataset: 'teamPlayers', optional: true }],
+  render({ data, cols }) {
+    const players = data.teamPlayers?.players || [];
+    const teams = [...(data.teams?.teams || [])]
+      .sort((a, b) => (a.no ?? 999) - (b.no ?? 999))
+      .map((t) => ({ ...t, players: players.length ? players.filter((p) => p.team === t.name).length || null : null }));
+    const usable = pruneEmpty(cols, teams, {});
+    return {
+      title: 'Startovní pořadí družstev',
+      sub: `${teams.length} družstev`,
+      blocks: teams.length
+        ? [{ type: 'table', className: 'grid startlist', colgroup: colgroup(usable), thead: theadRow(usable), rows: teams.map((t) => bodyRow(usable, t, {})) }]
+        : [noteBlock('Seznam družstev zatím není k dispozici.')],
+      warnings: teams.length ? [] : ['Seznam družstev zatím není na chess-results k dispozici.'],
+    };
   },
 };

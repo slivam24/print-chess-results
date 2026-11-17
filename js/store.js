@@ -429,8 +429,9 @@ export function templateSettings(profile, tpl) {
     fontMax: Number(saved.fontMax) > 0 ? Number(saved.fontMax) : 20,
     pageColumns: saved.pageColumns ?? (tpl.defaults && tpl.defaults.columns) ?? 1,
     // Záhlaví / zápatí výstupu: 'inherit' = podle profilu (Nastavení → Záhlaví a zápatí)
-    header: ['first', 'every', 'title', 'off'].includes(saved.header) ? saved.header : 'inherit',
-    footer: ['on', 'off'].includes(saved.footer) ? saved.footer : 'inherit',
+    // (šablona může mít vlastní výchozí hodnotu, např. rozpis šachovnic k rozstříhání bez záhlaví)
+    header: ['first', 'every', 'title', 'off', 'inherit'].includes(saved.header) ? saved.header : (tpl.defaults && tpl.defaults.header) || 'inherit',
+    footer: ['on', 'off', 'inherit'].includes(saved.footer) ? saved.footer : (tpl.defaults && tpl.defaults.footer) || 'inherit',
     options: opts,
   };
 }

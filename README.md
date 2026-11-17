@@ -192,8 +192,9 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 | **Abecední seznam hráčů** | jednotlivci | jako ve Swiss-Manageru: Č., St.č., titul, Jméno, RtgN, RtgF, FED, Klub; česká abeceda (CH za H), kategorie |
 | **Pořadí** | jednotlivci | po zvoleném kole, kategorie (vč. přepočtu pořadí v kategorii), vysvětlivky pomocných hodnocení |
 | **Pořadí + kategorie** | jednotlivci | pořadí s Typem a Skupinou; vlastní kategorie složené z typů / skupin / pohlaví, každá s vlastním pořadím; za sebou, nebo každá na samostatné stránce; kategorie se nerozdělí na dvě stránky (lze vypnout); volitelně i celkové pořadí |
-| **Los zápasů družstev** | družstva | výsledky, velké písmo na nástěnku |
-| **Rozpis hráčů na šachovnicích** | družstva | každý zápas se sestavami a barvami, Elo ze soupisek, podpisy kapitánů a rozhodčího, zápas na stránku; když sestavy nejsou zveřejněné, vytiskne prázdné řádky k vyplnění |
+| **Los zápasů družstev** | družstva | výsledky, velké písmo na nástěnku; u soutěže každý s každým **všechna kola najednou** (mezera mezi koly, kolo na stránku) |
+| **Rozpis hráčů na šachovnicích** | družstva | k rozstříhání: ve výchozím stavu bez záhlaví a zápatí, nastavitelná mezera mezi zápasy, popisek „Kolo 1, Zápas 1“, sloupce nadepsané názvy družstev; sestavy a barvy, Elo ze soupisek, podpisy kapitánů a rozhodčího, zápas na stránku; když sestavy nejsou zveřejněné, doplní sestavu družstva, které má přesně tolik hráčů jako šachovnic, ostatní nechá prázdné k vyplnění; u každý s každým i všechna kola najednou |
+| **Startovní pořadí družstev** | družstva | družstva podle startovních čísel, počet hráčů, Ø Elo |
 | **Soupisky družstev** | družstva | družstvo na stránku, jen seznam družstev |
 | **Pořadí družstev** | družstva | po kole, vysvětlivky |
 

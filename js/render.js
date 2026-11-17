@@ -35,6 +35,8 @@ export function datasetsFor(tpl, info, round, opts) {
   // Pro jednotlivce v kruhovém systému je los všech kol na jedné stránce rd=1
   return list.map((n) => {
     if (n.dataset === 'pairings' && !info.isTeam && info.system === 'roundrobin') return { ...n, round: 1, fetchRound: 1 };
+    // Družstva – všechna kola: stránka bez čísla kola obsahuje všechna kola
+    if (round === 'all' && ['boards', 'teamPairings'].includes(n.dataset)) return { ...n, round: null };
     return n;
   });
 }

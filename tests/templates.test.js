@@ -588,3 +588,49 @@ describe('výsledky', () => {
     assert.equal(fmtResult({ played: false }), '');
   });
 });
+
+describe('družstva: startovní pořadí, všechna kola, rozpis k rozstříhání', () => {
+  const rr = { ...team.info, isTeam: true, system: 'roundrobin' };
+  test('startovní pořadí družstev podle čísel', () => {
+    const doc = buildDocument({ tpl: getTemplate('team-startlist'), info: team.info, data: { teams: { teams: [{ no: 2, name: 'B', ratingAvg: 1500 }, { no: 1, name: 'A', ratingAvg: 1600 }] } }, profile: defaultProfile() });
+    assert.match(doc.blocks[0].rows[0], /<td class="name">A<\/td>/);
+    assert.ok(!/Hráčů/.test(doc.blocks[0].thead)); // bez soupisek se sloupec skryje
+  });
+  test('los všech kol jen u družstev každý s každým', () => {
+    assert.equal(getTemplate('team-matches').allRounds(rr), true);
+    assert.equal(getTemplate('team-matches').allRounds({ ...rr, system: 'swiss' }), false);
+    assert.deepEqual(datasetsFor(getTemplate('team-matches'), rr, 'all', {}).map((n) => n.round), [null, null]);
+    const doc = buildDocument({ tpl: getTemplate('team-matches'), info: rr, data: team.data, profile: defaultProfile(), round: 'all' });
+    assert.equal(doc.title, 'Los všech kol');
+    assert.ok(doc.blocks.some((b) => b.type === 'table' && b.keepTogether));
+  });
+  test('rozpis: bez záhlaví a zápatí, Kolo X, Zápas Y, názvy družstev v hlavičce, mezera mezi zápasy', () => {
+    const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: defaultProfile(), round: 3 });
+    assert.equal(doc.layout.header, null);
+    assert.equal(doc.layout.footer, null);
+    const heads = doc.blocks.filter((b) => b.type === 'html' && /match-head/.test(b.html));
+    assert.match(heads[0].html, /Kolo 3, Zápas 1/);
+    assert.equal(heads[0].spaceBefore, undefined);
+    assert.equal(heads[1].spaceBefore, 12);
+    const m = team.data.boards.rounds[0].matches[0];
+    const t = doc.blocks.find((b) => b.type === 'table');
+    assert.ok(t.thead.includes(`>${m.home.name}<`) && t.thead.includes(`>${m.away.name}<`));
+    // vlastní volba záhlaví má přednost
+    const p = defaultProfile();
+    p.templates['team-boards'] = { header: 'first' };
+    assert.ok(buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: p, round: 3 }).layout.header);
+  });
+  test('sestava ze soupisky: jen družstvo s přesně tolika hráči jako šachovnic', async () => {
+    const { prefillLineups } = await import('../js/templates/team.js');
+    const boards = [1, 2].map((n) => ({ board: n, home: { empty: true, color: 'w' }, away: { empty: true, color: 'b' }, result: { played: false } }));
+    const players = [
+      { team: 'A', name: 'A2', board: 2 }, { team: 'A', name: 'A1', board: 1 },
+      { team: 'B', name: 'B1', board: 1 }, { team: 'B', name: 'B2', board: 2 }, { team: 'B', name: 'B3', board: 3 },
+    ];
+    const r = prefillLineups({ home: { name: 'A' }, away: { name: 'B' }, boards }, players, 2);
+    assert.deepEqual(r.filled, ['A']);
+    assert.deepEqual(r.match.boards.map((b) => b.home.name), ['A1', 'A2']);
+    assert.ok(r.match.boards.every((b) => !b.away.name));
+    assert.ok(boards.every((b) => !b.home.name)); // původní data se nezmění
+  });
+});
