@@ -437,9 +437,11 @@ export function parseBoardPairings(doc) {
         const right = vals.slice(dash + 1);
         const scoreText = right.length > 2 ? right[right.length - 1] : '';
         const rightTeam = right.length > 2 ? right.slice(0, -1) : right;
+        // Hlavička zápasu má za názvem družstva ještě sloupec „Rtg“ (průměr) – do názvu nepatří
+        const RTG_HEAD = /^(rtg|elo|rtgi|rtgn|rtg avg|rtgavg|ø|ø rtg|ø elo)$/i;
         const pick = (arr) => ({
           no: parseIntSafe(arr.find((x) => /^\d+$/.test(x))),
-          name: arr.filter((x) => !/^\d+$/.test(x)).join(' ').trim(),
+          name: arr.filter((x) => !/^\d+$/.test(x) && !RTG_HEAD.test(x.trim())).join(' ').trim(),
         });
         const score = parseMatchScore(scoreText);
         rd.matches.push({

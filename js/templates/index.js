@@ -5,7 +5,7 @@
 import { pairingsTable, pairingsBoard, pairingsAlpha } from './pairings.js';
 import { startList, alphaList, ranking, rankingCat, teamRanking, teamRoster } from './lists.js';
 import { arbiterSheet, scoreSlips } from './sheets.js';
-import { teamMatches, teamBoards } from './team.js';
+import { teamMatches, teamBoards, teamStartList } from './team.js';
 
 export const TEMPLATES = [
   startList,
@@ -19,6 +19,7 @@ export const TEMPLATES = [
   scoreSlips,
   teamMatches,
   teamBoards,
+  teamStartList,
   teamRoster,
   teamRanking,
 ];

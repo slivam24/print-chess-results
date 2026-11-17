@@ -162,7 +162,7 @@ table.board-pairings .res { color: var(--grey); font-weight: 400; }
   border-bottom: 0;
   font-size: 1.1em;
 }
-.match-head .m-no { font-size: .8em; color: var(--grey); white-space: nowrap; }
+.match-head .m-no { font-size: .85em; font-weight: 600; color: var(--ink); white-space: nowrap; }
 .match-head .m-team { flex: 1; font-weight: 700; }
 .match-head .m-team:last-child { text-align: right; }
 .match-head .m-vs { font-weight: 700; min-width: 12mm; text-align: center; }
