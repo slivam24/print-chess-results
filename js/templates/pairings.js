@@ -2,7 +2,7 @@
 
 import {
   esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, byeLabel, theadRow, colgroup,
-  bodyRow, playerIndex, collator, noteBlock, pruneEmpty, SYM_W,
+  bodyRow, playerIndex, collator, noteBlock, pruneEmpty, sectionTitle, SYM_W,
 } from './common.js';
 
 /** Najde v datech losu požadované kolo (kruhový systém má všechna kola najednou). */
@@ -96,6 +96,35 @@ const baseOptions = [
   { key: 'showByes', label: 'Uvést volno a nenasazené hráče', type: 'bool', def: true },
 ];
 
+/** Los všech kol najednou (každý s každým zná všechna kola dopředu). */
+function renderAllRounds({ data, opts, cols: allCols, nameFormat }) {
+  const rounds = ((data.pairings && data.pairings.rounds) || []).filter((r) => r.pairings && r.pairings.length);
+  const ctx = { opts, nameFormat };
+  const lists = rounds.map((r) => filterPairings(enrichPairings(r, data.main?.players), opts));
+  // Stejné sloupce ve všech kolech
+  const cols = pruneEmpty(allCols, lists.flat(), ctx);
+  const blocks = [];
+  rounds.forEach((r, i) => {
+    const title = sectionTitle(`${r.round ?? i + 1}. kolo`, roundSub(r));
+    if (opts.roundPerPage && i > 0) title.breakBefore = true;
+    blocks.push(title);
+    blocks.push({
+      type: 'table',
+      className: 'grid pairings sym',
+      colgroup: colgroup(cols),
+      thead: theadRow(cols),
+      rows: lists[i].map((p) => bodyRow(cols, p, ctx, p.black ? '' : 'bye-row')),
+      keepTogether: true, // kolo se nerozdělí na dvě stránky
+    });
+  });
+  return {
+    title: 'Los všech kol',
+    sub: rounds.length ? `${rounds.length} kol` : '',
+    blocks: blocks.length ? blocks : [noteBlock('Los zatím není na chess-results zveřejněn.')],
+    warnings: rounds.length ? [] : ['Los zatím není na chess-results zveřejněn.'],
+  };
+}
+
 export const pairingsTable = {
   id: 'pairings',
   name: 'Los kola',
@@ -103,11 +132,18 @@ export const pairingsTable = {
   group: 'Los kola',
   supports: (info) => !info.isTeam,
   roundMode: 'pairings',
-  options: baseOptions,
+  // Každý s každým: v nabídce kola je i „všechna kola najednou“
+  allRounds: (info) => !info.isTeam && info.system === 'roundrobin',
+  options: [
+    ...baseOptions,
+    { key: 'roundPerPage', label: 'Každé kolo na samostatné stránce', type: 'bool', def: false, onlyAllRounds: true },
+  ],
   columns: PAIRING_COLUMNS,
   defaults: { orientation: 'portrait', fontSize: null, columns: 1 },
   needs: roundNeeds,
-  render({ info, data, round: rq, opts, cols: allCols, nameFormat }) {
+  render(args) {
+    if (args.round === 'all') return renderAllRounds(args);
+    const { info, data, round: rq, opts, cols: allCols, nameFormat } = args;
     const round = pickRound(data.pairings, rq);
     const list = filterPairings(enrichPairings(round, data.main?.players), opts);
     const ctx = { opts, nameFormat };

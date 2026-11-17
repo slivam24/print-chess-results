@@ -325,6 +325,7 @@ function renderOptions() {
     const auto = autoRoundFor(tpl);
     const label = tpl.roundMode === 'ranking' ? 'Pořadí po kole' : 'Kolo';
     const list = [['auto', `automaticky${auto ? ` (${auto}. kolo)` : ''}`]];
+    if (tpl.allRounds && tpl.allRounds(info)) list.push(['all', 'všechna kola najednou']);
     for (let i = 1; i <= max; i++) {
       let note = '';
       if (tpl.roundMode === 'pairings' && info.pairedRounds.length && !info.pairedRounds.includes(i)) note = ' – los zatím není';
@@ -332,7 +333,12 @@ function renderOptions() {
       list.push([i, `${i}. kolo${note}`]);
     }
     els.options.append(h('label', { class: 'field' }, label, h('select', {
-      onchange: (e) => { session.round = e.target.value === 'auto' ? 'auto' : Number(e.target.value); refreshPreview(); },
+      onchange: (e) => {
+        const v = e.target.value;
+        session.round = v === 'auto' || v === 'all' ? v : Number(v);
+        renderOptions(); // volby jen pro „všechna kola“
+        refreshPreview();
+      },
     }, options(list, session.round))));
   }
 
@@ -345,7 +351,9 @@ function renderOptions() {
     }, { silent: true });
     scheduleRender();
   };
+  const allRounds = session.round === 'all' && tpl.allRounds && tpl.allRounds(info);
   for (const o of tpl.options || []) {
+    if (o.onlyAllRounds && !allRounds) continue;
     const v = ts.options[o.key];
     if (o.type === 'bool') {
       els.options.append(h('label', { class: 'check' },
@@ -436,7 +444,9 @@ async function refreshPreview({ fresh = false } = {}) {
       // Kolo: „automaticky“ se určí pro každou skupinu zvlášť
       let round = null;
       if (tpl.roundMode) {
-        if (session.round === 'auto') {
+        if (session.round === 'all' && tpl.allRounds && tpl.allRounds(info)) {
+          round = 'all';
+        } else if (session.round === 'auto' || session.round === 'all') {
           let pre = {};
           if (!info.isTeam && info.system === 'roundrobin' && tpl.roundMode === 'pairings') {
             pre = { pairings: (await source.get(tnr, 'pairings', 1, { fresh })).data };
@@ -483,10 +493,11 @@ function layoutAll(docs) {
     for (const w of d.warnings) warnings.push(d.groupName ? `${d.groupName}: ${w}` : w);
     if (d.layout.fitPage && d.layout.fitPage.enabled) {
       const pt = String(res.fontSize).replace('.', ',');
-      container.dataset.fit = res.pageCount > 1
-        ? `${pt} pt`
-        : `${pt} pt${res.rowHeight ? `, řádek ${String(res.rowHeight).replace('.', ',')} mm` : ''} (1 strana)`;
-      if (res.pageCount > 1) warnings.push(`${d.groupName ? `${d.groupName}: ` : ''}Výstup se nevejde na jednu stránku ani při nejmenším písmu (${d.layout.fitPage.minPt} pt) – je na ${res.pageCount} stránkách s co největším písmem.`);
+      // Vynucené konce stránek (např. každé kolo na samostatné stránce) nejsou „nevejde se“
+      const forced = 1 + d.blocks.filter((b, i) => i > 0 && (b.breakBefore || b.type === 'break')).length;
+      const row = res.rowHeight ? `, řádek ${String(res.rowHeight).replace('.', ',')} mm` : '';
+      container.dataset.fit = res.pageCount > forced ? `${pt} pt${row}` : `${pt} pt${row} (${forced > 1 ? 'oddíl na stránku' : '1 strana'})`;
+      if (res.pageCount > forced) warnings.push(`${d.groupName ? `${d.groupName}: ` : ''}Výstup se nevejde na jednu stránku ani při nejmenším písmu (${d.layout.fitPage.minPt} pt) – je na ${res.pageCount} stránkách s co největším písmem. Tip: zkuste 2 sloupce na stránce (⚙ Nastavení → Výstup) nebo orientaci na šířku.`);
     } else if (d.layout.fitWidth && d.layout.fitWidth.enabled) {
       container.dataset.fit = `${String(res.fontSize).replace('.', ',')} pt (co největší)`;
     } else if (d.layout.fit && d.layout.fit.enabled) {

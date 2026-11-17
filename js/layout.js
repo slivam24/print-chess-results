@@ -334,22 +334,23 @@ function fitPageWithRows(host, blocks, o) {
     font = lo;
   }
   const base = { ...o, fontSize: font };
-  if (maxPages > 1) return base;
-  // 2) Výška řádků: přirozená výška řádku (nejvyšší z tabulek) → co nejvyšší, aby to pořád byla 1 stránka
+  // 2) Výška řádků: přirozená výška řádku (nejvyšší z tabulek) → co nejvyšší, aby se nezvýšil počet stránek
+  //    (1 stránka, nebo počet daný vynuceným koncem stránky, např. „každé kolo na samostatné stránce“)
   const r0 = measureAndPack(host, blocks, base);
   const rows = r0.measured.flatMap((m) => m.rowH || []);
-  if (!rows.length || r0.pages.length > 1) return base;
+  if (!rows.length || r0.pages.length > maxPages) return base;
   const natural = Math.max(...rows) / PX_PER_MM; // mm
   const start = Math.max(natural, Number(o.rowHeight) || 0);
   const maxRow = Math.max(start, natural * (o.fitPage.maxRowFactor || 2.5));
-  if (!ok({ ...base, rowHeight: Math.round(start * 10) / 10 })) return base;
+  const okRows = (mm) => ok({ ...base, rowHeight: Math.round(mm * 10) / 10 }, maxPages);
+  if (!okRows(start)) return base;
   let lo = start;
   let hi = maxRow;
-  if (ok({ ...base, rowHeight: Math.round(hi * 10) / 10 })) lo = hi;
+  if (okRows(hi)) lo = hi;
   else {
     while (hi - lo > 0.1) {
       const mid = (lo + hi) / 2;
-      if (ok({ ...base, rowHeight: Math.round(mid * 10) / 10 })) lo = mid; else hi = mid;
+      if (okRows(mid)) lo = mid; else hi = mid;
     }
   }
   const rowHeight = Math.floor(lo * 10) / 10;

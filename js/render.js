@@ -44,10 +44,10 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
   const extra = tpl.layout ? tpl.layout(opts, page) || {} : {};
   const headerHtml = 'header' in extra && extra.header === null
     ? null
-    : renderHeader(profile, info, { outputTitle: out.title, outputSub: out.sub, vars: { kolo: round ? String(round) : '' } });
+    : renderHeader(profile, info, { outputTitle: out.title, outputSub: out.sub, vars: { kolo: round && round !== 'all' ? String(round) : '' } });
   const footerFn = 'footer' in extra && extra.footer === null
     ? null
-    : renderFooter(profile, info, { vars: { kolo: round ? String(round) : '' } });
+    : renderFooter(profile, info, { vars: { kolo: round && round !== 'all' ? String(round) : '' } });
   const layout = {
     orientation,
     margins: profile.page.margins,
