@@ -40,8 +40,13 @@ export function fmtRating(r) {
 export function fmtResult(res) {
   if (!res || !res.played) return '';
   if (res.black == null) return res.white ?? res.text;
-  const m = (x) => (x === '-' ? '−' : x);
-  return `${m(res.white)} – ${m(res.black)}`;
+  // Kontumace (chess-results „+ - -“) jako „K1 – 0“, „K0 – 1“, „K0 – 0“
+  const isForfeit = [res.white, res.black].some((x) => x === '+' || x === '-');
+  if (isForfeit) {
+    const k = (x) => (x === '+' ? '1' : x === '-' ? '0' : x);
+    return `K${k(res.white)} – ${k(res.black)}`;
+  }
+  return `${res.white} – ${res.black}`;
 }
 
 /** Datum ISO → „19. 11. 2026“. */
@@ -176,7 +181,7 @@ export const SYM_W = {
   ratingNat: '4.2em',
   fed: '3.2em',
   points: '2.6em',
-  result: '3.8em',
+  result: '4.4em', // vejde se i kontumace „K1 – 0“
   color: '2em',
 };
 

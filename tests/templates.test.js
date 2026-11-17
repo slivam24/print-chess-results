@@ -575,3 +575,16 @@ describe('záhlaví a zápatí výstupu', () => {
     assert.equal(getTemplate('scoresheets').pageChrome, false);
   });
 });
+
+describe('výsledky', () => {
+  test('kontumace se píše K1 – 0 / K0 – 1 / K0 – 0, běžné výsledky beze změny', async () => {
+    const { fmtResult } = await import('../js/templates/common.js');
+    const r = (white, black) => ({ played: true, white, black });
+    assert.equal(fmtResult(r('+', '-')), 'K1 – 0');
+    assert.equal(fmtResult(r('-', '+')), 'K0 – 1');
+    assert.equal(fmtResult(r('-', '-')), 'K0 – 0');
+    assert.equal(fmtResult(r('1', '0')), '1 – 0');
+    assert.equal(fmtResult(r('½', '½')), '½ – ½');
+    assert.equal(fmtResult({ played: false }), '');
+  });
+});
