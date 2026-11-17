@@ -68,6 +68,16 @@ function tableHtml(b, rows) {
   return `<table class="${b.className || 'grid'}">${b.colgroup || ''}${b.thead ? `<thead>${b.thead}</thead>` : ''}<tbody>${rows.join('')}</tbody></table>`;
 }
 
+/** Je text buňky širší než její vnitřní šířka (přesně, bez zaokrouhlení)? */
+function textOverflows(cell) {
+  if (!cell.firstChild) return false;
+  const range = document.createRange();
+  range.selectNodeContents(cell);
+  const cs = getComputedStyle(cell);
+  const avail = cell.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+  return range.getBoundingClientRect().width > avail + 0.05;
+}
+
 /** Změří bloky v daném sloupci. */
 function measureBlocks(col, blocks) {
   const out = [];
@@ -102,8 +112,11 @@ function measureBlocks(col, blocks) {
     if (wrap.scrollWidth > colW + 1 || (wrap.firstElementChild && wrap.firstElementChild.getBoundingClientRect().width > colW + 1)) out.overflowX = true;
     // Pevné rozložení tabulky (table-layout: fixed) nepřeteče jako celek – přetéct může obsah buňky
     if (!out.overflowX && b.type === 'table' && /\bsym\b/.test(b.className || '')) {
-      for (const cell of wrap.querySelectorAll('td')) {
-        if (cell.scrollWidth > cell.clientWidth + 1) { out.overflowX = true; break; }
+      // U tabulek „one-line“ se hlídá i hlavička (názvy družstev), a to přesně – i o zlomek pixelu
+      // delší text by prohlížeč zkrátil na „…“ (scrollWidth je zaokrouhlený, proto měříme text přímo)
+      const oneLine = /\bone-line\b/.test(b.className || '');
+      for (const cell of wrap.querySelectorAll(oneLine ? 'td, th' : 'td')) {
+        if (cell.scrollWidth > cell.clientWidth + 1 || (oneLine && textOverflows(cell))) { out.overflowX = true; break; }
       }
     }
     col.removeChild(wrap);
@@ -237,7 +250,7 @@ export function layoutDocument(target, blocks, o) {
   } else if (o.fitWidth && o.fitWidth.enabled) {
     opts = fitToWidth(host, blocks, o);
   }
-  const { pages } = measureAndPack(host, blocks, opts);
+  const { pages, overflowX } = measureAndPack(host, blocks, opts);
   host.innerHTML = '';
 
   applyDocStyle(target, opts);
@@ -257,7 +270,7 @@ export function layoutDocument(target, blocks, o) {
     });
     target.appendChild(page);
   });
-  return { pageCount: total, fontSize: opts.fontSize, columns: opts.columns, rowHeight: opts.rowHeight || null };
+  return { pageCount: total, fontSize: opts.fontSize, columns: opts.columns, rowHeight: opts.rowHeight || null, overflowX };
 }
 
 /** Najde největší písmo (a případně počet sloupců), při kterém se vše vejde na 1 stránku. */

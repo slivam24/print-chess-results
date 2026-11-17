@@ -660,6 +660,9 @@ function layoutAll(docs) {
     pages += res.pageCount;
     orientation = d.layout.orientation;
     for (const w of d.warnings) warnings.push(d.groupName ? `${d.groupName}: ${w}` : w);
+    if (res.overflowX && /one-line/.test(d.blocks.map((b) => b.className || '').join(' '))) {
+      warnings.push('Některé názvy nebo jména se nevešly celé na řádek (jsou zkrácené „…“). Zkuste tlačítko Max. písmo nebo menší písmo či orientaci na šířku.');
+    }
     if (d.layout.fitPage && d.layout.fitPage.enabled) {
       const pt = String(res.fontSize).replace('.', ',');
       // Vynucené konce stránek (např. každé kolo na samostatné stránce) nejsou „nevejde se“
