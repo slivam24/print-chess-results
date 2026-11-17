@@ -388,7 +388,7 @@ describe('los kola: sloupec Výs., čísla na střed, schované výstupy', () =>
   test('žádný číselný sloupec není zarovnaný vpravo', () => {
     for (const t of TEMPLATES) for (const c of t.columns || []) assert.doesNotMatch(c.cls || '', /\br\b/, `${t.id}.${c.key}`);
   });
-  test('výchozí profil schovává kdo kde hraje, rozhodcovský list a výsledkové lístky', () => {
-    assert.deepEqual(defaultProfile().hiddenTemplates.sort(), ['arbiter-sheet', 'pairings-alpha', 'scoresheets']);
+  test('výchozí profil schovává nástěnku, kdo kde hraje, rozhodcovský list a výsledkové lístky', () => {
+    assert.deepEqual(defaultProfile().hiddenTemplates.sort(), ['arbiter-sheet', 'pairings-alpha', 'pairings-board', 'scoresheets']);
   });
 });
