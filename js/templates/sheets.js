@@ -15,7 +15,7 @@ function roundSub(round) {
 // ---------------------------------------------------------------------------
 
 const ARB_COLUMNS = [
-  { key: 'board', label: 'Š.', cls: 'c num strong', width: SYM_W.board, get: (p) => esc(p.board ?? '') },
+  { key: 'board', label: 'Š.', cls: 'c num strong', width: SYM_W.board, get: (p) => (p.black ? esc(p.board ?? '') : '') },
   { key: 'wNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => esc(fmtName(p.white?.name, ctx.nameFormat)) },
   { key: 'wRating', hideEmpty: true, label: 'Elo', cls: 'r num', def: false, width: SYM_W.rating, get: (p) => fmtRating(p.white?.rating) },

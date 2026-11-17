@@ -355,3 +355,17 @@ describe('symetrické šířky sloupců v tabulkách s dvojicemi', () => {
     }
   });
 });
+
+describe('volno bez čísla šachovnice (jako Swiss-Manager)', () => {
+  for (const id of ['pairings', 'pairings-board', 'arbiter-sheet']) {
+    test(id, () => {
+      const doc = buildDocument({ tpl: getTemplate(id), info: swiss.info, data: swiss.data, profile: defaultProfile(), round: 7 });
+      const rows = doc.blocks.find((b) => b.type === 'table').rows;
+      const byes = rows.filter((r) => /class="bye"/.test(r));
+      assert.ok(byes.length > 0);
+      for (const r of byes) assert.match(r, /^<tr[^>]*><td class="c num[^"]*"[^>]*><\/td>/, 'první buňka (šachovnice) má být prázdná');
+      const played = rows.find((r) => !/class="bye"/.test(r));
+      assert.match(played, /^<tr[^>]*><td class="c num[^"]*"[^>]*>1<\/td>/);
+    });
+  }
+});
