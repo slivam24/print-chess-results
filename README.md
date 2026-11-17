@@ -225,6 +225,10 @@ Výsledky kola a křížová tabulka jsou připravené k doplnění jako další
 
 ## Když něco nejde
 
+**Po aktualizaci appky vidím starou verzi:** GitHub Pages dovoluje prohlížeči držet soubory až 10 minut v mezipaměti.
+Appka po spuštění sama zkontroluje, zda na serveru není novější verze, a případně se jednou znovu načte.
+Kdyby to nestačilo, pomůže `Ctrl+F5` (úplné obnovení stránky).
+
 | Problém | Řešení |
 |---|---|
 | „Proxy neodpovídá (síť nebo CORS)“ | Otevřete <https://chess-print-proxy.slivam24.workers.dev> – má odpovědět „chess-print proxy OK“. Pokud ano, zkontrolujte v Cloudflare proměnnou `ALLOWED_ORIGINS` (musí obsahovat `https://slivam24.github.io`) a v Nastavení → Připojení, že není zadaná jiná adresa. |
