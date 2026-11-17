@@ -482,7 +482,7 @@ const COLUMN_NAMES = {
   wPoints: 'Body bílého', bPoints: 'Body černého', wRating: 'Elo bílého', bRating: 'Elo černého',
   wRatingNat: 'Nár. Elo bílého', bRatingNat: 'Nár. Elo černého', wClub: 'Klub bílého', bClub: 'Klub černého',
   wFed: 'Federace bílého', bFed: 'Federace černého', homeColor: 'Barva domácího', awayColor: 'Barva hosta',
-  homeRating: 'Elo domácího', awayRating: 'Elo hosta', homeNo: 'Č. domácích', awayNo: 'Č. hostů',
+  homeRating: 'Elo domácího', awayRating: 'Elo hosta', homeRoster: 'Pořadí na soupisce (domácí)', awayRoster: 'Pořadí na soupisce (hosté)', homeNo: 'Č. domácích', awayNo: 'Č. hostů',
   check: 'Kontrola (✓)', note: 'Poznámka', startNo: 'Startovní číslo', no: 'Číslo',
   rating: 'Rating FIDE', ratingNat: 'Národní rating', type: 'Typ hráče (U16, S50…)', group: 'Skupina', sex: 'Pohlaví',
   rank: 'Pořadí', rankAll: 'Celkové pořadí (u kategorií)',

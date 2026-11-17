@@ -124,23 +124,30 @@ function playerHtml(s, ctx) {
 const BOARD_COLUMNS = [
   { key: 'board', label: 'Š.', cls: 'c num strong', width: '2.4em', get: (b) => esc(b.board ?? '') },
   { key: 'homeColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.home.color) },
+  { key: 'homeRoster', label: 'Soup.', cls: 'c num', width: '4.2em', get: (b) => esc(b.home.rosterNo ?? '') },
   { key: 'home', label: 'Domácí', cls: 'name', get: (b, ctx) => playerHtml(b.home, ctx) },
   { key: 'homeRating', label: 'RtgF', cls: 'c num', width: SYM_W.rating, get: (b) => fmtRating(b.home.rating) },
   { key: 'result', label: 'Výsledek', cls: 'c res write', width: '5.5em', get: (b, ctx) => (ctx.opts.showResults ? esc(fmtResult(b.result)) : '') },
   { key: 'awayColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.away.color) },
+  { key: 'awayRoster', label: 'Soup.', cls: 'c num', width: '4.2em', get: (b) => esc(b.away.rosterNo ?? '') },
   { key: 'away', label: 'Hosté', cls: 'name', get: (b, ctx) => playerHtml(b.away, ctx) },
   { key: 'awayRating', label: 'RtgF', cls: 'c num', width: SYM_W.rating, get: (b) => fmtRating(b.away.rating) },
 ];
 
-/** Doplní rating a titul hráčů ze soupisek (stránka šachovnic rating neuvádí). */
-function enrichBoards(match, players) {
+/**
+ * Doplní ze soupisek pořadí hráče na soupisce, a volitelně rating a titul
+ * (stránka šachovnic rating neuvádí).
+ */
+function enrichBoards(match, players, { ratings = true } = {}) {
   if (!players || !players.length) return match;
   const key = (team, name) => `${team}|${name}`;
   const idx = new Map(players.map((p) => [key(p.team, p.name), p]));
   const fill = (s, team) => {
     if (!s || !s.name) return s;
     const p = idx.get(key(team, s.name));
-    return p ? { ...s, rating: s.rating ?? p.rating, title: s.title || p.title } : s;
+    if (!p) return s;
+    const out = { ...s, rosterNo: s.rosterNo ?? p.board ?? null };
+    return ratings ? { ...out, rating: s.rating ?? p.rating, title: s.title || p.title } : out;
   };
   return { ...match, boards: match.boards.map((b) => ({ ...b, home: fill(b.home, match.home?.name), away: fill(b.away, match.away?.name) })) };
 }
@@ -171,7 +178,7 @@ export function prefillLineups(match, players, nBoards) {
     if (list.length !== boards.length) continue;
     boards.forEach((b, i) => {
       const p = list[i];
-      b[side] = { ...b[side], empty: false, name: p.name, title: p.title || '', rating: p.rating ?? null };
+      b[side] = { ...b[side], empty: false, name: p.name, title: p.title || '', rating: p.rating ?? null, rosterNo: p.board ?? null };
     });
     filled.push(team);
   }
@@ -194,7 +201,7 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
   let i = 0;
   for (const m0 of round.matches) {
     if (!m0.away) continue;
-    let m = opts.ratings === false ? m0 : enrichBoards(m0, data.teamPlayers?.players);
+    let m = enrichBoards(m0, data.teamPlayers?.players, { ratings: opts.ratings !== false });
     const nBoards = m.boards && m.boards.length ? m.boards.length : Number(opts.blankBoards) || 8;
     if (opts.prefill !== false && !(m.boards || []).some((b) => b.home.name || b.away.name)) {
       const r = prefillLineups(m, data.teamPlayers?.players, nBoards);
@@ -211,7 +218,8 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
       </div>`;
     const rows = boards.map((b) => bodyRow(mc, b, ctx));
     if (!played) {
-      const total = mc.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : c.key === 'home' || c.key === 'away' ? '<td class="r muted">celkem</td>' : '<td></td>'));
+      // Řádek pro celkové skóre zápasu (jen dvojtečka ve sloupci výsledků)
+      const total = mc.map((c) => (c.key === 'result' ? '<td class="c res write strong">:</td>' : '<td></td>'));
       rows.push(`<tr class="total-row">${total.join('')}</tr>`);
     }
     const headBlock = { type: 'html', html: head, keepWithNext: true };
@@ -248,10 +256,8 @@ export const teamBoards = {
   columns: BOARD_COLUMNS,
   // Rozpis se stříhá na jednotlivé zápasy – ve výchozím stavu bez záhlaví a zápatí stránky
   defaults: { orientation: 'portrait', columns: 1, header: 'off', footer: 'off' },
-  needs: ({ round, opts }) => [
-    ...needs({ round }),
-    ...(opts && opts.ratings === false && opts.prefill === false ? [] : [{ dataset: 'teamPlayers', optional: true }]),
-  ],
+  // Soupisky: pořadí na soupisce, Elo a doplnění sestav
+  needs: ({ round }) => [...needs({ round }), { dataset: 'teamPlayers', optional: true }],
   render({ data, round: rq, opts, cols, nameFormat }) {
     const ctx = { opts, nameFormat };
     const rounds = rq === 'all' ? teamRoundNumbers(data).map((n) => teamRound(data, n)).filter(Boolean) : [teamRound(data, rq)].filter(Boolean);
