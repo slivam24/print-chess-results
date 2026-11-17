@@ -171,7 +171,7 @@ Kategorie uvnitř jednoho turnaje (sloupec „Gr/Typ“, např. U10, U12) lze u 
 | **Pořadí družstev** | družstva | po kole, vysvětlivky |
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
-Méně používané výstupy (kdo kde hraje, rozhodcovský list, výsledkové lístky) jsou ve výchozím stavu schované – zapnete je
+Méně používané výstupy (los na nástěnku, kdo kde hraje, rozhodcovský list, výsledkové lístky) jsou ve výchozím stavu schované – zapnete je
 v ⚙ Nastavení → Nabídka výstupů.
 Ratingy: chess-results u některých turnajů uvádí jen jeden sloupec „Rtg“ (bez rozlišení národní/mezinárodní) – appka ho pak
 zobrazí jako „Rtg“; oba sloupce NRtg a IRtg se objeví, když je chess-results nabízí. Ve výchozím stavu je chess-results

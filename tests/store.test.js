@@ -86,3 +86,11 @@ describe('přenos profilů mezi počítači', () => {
     assert.ok(defaultProfile('X').id);
   });
 });
+
+test('migrace v5: profil s uloženým seznamem schovaných výstupů schová i nástěnku', async () => {
+  const { normalizeState } = await import('../js/store.js');
+  const s = normalizeState({ version: 4, profiles: [{ id: 'a', name: 'A', hiddenTemplates: ['pairings-alpha'] }] });
+  assert.deepEqual(s.profiles[0].hiddenTemplates.sort(), ['pairings-alpha', 'pairings-board']);
+  const t = normalizeState({ version: 5, profiles: [{ id: 'a', name: 'A', hiddenTemplates: [] }] });
+  assert.deepEqual(t.profiles[0].hiddenTemplates, []);
+});

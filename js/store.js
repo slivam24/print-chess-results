@@ -3,7 +3,7 @@
 
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 5;
 
 /**
  * Vestavěná proxy (Cloudflare Worker z worker/worker.js nasazený pro tuto appku).
@@ -30,7 +30,7 @@ export function defaultProfile(name = 'Výchozí') {
     },
     nameFormat: 'last-first',
     // Výstupy schované z nabídky (zapínají se v Nastavení → Výstupy)
-    hiddenTemplates: ['pairings-alpha', 'arbiter-sheet', 'scoresheets'],
+    hiddenTemplates: ['pairings-board', 'pairings-alpha', 'arbiter-sheet', 'scoresheets'],
     header: {
       enabled: true,
       align: 'center',
@@ -95,6 +95,15 @@ export function normalizeProfile(p) {
 export function normalizeState(raw) {
   if (!isObj(raw)) throw new Error('Soubor neobsahuje nastavení appky.');
   const d = defaultState();
+  // Verze < 5: schovat i „Los kola – nástěnka“ (jen když profil už měl seznam schovaných výstupů;
+  // starší profily bez něj dostanou celý výchozí seznam)
+  if (raw.version && raw.version < 5) {
+    for (const p of Array.isArray(raw.profiles) ? raw.profiles : []) {
+      if (p && Array.isArray(p.hiddenTemplates) && !p.hiddenTemplates.includes('pairings-board')) {
+        p.hiddenTemplates.push('pairings-board');
+      }
+    }
+  }
   // Verze < 3: výchozí okraje 12 mm → 5 mm (jen u profilů, které měly pořád původní výchozí hodnotu)
   if (!raw.version || raw.version < 3) {
     for (const p of Array.isArray(raw.profiles) ? raw.profiles : []) {
