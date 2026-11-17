@@ -176,7 +176,7 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 
 | Výstup | Pro | Volby |
 |---|---|---|
-| **Los kola** | jednotlivci | výsledky ano/ne, volno a nenasazení, sloupce (č., titul, Elo, nár. Elo, klub, federace, body…) |
+| **Los kola** | jednotlivci | výsledky ano/ne, volno a nenasazení, sloupce (č., titul, Elo, nár. Elo, klub, federace, body…); u turnaje každý s každým v nabídce kola **všechna kola najednou** (kolo se nerozdělí na dvě stránky, volitelně každé kolo na samostatné stránce) |
 | **Los kola – nástěnka** | jednotlivci | vše na jednu stránku, písmo se zvětší na maximum, při mnoha dvojicích dělení do sloupců, tituly, max. velikost písma |
 | **Los kola – kdo kde hraje** | jednotlivci | hráči podle abecedy → šachovnice, barva, soupeř; na jednu stránku |
 | **Rozhodcovský list kola** | jednotlivci | prázdné kolonky výsledek / ✓ / poznámka, výška řádku, předvyplnění známých výsledků, podpis |

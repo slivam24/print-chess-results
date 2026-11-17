@@ -222,6 +222,29 @@ describe('záhlaví bez údajů', () => {
   });
 });
 
+describe('každý s každým: los všech kol najednou', () => {
+  const info = parseInfo(fixture('rr-main'));
+  const data = { main: { players: parseStartList(fixture('rr-main')).players }, pairings: parsePairings(fixture('rr-pairings-r1')) };
+  test('nabídka jen u kruhového systému', () => {
+    assert.equal(getTemplate('pairings').allRounds(info), true);
+    assert.equal(getTemplate('pairings').allRounds(swiss.info), false);
+  });
+  test('každé kolo s nadpisem, nerozdělí se, stejné sloupce; volitelně kolo na stránku', () => {
+    const doc = buildDocument({ tpl: getTemplate('pairings'), info, data, profile: defaultProfile(), round: 'all' });
+    const tables = doc.blocks.filter((b) => b.type === 'table');
+    assert.equal(tables.length, data.pairings.rounds.length);
+    assert.ok(tables.every((t) => t.keepTogether && t.thead === tables[0].thead));
+    assert.match(doc.blocks[0].html, /1\. kolo/);
+    assert.equal(doc.title, 'Los všech kol');
+    assert.doesNotMatch(doc.layout.header, /all/);
+    assert.ok(!doc.blocks.some((b) => b.breakBefore));
+    const p = defaultProfile();
+    p.templates.pairings = { options: { roundPerPage: true } };
+    const paged = buildDocument({ tpl: getTemplate('pairings'), info, data, profile: p, round: 'all' });
+    assert.equal(paged.blocks.filter((b) => b.breakBefore).length, data.pairings.rounds.length - 1);
+  });
+});
+
 describe('vestavěná proxy', () => {
   test('bez vlastní adresy se použije vestavěná, vlastní má přednost', async () => {
     const { Store, DEFAULT_PROXY_URL } = await import('../js/store.js');
