@@ -168,7 +168,7 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 | **Startovní listina** | jednotlivci | řazení (st. čísla / rating), kategorie; Typ a Skupina hráče, pokud je chess-results uvádí |
 | **Abecední seznam hráčů** | jednotlivci | jako ve Swiss-Manageru: Č., St.č., titul, Jméno, RtgN, RtgF, FED, Klub; česká abeceda (CH za H), kategorie |
 | **Pořadí** | jednotlivci | po zvoleném kole, kategorie (vč. přepočtu pořadí v kategorii), vysvětlivky pomocných hodnocení |
-| **Pořadí + kategorie** | jednotlivci | pořadí s Typem a Skupinou; vlastní kategorie složené z typů / skupin / pohlaví, každá s vlastním pořadím; za sebou, nebo každá na samostatné stránce; volitelně i celkové pořadí |
+| **Pořadí + kategorie** | jednotlivci | pořadí s Typem a Skupinou; vlastní kategorie složené z typů / skupin / pohlaví, každá s vlastním pořadím; za sebou, nebo každá na samostatné stránce; kategorie se nerozdělí na dvě stránky (lze vypnout); volitelně i celkové pořadí |
 | **Los zápasů družstev** | družstva | výsledky, velké písmo na nástěnku |
 | **Rozpis hráčů na šachovnicích** | družstva | každý zápas se sestavami a barvami, Elo ze soupisek, podpisy kapitánů a rozhodčího, zápas na stránku; když sestavy nejsou zveřejněné, vytiskne prázdné řádky k vyplnění |
 | **Soupisky družstev** | družstva | družstvo na stránku, jen seznam družstev |
