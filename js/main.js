@@ -674,6 +674,7 @@ function init() {
     loadTournament(els.input.value);
   });
   els.btnPrint.addEventListener('click', () => window.print());
+  $('#btn-print-setup').addEventListener('click', () => openSettings('print'));
   els.btnSettings.addEventListener('click', () => (els.sideSettings.hidden ? openSettings() : closeSettings()));
   els.profileSelect.addEventListener('change', (e) => {
     store.setActiveProfile(e.target.value);

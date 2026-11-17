@@ -475,3 +475,17 @@ describe('pořadí + kategorie', () => {
   });
 });
 
+
+describe('tisk jedním klikem', () => {
+  test('rozpozná prohlížeč a sestaví příkaz pro zástupce', async () => {
+    const { detectEnv, launchCommand } = await import('../js/ui/printSetup.js');
+    const win = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36';
+    assert.deepEqual(detectEnv(win), { os: 'win', browser: 'chrome' });
+    assert.deepEqual(detectEnv(`${win} Edg/130.0.0.0`), { os: 'win', browser: 'edge' });
+    assert.deepEqual(detectEnv('Mozilla/5.0 (Macintosh; Intel Mac OS X 14.0; rv:131.0) Gecko/20100101 Firefox/131.0'), { os: 'mac', browser: 'firefox' });
+    const url = 'https://slivam24.github.io/print-chess-results/';
+    assert.equal(launchCommand({ os: 'win', browser: 'chrome' }, url), `"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --kiosk-printing "${url}"`);
+    assert.match(launchCommand({ os: 'win', browser: 'edge' }, url), /msedge\.exe" --kiosk-printing/);
+    assert.equal(launchCommand({ os: 'mac', browser: 'chrome' }, url), `open -na "Google Chrome" --args --kiosk-printing "${url}"`);
+  });
+});
