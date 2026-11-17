@@ -50,7 +50,7 @@ const nm = (s, ctx) => esc(fmtName(s.name, ctx.nameFormat));
 
 /** Sloupce tabulky losu. */
 const PAIRING_COLUMNS = [
-  { key: 'board', label: 'Š.', cls: 'c num', width: SYM_W.board, get: (p) => esc(p.board ?? '') },
+  { key: 'board', label: 'Š.', cls: 'c num', width: SYM_W.board, get: (p) => (p.black ? esc(p.board ?? '') : '') },
   { key: 'wNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
   { key: 'wTitle', hideEmpty: true, label: '', cls: 'c title', width: SYM_W.title, get: (p) => esc(p.white?.title || '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => side(p.white, ctx, nm) },
@@ -136,7 +136,7 @@ export const pairingsTable = {
 // ---------------------------------------------------------------------------
 
 const BOARD_COLUMNS = [
-  { key: 'board', label: 'Šach.', cls: 'c num strong', width: '3.8em', get: (p) => esc(p.board ?? '') },
+  { key: 'board', label: 'Šach.', cls: 'c num strong', width: '3.8em', get: (p) => (p.black ? esc(p.board ?? '') : '') },
   { key: 'wNo', label: 'č.', cls: 'c num muted', def: false, width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => boardName(p.white, ctx) },
   { key: 'wPoints', label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => fmtPoints(p.white?.points) },
