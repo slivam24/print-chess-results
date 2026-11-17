@@ -3,6 +3,7 @@
 import { h, clear, options, downloadText, readFileText, imageToDataUrl } from './dom.js';
 import { resolveColumns } from '../templates/common.js';
 import { templateSettings, DEFAULT_PROXY_URL } from '../store.js';
+import { TEMPLATES } from '../templates/index.js';
 
 const FONTS = [
   ['Arial, Helvetica, sans-serif', 'Arial'],
@@ -29,6 +30,7 @@ const TABS = [
   ['page', 'Stránka'],
   ['header', 'Záhlaví a zápatí'],
   ['template', 'Výstup'],
+  ['outputs', 'Nabídka výstupů'],
   ['connection', 'Připojení'],
   ['backup', 'Záloha'],
 ];
@@ -80,6 +82,7 @@ export class SettingsPanel {
       page: () => this.renderPage(card),
       header: () => this.renderHeader(card),
       template: () => this.renderTemplate(card),
+      outputs: () => this.renderOutputs(card),
       connection: () => this.renderConnection(card),
       backup: () => this.renderBackup(card),
     }[this.tab];
@@ -341,6 +344,32 @@ export class SettingsPanel {
       );
     }
     add(card, h('p', { class: 'help', style: { marginTop: '12px' } }, 'Volby výstupu (např. zobrazení výsledků) najdete vlevo v části „Možnosti“ – i ty se ukládají do profilu.'));
+  }
+
+  // --- Které výstupy se nabízejí ------------------------------------------
+
+  renderOutputs(card) {
+    const hidden = new Set(this.profile.hiddenTemplates || []);
+    const list = h('div', {});
+    let lastGroup = null;
+    for (const t of TEMPLATES) {
+      if (t.group !== lastGroup) { list.append(h('div', { class: 'tpl-group' }, t.group)); lastGroup = t.group; }
+      list.append(h('label', { class: 'check' },
+        h('input', {
+          type: 'checkbox', checked: !hidden.has(t.id),
+          onchange: (e) => this.edit((pp) => {
+            const set = new Set(pp.hiddenTemplates || []);
+            if (e.target.checked) set.delete(t.id); else set.add(t.id);
+            pp.hiddenTemplates = [...set];
+          }),
+        }),
+        h('span', {}, h('b', {}, t.name), h('span', { class: 'muted' }, ` – ${t.description}`))));
+    }
+    add(card,
+      h('h2', {}, 'Nabídka výstupů'),
+      h('p', { class: 'small muted' }, 'Zaškrtnuté výstupy se ukazují vlevo v části „Co tisknout“. Nepoužívané můžete schovat – nastavení se neztratí a jdou kdykoli znovu zapnout. Výstupy pro družstva se ukazují jen u soutěží družstev a naopak.'),
+      list,
+    );
   }
 
   // --- Připojení -----------------------------------------------------------

@@ -3,7 +3,7 @@
 
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 /**
  * Vestavěná proxy (Cloudflare Worker z worker/worker.js nasazený pro tuto appku).
@@ -29,6 +29,8 @@ export function defaultProfile(name = 'Výchozí') {
       tableStyle: 'grid',
     },
     nameFormat: 'last-first',
+    // Výstupy schované z nabídky (zapínají se v Nastavení → Výstupy)
+    hiddenTemplates: ['pairings-alpha', 'arbiter-sheet', 'scoresheets'],
     header: {
       enabled: true,
       align: 'center',

@@ -139,7 +139,7 @@ export const SYM_W = {
   ratingNat: '4.2em',
   fed: '3.2em',
   points: '2.6em',
-  result: '5.4em',
+  result: '3.8em',
   color: '2em',
 };
 

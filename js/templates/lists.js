@@ -46,10 +46,10 @@ const START_COLUMNS = [
   { key: 'startNo', label: 'č.', cls: 'c num', width: '2.6em', get: (p) => esc(p.startNo ?? '') },
   { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (p) => esc(p.title) },
   { key: 'name', label: 'Jméno', cls: 'name', get: (p, ctx) => esc(fmtName(p.name, ctx.nameFormat)) },
-  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'r num muted', def: false, get: (p) => esc(p.fideId ?? '') },
+  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'c num muted', def: false, get: (p) => esc(p.fideId ?? '') },
   { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', get: (p) => esc(p.fed) },
-  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'r num', width: '3.2em', get: (p) => fmtRating(p.rating) },
-  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', width: '3.6em', get: (p) => fmtRating(p.ratingNat) },
+  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'c num', width: '3.2em', get: (p) => fmtRating(p.rating) },
+  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'c num', width: '3.6em', get: (p) => fmtRating(p.ratingNat) },
   { key: 'group', hideEmpty: true, label: 'Kat.', cls: 'c', def: false, get: (p) => esc(p.group) },
   { key: 'club', hideEmpty: true, label: 'Klub', cls: 'club', get: (p) => esc(p.club) },
 ];
@@ -101,11 +101,11 @@ const ALPHA_COLUMNS = [
   { key: 'startNo', label: 'St.č.', cls: 'c num', width: '3.2em', get: (p) => esc(p.startNo ?? '') },
   { key: 'title', hideEmpty: true, label: '', cls: 'c title', width: '2.8em', get: (p) => esc(p.title) },
   { key: 'name', label: 'Jméno', cls: 'name', get: (p, ctx) => esc(fmtName(p.name, ctx.nameFormat)) },
-  { key: 'ratingNat', hideEmpty: true, label: 'NRtg', cls: 'r num', width: '3.4em', get: (p) => fmtRating(p.ratingNat) },
-  { key: 'rating', hideEmpty: true, label: 'IRtg', cls: 'r num', width: '3.4em', get: (p) => fmtRating(p.rating) },
+  { key: 'ratingNat', hideEmpty: true, label: 'NRtg', cls: 'c num', width: '3.4em', get: (p) => fmtRating(p.ratingNat) },
+  { key: 'rating', hideEmpty: true, label: 'IRtg', cls: 'c num', width: '3.4em', get: (p) => fmtRating(p.rating) },
   { key: 'fed', hideEmpty: true, label: 'FED', cls: 'c', width: '3em', get: (p) => esc(p.fed) },
   { key: 'club', hideEmpty: true, label: 'Klub', cls: 'club', get: (p) => esc(p.club) },
-  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'r num muted', def: false, get: (p) => esc(p.fideId ?? '') },
+  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'c num muted', def: false, get: (p) => esc(p.fideId ?? '') },
   { key: 'group', hideEmpty: true, label: 'Kat.', cls: 'c', def: false, get: (p) => esc(p.group) },
 ];
 
@@ -160,8 +160,8 @@ const RANK_COLUMNS = [
   { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (r) => esc(r.title) },
   { key: 'name', label: 'Jméno', cls: 'name', get: (r, ctx) => esc(fmtName(r.name, ctx.nameFormat)) },
   { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', def: false, get: (r) => esc(r.fed) },
-  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'r num', width: '3.2em', get: (r) => fmtRating(r.rating) },
-  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', def: false, get: (r) => fmtRating(r.ratingNat) },
+  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'c num', width: '3.2em', get: (r) => fmtRating(r.rating) },
+  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'c num', def: false, get: (r) => fmtRating(r.ratingNat) },
   { key: 'group', hideEmpty: true, label: 'Kat.', cls: 'c', def: false, get: (r) => esc(r.group) },
   { key: 'club', hideEmpty: true, label: 'Klub', cls: 'club', get: (r) => esc(r.club) },
   { key: 'points', label: 'Body', cls: 'c num strong', width: '3em', get: (r) => fmtPoints(r.points) },
@@ -265,10 +265,10 @@ const ROSTER_COLUMNS = [
   { key: 'board', label: 'Š.', cls: 'c num', width: '2.4em', get: (p) => esc(p.board ?? '') },
   { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (p) => esc(p.title) },
   { key: 'name', label: 'Jméno', cls: 'name', get: (p, ctx) => esc(fmtName(p.name, ctx.nameFormat)) },
-  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'r num muted', def: false, get: (p) => esc(p.fideId ?? '') },
+  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'c num muted', def: false, get: (p) => esc(p.fideId ?? '') },
   { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', get: (p) => esc(p.fed) },
-  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'r num', width: '3.2em', get: (p) => fmtRating(p.rating) },
-  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'r num', width: '3.6em', get: (p) => fmtRating(p.ratingNat) },
+  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'c num', width: '3.2em', get: (p) => fmtRating(p.rating) },
+  { key: 'ratingNat', hideEmpty: true, label: 'Elo nár.', cls: 'c num', width: '3.6em', get: (p) => fmtRating(p.ratingNat) },
   { key: 'group', hideEmpty: true, label: 'Typ', cls: 'c', def: false, get: (p) => esc(p.group) },
 ];
 
@@ -295,8 +295,8 @@ export const teamRoster = {
       blocks.push({
         type: 'table',
         className: 'grid',
-        thead: '<tr><th class="c">č.</th><th>Družstvo</th><th class="r">Ø Elo</th></tr>',
-        rows: teams.map((t) => `<tr><td class="c num">${esc(t.no ?? '')}</td><td class="name">${esc(t.name)}</td><td class="r num">${fmtRating(t.ratingAvg)}</td></tr>`),
+        thead: '<tr><th class="c">č.</th><th>Družstvo</th><th class="c">Ø Elo</th></tr>',
+        rows: teams.map((t) => `<tr><td class="c num">${esc(t.no ?? '')}</td><td class="name">${esc(t.name)}</td><td class="c num">${fmtRating(t.ratingAvg)}</td></tr>`),
       });
     } else {
       const byTeam = new Map();
