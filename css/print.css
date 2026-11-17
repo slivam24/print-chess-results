@@ -223,3 +223,6 @@ table.grid.boards tr.total-row td.res { border: .8pt solid #000 !important; }
   }
   .pages .print-doc:last-child .page:last-child { break-after: auto; page-break-after: auto; }
 }
+
+/* Měření přirozené šířky textu sloupců (layout.js, autofitColumns) */
+.autofit-measure th, .autofit-measure td { white-space: nowrap !important; }

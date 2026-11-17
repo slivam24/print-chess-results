@@ -122,8 +122,10 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
 5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí,
-   vlastní nadpisy, **šířka sloupce (mm)** a **velikost písma sloupce (pt)**, **výška řádku (mm)**, orientace, velikost písma,
-   počet sloupců na stránce. Celá tabulka má jednotnou velikost písma, pokud ji u sloupce nezměníte.
+   vlastní nadpisy, **šířka sloupce (v mm, nebo v % šířky tabulky, např. `10 %`)** a **velikost písma sloupce (pt)**,
+   **výška řádku (mm)**, orientace, velikost písma, počet sloupců na stránce. Celá tabulka má jednotnou velikost písma,
+   pokud ji u sloupce nezměníte. Bez zadané šířky se úzké sloupce (čísla, body, rating…) samy přizpůsobí nejdelšímu textu
+   včetně nadpisu; protějškové sloupce (bílý/černý, domácí/hosté) mají stejnou šířku a zbytek dostanou sloupce se jmény.
    Velikost písma může být **pevná**, nebo **co největší** – appka zvolí největší písmo (do zadané hranice), při kterém
    se všechny sloupce vejdou na šířku stránky bez zalamování.
 6. **⚙ Nastavení → Záloha → Exportovat zálohu** – uschovejte si soubor JSON.

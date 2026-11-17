@@ -365,7 +365,7 @@ describe('sloupce: šířka, písmo, výška řádku, nové sloupce', () => {
     p.templates.startlist = { rowHeight: 7, columns: [{ key: 'startNo', on: true, width: 12 }, { key: 'name', on: true, fontSize: 13 }] };
     const doc = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p });
     const t = doc.blocks[0];
-    assert.match(t.colgroup, /<col style="width:12mm">/);
+    assert.match(t.colgroup, /<col style="width:12mm" data-key="[^"]*">/);
     assert.match(t.rows[0], /<td class="name" style="font-size:13pt">/);
     assert.equal(doc.layout.rowHeight, 7);
   });
@@ -406,7 +406,7 @@ describe('okraje a písmo „co největší“', () => {
 });
 
 describe('symetrické šířky sloupců v tabulkách s dvojicemi', () => {
-  const widthsOf = (block) => [...block.colgroup.matchAll(/<col(?: style="width:([^"]+)")?>/g)].map((m) => m[1] || 'auto');
+  const widthsOf = (block) => [...block.colgroup.matchAll(/<col(?!group)(?: style="width:([^"]+)")?[^>]*>/g)].map((m) => m[1] || 'auto');
   const keysOf = (block) => [...block.thead.matchAll(/<th class="[^"]*">([^<]*)<\/th>/g)].map((m) => m[1]);
   test('los kola: protějškové sloupce mají stejnou šířku, jména se dělí o zbytek', () => {
     const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile: defaultProfile(), round: 7 });
@@ -664,4 +664,30 @@ test('rozpis šachovnic: sloupec s pořadím na soupisce u obou družstev', () =
   const m = team.data.boards.rounds[0].matches[0];
   const p = team.data.teamPlayers.players.find((x) => x.team === m.home.name && x.name === m.boards[0].home.name);
   if (p && p.board != null) assert.match(t.rows[0], new RegExp(`<td class="c num">${p.board}</td>`));
+});
+
+describe('šířky sloupců', () => {
+  test('šířka v mm nebo v procentech', async () => {
+    const { parseColWidth } = await import('../js/templates/common.js');
+    assert.deepEqual(parseColWidth(12), { css: '12mm', value: 12 });
+    assert.deepEqual(parseColWidth('12,5'), { css: '12.5mm', value: 12.5 });
+    assert.deepEqual(parseColWidth('10 %'), { css: '10%', value: '10%' });
+    assert.equal(parseColWidth(''), null);
+    assert.equal(parseColWidth('abc'), null);
+    const cols = resolveColumns(getTemplate('team-boards').columns, [{ key: 'homeRoster', width: '8%' }]);
+    assert.equal(cols.find((c) => c.key === 'homeRoster').width, '8%');
+  });
+  test('úzké sloupce se přizpůsobí obsahu (data-fit), protějšky a vlastní šířka', async () => {
+    const { partnerKey } = await import('../js/layout.js');
+    assert.equal(partnerKey('homeRoster'), 'awayRoster');
+    assert.equal(partnerKey('wNo'), 'bNo');
+    assert.equal(partnerKey('board'), null);
+    const p = defaultProfile();
+    p.templates['team-boards'] = { columns: [{ key: 'awayRoster', width: 15 }] };
+    const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: p, round: 3 });
+    const cg = doc.blocks.find((b) => b.type === 'table').colgroup;
+    assert.match(cg, /data-key="homeRoster" data-fit="1"/);
+    assert.match(cg, /style="width:15mm" data-key="awayRoster">/); // vlastní šířka se nepřizpůsobuje
+    assert.match(cg, /data-key="result" data-fit="1" data-min="5.5"/); // k zápisu: nejmenší šířka
+  });
 });

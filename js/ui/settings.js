@@ -1,7 +1,7 @@
 // Panel nastavení: profily, stránka a písmo, záhlaví/zápatí, šablona, připojení, záloha.
 
 import { h, clear, options, downloadText, readFileText, imageToDataUrl } from './dom.js';
-import { resolveColumns } from '../templates/common.js';
+import { resolveColumns, parseColWidth } from '../templates/common.js';
 import { templateSettings, DEFAULT_PROXY_URL } from '../store.js';
 import { TEMPLATES } from '../templates/index.js';
 import { renderPrintSetup } from './printSetup.js';
@@ -314,7 +314,7 @@ export class SettingsPanel {
           key: c.key,
           on: c.on,
           ...(c.label ? { label: c.label } : {}),
-          ...(Number(c.width) > 0 ? { width: Number(c.width) } : {}),
+          ...(parseColWidth(c.width) ? { width: parseColWidth(c.width).value } : {}),
           ...(Number(c.fontSize) > 0 ? { fontSize: Number(c.fontSize) } : {}),
         }));
       }, { rerenderPanel: true });
@@ -325,7 +325,7 @@ export class SettingsPanel {
       const ul = h('ul', { class: 'col-editor' });
       ul.append(h('li', { class: 'col-head' },
         h('span', { style: { width: '18px' } }), h('span', { class: 'c-label' }, 'Sloupec'),
-        h('span', { class: 'c-h-label' }, 'Vlastní nadpis'), h('span', { class: 'c-h-num' }, 'Šířka mm'),
+        h('span', { class: 'c-h-label' }, 'Vlastní nadpis'), h('span', { class: 'c-h-num' }, 'Šířka mm/%'),
         h('span', { class: 'c-h-num' }, 'Písmo pt'), h('span', { class: 'c-h-btn' })));
       cols.forEach((c, i) => {
         ul.append(h('li', { class: c.on ? '' : 'off' },
@@ -335,14 +335,23 @@ export class SettingsPanel {
             type: 'text', class: 'c-in-label', value: savedOf(c.key).label || '', placeholder: c.label || '(bez nadpisu)', title: 'Vlastní nadpis sloupce',
             onchange: (e) => { const l = current(); l[i].label = e.target.value.trim(); save(l); },
           }),
-          numInput(i, 'width', 'Šířka sloupce v mm (prázdné = automaticky)', 'auto', 3, 150, 1),
+          h('input', {
+            type: 'text', class: 'c-in-width', value: current()[i].width ?? '', placeholder: 'auto', inputmode: 'decimal',
+            title: 'Šířka sloupce: číslo = mm, s % = procenta šířky tabulky (např. 12 %). Prázdné = automaticky podle obsahu.',
+            onchange: (e) => {
+              const l = current();
+              const w = parseColWidth(e.target.value);
+              l[i].width = w ? w.value : null;
+              save(l);
+            },
+          }),
           numInput(i, 'fontSize', 'Velikost písma sloupce v pt (prázdné = jako tabulka)', '–', 5, 30, 0.5),
           h('button', { class: 'btn icon small', type: 'button', title: 'Nahoru', disabled: i === 0, onclick: () => { const l = current(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; save(l); } }, '↑'),
           h('button', { class: 'btn icon small', type: 'button', title: 'Dolů', disabled: i === cols.length - 1, onclick: () => { const l = current(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; save(l); } }, '↓')));
       });
       add(card,
         h('h3', {}, 'Sloupce'),
-        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, šipkami změníte pořadí. Vlastní nadpis, šířka (mm) a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Šířka je nejmenší šířka; zbylé místo dostanou sloupce bez zadané šířky.'),
+        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, šipkami změníte pořadí. Vlastní nadpis, šířka a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Úzké sloupce (čísla, body, rating…) se samy přizpůsobí nejdelšímu textu včetně nadpisu, protějškové sloupce (bílý/černý, domácí/hosté) mají stejnou šířku. Šířku můžete zadat v mm (např. 12) nebo v procentech šířky tabulky (např. 10 %); zbylé místo dostanou sloupce se jmény.'),
         ul,
         h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; delete t.columnsVersion; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
       );
