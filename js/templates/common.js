@@ -91,14 +91,14 @@ export function resolveColumns(defs, saved) {
     const d = byKey.get(s.key);
     if (!d || seen.has(s.key)) continue;
     seen.add(s.key);
-    const w = Number(s.width) > 0 ? Number(s.width) : null;
+    const w = parseColWidth(s.width);
     const fs = Number(s.fontSize) > 0 ? Number(s.fontSize) : null;
     out.push({
       ...d,
       on: s.on !== false,
       label: s.label || d.label,
       customLabel: !!s.label,
-      ...(w ? { width: `${w}mm`, userWidth: w } : {}),
+      ...(w ? { width: w.css, userWidth: w.value } : {}),
       ...(fs ? { fontSize: fs } : {}),
     });
   }
@@ -195,9 +195,31 @@ function cellStyle(c) {
   return c.fontSize ? ` style="font-size:${c.fontSize}pt"` : '';
 }
 
+/**
+ * <colgroup> tabulky. Výchozí šířky v em jsou jen odhad: sazba (layout.js) je u tabulek
+ * s pevným rozložením („sym“) přizpůsobí obsahu (data-fit). Sloupce k ručnímu zápisu
+ * (výsledek) si nechají výchozí šířku jako nejmenší (data-min). Šířka zadaná uživatelem platí vždy.
+ */
 export function colgroup(cols) {
   if (!cols.some((c) => c.width)) return '';
-  return `<colgroup>${cols.map((c) => `<col${c.width ? ` style="width:${c.width}"` : ''}>`).join('')}</colgroup>`;
+  return `<colgroup>${cols.map((c) => {
+    const attrs = [];
+    if (c.width) attrs.push(`style="width:${c.width}"`);
+    attrs.push(`data-key="${esc(c.key || '')}"`);
+    if (c.width && !c.userWidth && /em$/.test(c.width)) {
+      attrs.push('data-fit="1"');
+      if (/\b(write|res)\b/.test(c.cls || '')) attrs.push(`data-min="${parseFloat(c.width)}"`);
+    }
+    return `<col ${attrs.join(' ')}>`;
+  }).join('')}</colgroup>`;
+}
+
+/** Šířka sloupce z nastavení: číslo = mm, „15 %“ = procenta šířky tabulky. */
+export function parseColWidth(v) {
+  if (v == null || v === '') return null;
+  const m = String(v).trim().replace(',', '.').match(/^(\d+(?:\.\d+)?)\s*(%|mm)?$/);
+  if (!m || !(Number(m[1]) > 0)) return null;
+  return m[2] === '%' ? { css: `${Number(m[1])}%`, value: `${Number(m[1])}%` } : { css: `${Number(m[1])}mm`, value: Number(m[1]) };
 }
 
 /** Datový řádek – getter vrací už escapované HTML. */

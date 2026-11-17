@@ -68,6 +68,79 @@ function tableHtml(b, rows) {
   return `<table class="${b.className || 'grid'}">${b.colgroup || ''}${b.thead ? `<thead>${b.thead}</thead>` : ''}<tbody>${rows.join('')}</tbody></table>`;
 }
 
+/** Protějškový sloupec (bílý ↔ černý, domácí ↔ hosté) – má mít stejnou šířku. */
+export function partnerKey(key) {
+  if (/^w[A-Z]/.test(key)) return `b${key.slice(1)}`;
+  if (/^b[A-Z]/.test(key)) return `w${key.slice(1)}`;
+  if (/^home/.test(key)) return `away${key.slice(4)}`;
+  if (/^away/.test(key)) return `home${key.slice(4)}`;
+  return null;
+}
+
+/**
+ * Úzké sloupce tabulek s pevným rozložením („sym“) přizpůsobí obsahu: šířka = nejdelší text
+ * (nadpis i buňky) + odsazení. Tabulky se stejnými sloupci (např. všechny zápasy rozpisu) dostanou
+ * stejné šířky, protějškové sloupce také. Šířky jsou v em, takže platí pro každou velikost písma.
+ */
+function autofitColumns(host, blocks, o) {
+  const targets = blocks.filter((b) => b.type === 'table' && /\bsym\b/.test(b.className || '') && /data-fit/.test(b.colgroup || ''));
+  if (!targets.length) return blocks;
+  applyDocStyle(host, o);
+  host.innerHTML = '';
+  const { page, cols } = buildPage({ ...o, columns: 1 }, { withHeader: false, pageNo: 1, pageCount: 1 });
+  host.appendChild(page);
+  const col = cols[0];
+  const groups = new Map(); // stejný colgroup → společné šířky
+  for (const b of targets) {
+    if (!groups.has(b.colgroup)) groups.set(b.colgroup, []);
+    groups.get(b.colgroup).push(b);
+  }
+  const replaced = new Map();
+  for (const [cg, list] of groups) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = `<table>${cg}</table>`;
+    const colEls = [...tmp.querySelectorAll('col')];
+    const max = colEls.map(() => 0);
+    let fs = 0;
+    for (const b of list) {
+      const wrap = el('div', 'blk autofit-measure');
+      wrap.innerHTML = tableHtml(b, b.rows);
+      col.appendChild(wrap);
+      const table = wrap.querySelector('table');
+      fs = parseFloat(getComputedStyle(table).fontSize) || fs;
+      for (const tr of table.querySelectorAll('tr')) {
+        const cells = [...tr.children];
+        if (cells.length !== colEls.length) continue;
+        cells.forEach((cell, i) => {
+          if (!colEls[i].dataset.fit || !cell.firstChild) return;
+          const range = document.createRange();
+          range.selectNodeContents(cell);
+          const cs = getComputedStyle(cell);
+          const w = range.getBoundingClientRect().width + (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0) + 2;
+          if (w > max[i]) max[i] = w;
+        });
+      }
+      col.removeChild(wrap);
+    }
+    if (!fs) continue;
+    const em = colEls.map((c, i) => {
+      if (!c.dataset.fit) return null;
+      const min = Number(c.dataset.min) || 1.4;
+      // + malá rezerva, aby text nebyl nalepený na čárách
+      return Math.max(min, Math.ceil((max[i] / fs + 0.4) * 10) / 10);
+    });
+    const keys = colEls.map((c) => c.dataset.key);
+    keys.forEach((k, i) => {
+      const j = keys.indexOf(partnerKey(k));
+      if (em[i] != null && j >= 0 && em[j] != null) em[i] = em[j] = Math.max(em[i], em[j]);
+    });
+    colEls.forEach((c, i) => { if (em[i] != null) c.style.width = `${em[i]}em`; });
+    replaced.set(cg, `<colgroup>${colEls.map((c) => c.outerHTML).join('')}</colgroup>`);
+  }
+  host.innerHTML = '';
+  return blocks.map((b) => (b.type === 'table' && replaced.has(b.colgroup) ? { ...b, colgroup: replaced.get(b.colgroup) } : b));
+}
+
 /** Je text buňky širší než její vnitřní šířka (přesně, bez zaokrouhlení)? */
 function textOverflows(cell) {
   if (!cell.firstChild) return false;
@@ -239,9 +312,10 @@ function measureAndPack(host, blocks, o) {
  *      footer (fn(pageNo, pageCount) → html), fit: { enabled, minPt, maxPt, autoColumns } }
  * Vrací { pageCount, fontSize, columns }.
  */
-export function layoutDocument(target, blocks, o) {
+export function layoutDocument(target, blocks0, o) {
   const host = getMeasureHost();
   let opts = { ...o };
+  const blocks = autofitColumns(host, blocks0, o);
 
   if (o.fit && o.fit.enabled) {
     opts = fitToOnePage(host, blocks, o);
