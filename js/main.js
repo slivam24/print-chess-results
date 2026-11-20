@@ -56,12 +56,23 @@ function setStatus(text, kind = '') {
   els.status.className = `status ${kind}`;
 }
 
+let warningsOpen = false;
+/** Upozornění nad náhledem – sbalená na jeden řádek, rozbalí se kliknutím (chyby jsou vždy rozbalené). */
 function showWarnings(list, kind = '') {
   clear(els.warnings);
   if (!list || !list.length) { els.warnings.hidden = true; return; }
-  els.warnings.className = `warnings ${kind}`;
-  for (const w of list) els.warnings.append(w instanceof Node ? w : h('p', {}, '⚠ ', w));
+  const items = list.map((w) => (w instanceof Node ? w : h('p', {}, '⚠ ', w)));
+  const collapsible = kind !== 'error';
+  const update = () => {
+    els.warnings.className = `warnings ${kind} ${collapsible && !warningsOpen ? 'collapsed' : ''}`.trim();
+    if (toggle) toggle.textContent = warningsOpen ? '▴ sbalit' : `▾ ${list.length > 1 ? `zobrazit vše (${list.length})` : 'zobrazit celé'}`;
+  };
+  const toggle = collapsible ? h('button', { type: 'button', class: 'linklike warn-toggle', onclick: () => { warningsOpen = !warningsOpen; update(); } }) : null;
+  els.warnings.append(h('div', { class: 'warn-list' }, items), toggle);
+  update();
   els.warnings.hidden = false;
+  // Jediné krátké upozornění se vejde celé – tlačítko „zobrazit“ není potřeba
+  if (toggle && !warningsOpen && list.length === 1 && items[0].scrollWidth <= items[0].clientWidth + 1) toggle.hidden = true;
 }
 
 /** Výstupy pro turnaj bez těch, které má aktivní profil schované. */
@@ -384,6 +395,52 @@ function renderTournamentInfo() {
     h('a', { class: 'small', href: `https://chess-results.com/tnr${session.tnr}.aspx?lan=5`, target: '_blank', rel: 'noopener' }, 'otevřít na chess-results ↗')));
 }
 
+function selectTemplate(id) {
+  session.templateId = id;
+  store.update((s) => { s.ui.lastTemplate = id; }, { silent: true });
+  renderTemplateList();
+  refreshPreview();
+  if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
+}
+
+/** Nejvyšší číslo kola pro nabídku kol. */
+function maxRound(info) {
+  return Math.max(info.totalRounds || 0, info.lastPairedRound || 0, info.lastRankedRound || 0, 1);
+}
+
+/** Klávesy ← / → : předchozí / další kolo. */
+function stepRound(d) {
+  const tpl = currentTemplate();
+  const info = session.rootInfo;
+  if (!tpl || !tpl.roundMode || !info) return;
+  const max = maxRound(info);
+  let cur = session.round;
+  if (cur === 'auto') cur = autoRoundFor(tpl) || 1;
+  else if (cur === 'all') cur = d < 0 ? max + 1 : 0;
+  const next = Math.min(max, Math.max(1, Number(cur) + d));
+  if (next === session.round) return;
+  session.round = next;
+  renderOptions();
+  refreshPreview();
+}
+
+/** Klávesové zkratky: ← / → kolo, 1–9 výstup v pořadí nabídky. */
+function setupShortcuts() {
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    if (document.querySelector('dialog[open]') || !session.rootInfo) return;
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      stepRound(e.key === 'ArrowLeft' ? -1 : 1);
+    } else if (/^[1-9]$/.test(e.key)) {
+      const tpl = visibleTemplates(session.rootInfo)[Number(e.key) - 1];
+      if (tpl) { e.preventDefault(); selectTemplate(tpl.id); }
+    }
+  });
+}
+
 function renderTemplateList() {
   clear(els.tplList);
   const info = session.rootInfo;
@@ -397,13 +454,8 @@ function renderTemplateList() {
     }
     els.tplList.append(h('button', {
       type: 'button', class: 'tpl', 'aria-pressed': String(t.id === session.templateId),
-      onclick: () => {
-        session.templateId = t.id;
-        store.update((s) => { s.ui.lastTemplate = t.id; }, { silent: true });
-        renderTemplateList();
-        refreshPreview();
-        if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
-      },
+      onclick: () => selectTemplate(t.id),
+      title: visibleTemplates(info).indexOf(t) < 9 ? `Klávesa ${visibleTemplates(info).indexOf(t) + 1}` : null,
     }, h('span', { class: 'tpl-name' }, t.name), h('span', { class: 'tpl-desc' }, t.description)));
   }
   renderOptions();
@@ -418,38 +470,31 @@ function renderQuickLayout() {
   if (!tpl || !session.rootInfo) return;
   const ts = templateSettings(store.profile, tpl);
   const orient = ts.orientation && ts.orientation !== 'inherit' ? ts.orientation : store.profile.page.orientation;
-  // mode: 'max' = co největší písmo (tabulka může pokračovat), 'page' = vše na 1 stránku A4 (písmo i výška řádků)
-  const set = (orientation, mode) => {
-    const active = ts.fontMode === mode && orient === orientation;
+  const setTpl = (fn) => {
     store.update((s) => {
       const p = s.profiles.find((x) => x.id === s.activeProfileId);
       p.templates[tpl.id] = p.templates[tpl.id] || {};
-      p.templates[tpl.id].orientation = orientation;
-      p.templates[tpl.id].fontMode = active ? 'fixed' : mode;
+      fn(p.templates[tpl.id]);
     }, { silent: true });
     renderQuickLayout();
     if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
     scheduleRender();
   };
-  const btn = (orientation, mode, icon, label) => {
-    const on = ts.fontMode === mode && orient === orientation;
-    const what = mode === 'page' ? '1 strana A4' : 'max. písmo';
-    const title = on
-      ? 'Kliknutím vrátíte pevnou velikost písma'
-      : mode === 'page'
-        ? `Přepnout ${label.toLowerCase()} a zvětšit písmo i výšku řádků tak, aby se vše vešlo na jednu stránku A4`
-        : `Přepnout ${label.toLowerCase()} a zvětšit písmo na maximum (tabulka může pokračovat na další stránce)`;
-    return h('button', {
-      type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(on), title, 'aria-label': `${label} · ${what}`, onclick: () => set(orientation, mode),
-    }, `${icon} ${label}`);
-  };
+  const seg = (label, items) => h('div', { class: 'quick-group seg', role: 'group', 'aria-label': label },
+    h('span', {}, label),
+    items.map((it) => h('button', {
+      type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(it.on), title: it.title, 'aria-label': `${label}: ${it.text}`, onclick: it.onclick,
+    }, it.text)));
   box.append(
-    h('div', { class: 'quick-group', role: 'group', 'aria-label': 'Max. písmo' },
-      h('span', { title: 'Co největší písmo, aby se vešly všechny sloupce; tabulka může pokračovat na další stránce' }, 'Max. písmo'),
-      btn('portrait', 'max', '↕', 'Na výšku'), btn('landscape', 'max', '↔', 'Na šířku')),
-    h('div', { class: 'quick-group', role: 'group', 'aria-label': '1 strana A4' },
-      h('span', { title: 'Písmo i výška řádků co největší, aby se vše vešlo na jednu stránku A4' }, '1 strana A4'),
-      btn('portrait', 'page', '↕', 'Na výšku'), btn('landscape', 'page', '↔', 'Na šířku')),
+    seg('Orientace', [
+      { text: '↕ Na výšku', on: orient === 'portrait', title: 'Stránka na výšku', onclick: () => setTpl((t) => { t.orientation = 'portrait'; }) },
+      { text: '↔ Na šířku', on: orient === 'landscape', title: 'Stránka na šířku', onclick: () => setTpl((t) => { t.orientation = 'landscape'; }) },
+    ]),
+    seg('Písmo', [
+      { text: 'Pevné', on: ts.fontMode === 'fixed', title: 'Velikost písma podle nastavení (⚙ Nastavení → Výstup)', onclick: () => setTpl((t) => { t.fontMode = 'fixed'; }) },
+      { text: 'Co největší', on: ts.fontMode === 'max', title: 'Co největší písmo, aby se vešly všechny sloupce; tabulka může pokračovat na další stránce', onclick: () => setTpl((t) => { t.fontMode = 'max'; }) },
+      { text: '1 strana A4', on: ts.fontMode === 'page', title: 'Písmo i výška řádků co největší, aby se vše vešlo na jednu stránku A4', onclick: () => setTpl((t) => { t.fontMode = 'page'; }) },
+    ]),
   );
 }
 
@@ -461,7 +506,7 @@ function renderOptions() {
   if (!tpl || !info) { els.options.append(h('p', { class: 'muted small' }, 'Vyberte výstup.')); return; }
 
   if (tpl.roundMode) {
-    const max = Math.max(info.totalRounds || 0, info.lastPairedRound || 0, info.lastRankedRound || 0, 1);
+    const max = maxRound(info);
     const auto = autoRoundFor(tpl);
     const label = tpl.roundMode === 'ranking' ? 'Pořadí po kole' : 'Kolo';
     const list = [['auto', `automaticky${auto ? ` (${auto}. kolo)` : ''}`]];
@@ -898,6 +943,7 @@ function init() {
   // Ctrl+P bez kliknutí na tlačítko – náhled je vždy aktuální, nic dalšího netřeba.
 
   setupManualDialog();
+  setupShortcuts();
   renderProfileSelect();
   renderRecent();
 
