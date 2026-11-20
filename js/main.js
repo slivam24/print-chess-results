@@ -452,11 +452,13 @@ function renderTemplateList() {
       els.tplList.append(h('div', { class: 'tpl-group' }, t.group));
       lastGroup = t.group;
     }
+    const k = visibleTemplates(info).indexOf(t) + 1;
+    // Kompaktní dlaždice: jen název (a číslo klávesy), popis po najetí myší
     els.tplList.append(h('button', {
       type: 'button', class: 'tpl', 'aria-pressed': String(t.id === session.templateId),
       onclick: () => selectTemplate(t.id),
-      title: visibleTemplates(info).indexOf(t) < 9 ? `Klávesa ${visibleTemplates(info).indexOf(t) + 1}` : null,
-    }, h('span', { class: 'tpl-name' }, t.name), h('span', { class: 'tpl-desc' }, t.description)));
+      title: `${t.description}${k <= 9 ? ` (klávesa ${k})` : ''}`,
+    }, h('span', { class: 'tpl-name' }, t.name), k <= 9 ? h('span', { class: 'tpl-key', 'aria-hidden': 'true' }, String(k)) : null));
   }
   renderOptions();
 }
@@ -480,13 +482,14 @@ function renderQuickLayout() {
     if (settingsPanel && !els.sideSettings.hidden) settingsPanel.render();
     scheduleRender();
   };
-  const seg = (label, items) => h('div', { class: 'quick-group seg', role: 'group', 'aria-label': label },
-    h('span', {}, label),
+  // label '' = bez viditelného popisku (orientace je jasná ze šipek)
+  const seg = (label, items) => h('div', { class: 'quick-group seg', role: 'group', 'aria-label': label || 'Orientace' },
+    label ? h('span', {}, label) : null,
     items.map((it) => h('button', {
-      type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(it.on), title: it.title, 'aria-label': `${label}: ${it.text}`, onclick: it.onclick,
+      type: 'button', class: 'btn small quick-btn', 'aria-pressed': String(it.on), title: it.title, 'aria-label': `${label || 'Orientace'}: ${it.text}`, onclick: it.onclick,
     }, it.text)));
   box.append(
-    seg('Orientace', [
+    seg('', [
       { text: '↕ Na výšku', on: orient === 'portrait', title: 'Stránka na výšku', onclick: () => setTpl((t) => { t.orientation = 'portrait'; }) },
       { text: '↔ Na šířku', on: orient === 'landscape', title: 'Stránka na šířku', onclick: () => setTpl((t) => { t.orientation = 'landscape'; }) },
     ]),
@@ -503,7 +506,11 @@ function renderOptions() {
   clear(els.options);
   const tpl = currentTemplate();
   const info = session.rootInfo;
-  if (!tpl || !info) { els.options.append(h('p', { class: 'muted small' }, 'Vyberte výstup.')); return; }
+  const wrap = $('#options-wrap');
+  if (wrap) wrap.hidden = !tpl || !info;
+  if (!tpl || !info) return;
+  const ot = $('#options-title');
+  if (ot) ot.textContent = `Možnosti: ${tpl.name}`;
 
   if (tpl.roundMode) {
     const max = maxRound(info);

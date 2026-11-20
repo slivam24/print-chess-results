@@ -111,7 +111,7 @@ export const roundResults = {
   group: 'Los kola',                     // nadpis skupiny v seznamu
   supports: (info) => !info.isTeam,      // pro které turnaje
   roundMode: 'pairings',                 // 'pairings' | 'ranking' | null → výběr kola
-  options: [                             // volby ve „3. Možnosti“, ukládají se do profilu
+  options: [                             // volby v „Možnostech“ pod výběrem výstupu, ukládají se do profilu
     { key: 'showByes', label: 'Uvést volno', type: 'bool', def: true },
     // type: 'bool' | 'select' (choices: [[hodnota, popisek]]) | 'number' (min, max) | 'text' | 'category'
     //       | 'categories' (editor vlastních kategorií: [{ name, types, groups, sex, on }])
