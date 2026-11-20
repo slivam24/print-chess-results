@@ -697,3 +697,62 @@ describe('šířky sloupců', () => {
     assert.match(cg, /data-key="result" data-fit="1" data-min="5.5"/); // k zápisu: nejmenší šířka
   });
 });
+
+describe('křížová tabulka (každý s každým)', () => {
+  const info = parseInfo(fixture('rr-main'));
+  const players = parseStartList(fixture('rr-main')).players;
+  const xt = parseRanking(fixture('rr-crosstable'));
+  test('jen u turnaje každý s každým', () => {
+    assert.ok(templatesFor(info).some((t) => t.id === 'crosstable'));
+    assert.ok(!templatesFor(swiss.info).some((t) => t.id === 'crosstable'));
+  });
+  test('podle pořadí: sloupce 1…N, úhlopříčka, výsledky souhlasí', async () => {
+    const doc = buildDocument({ tpl: getTemplate('crosstable'), info, data: { main: { players }, crosstable: xt }, profile: defaultProfile() });
+    const t = doc.blocks[0];
+    const n = xt.rows.length;
+    for (let j = 1; j <= n; j++) assert.match(t.thead, new RegExp(`>${j}</th>`));
+    assert.equal((t.rows.join('').match(/ diag"/g) || []).length, n);
+    // 1. řádek (Titov) proti 4. (Shabanov): 1
+    const { crossMatrix } = await import('../js/templates/crosstable.js');
+    const m = crossMatrix(xt, players, 'rank');
+    assert.equal(m.cells[0][3], '1');
+    assert.equal(m.cells[3][0], '0');
+    assert.equal(m.cells[2][2], '*');
+  });
+  test('podle startovních čísel se přeskládají řádky i sloupce; prázdná k vyplnění', async () => {
+    const { crossMatrix } = await import('../js/templates/crosstable.js');
+    const byRank = crossMatrix(xt, players, 'rank');
+    const bySno = crossMatrix(xt, players, 'startNo');
+    assert.deepEqual(bySno.players.map((p) => p.startNo), [...bySno.players.map((p) => p.startNo)].sort((a, b) => a - b));
+    const a = byRank.players[0]; const b = byRank.players[3];
+    const ia = bySno.players.findIndex((p) => p.startNo === a.startNo);
+    const ib = bySno.players.findIndex((p) => p.startNo === b.startNo);
+    assert.equal(bySno.cells[ia][ib], byRank.cells[0][3]);
+    const p = defaultProfile();
+    p.templates.crosstable = { options: { results: false } };
+    const doc = buildDocument({ tpl: getTemplate('crosstable'), info, data: { main: { players }, crosstable: xt }, profile: p });
+    assert.doesNotMatch(doc.blocks[0].rows.join(''), /<td class="c xt">(1|0|½)<\/td>/);
+    assert.doesNotMatch(doc.blocks[0].thead, />Body</);
+  });
+  test('před turnajem: prázdná tabulka ze startovní listiny', () => {
+    const doc = buildDocument({ tpl: getTemplate('crosstable'), info, data: { main: { players } }, profile: defaultProfile() });
+    assert.equal(doc.blocks[0].rows.length, players.length);
+    assert.ok(doc.warnings.length);
+  });
+});
+
+describe('vyhlášení výsledků', () => {
+  test('nejlepší 3 celkově a v kategoriích z „Pořadí + kategorie“', () => {
+    const p = defaultProfile();
+    const players = swiss.data.main.players.map((x, i) => ({ ...x, type: i % 3 === 0 ? 'U16' : '' }));
+    p.templates['ranking-cat'] = { options: { categories: [{ name: 'Do 16 let', types: ['U16'] }, { name: 'Vypnutá', types: ['U16'], on: false }, { name: 'Nad 65', types: ['S65'] }] } };
+    const doc = buildDocument({ tpl: getTemplate('awards'), info: swiss.info, data: { main: { players }, ranking: swiss.data.ranking }, profile: p, round: 6 });
+    const titles = doc.blocks.filter((b) => b.type === 'html').map((b) => b.html.replace(/<[^>]+>/g, '').trim());
+    assert.deepEqual(titles, ['Celkové pořadí', 'Do 16 let']); // prázdná „Nad 65“ se vynechá
+    assert.ok(doc.warnings.some((w) => /Nad 65/.test(w)));
+    const tables = doc.blocks.filter((b) => b.type === 'table');
+    assert.ok(tables.every((t) => t.rows.length === 3 && t.keepTogether));
+    assert.match(tables[0].rows[0], /<td class="c num strong">1\.<\/td>/);
+    assert.equal(templateSettings(p, getTemplate('awards')).fontMode, 'page');
+  });
+});

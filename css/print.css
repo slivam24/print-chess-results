@@ -226,3 +226,9 @@ table.grid.boards tr.total-row td.res { border: .8pt solid #000 !important; }
 
 /* Měření přirozené šířky textu sloupců (layout.js, autofitColumns) */
 .autofit-measure th, .autofit-measure td { white-space: nowrap !important; }
+
+/* Křížová tabulka: úhlopříčka (hráč sám proti sobě) */
+table.grid.crosstable td.diag { background: #9a9a9a !important; }
+table.grid.crosstable td.xt { font-weight: 700; }
+/* Vyhlášení výsledků */
+.award-title .sec-title { font-size: 1.35em; }

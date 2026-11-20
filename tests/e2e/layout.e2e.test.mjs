@@ -119,14 +119,18 @@ test('jednotlivci – švýcarský systém', async (t) => {
     ['ranking-cat', { round: 6, options: { categories: [{ name: 'Výběr', types: [], groups: [], sex: [] }] } }],
     ['pairings', { round: 7 }], ['pairings-board', { round: 7 }], ['pairings-alpha', { round: 7 }],
     ['arbiter-sheet', { round: 7 }], ['scoresheets', { round: 7 }],
+    ['awards', { round: 6 }],
   ]);
   assert.deepEqual(errors, []);
   await page.close();
 });
 
-test('jednotlivci – každý s každým, los všech kol', async (t) => {
-  const { page, errors } = await openTournament(['rr-main', 'rr-pairings-r1']);
-  await checkAll(t, page, [['pairings', { round: 'all' }], ['pairings', { round: 2 }]]);
+test('jednotlivci – každý s každým: los všech kol, křížová tabulka', async (t) => {
+  const { page, errors } = await openTournament(['rr-main', 'rr-pairings-r1', 'rr-crosstable']);
+  await checkAll(t, page, [
+    ['pairings', { round: 'all' }], ['pairings', { round: 2 }],
+    ['crosstable', {}], ['crosstable', { options: { sort: 'startNo', results: false } }],
+  ]);
   assert.deepEqual(errors, []);
   await page.close();
 });
