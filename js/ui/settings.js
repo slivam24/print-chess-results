@@ -115,10 +115,20 @@ export class SettingsPanel {
     const nameInput = h('input', { type: 'text', value: this.profile.name, 'aria-label': 'Název profilu' });
     add(card, 
       h('h2', {}, 'Profily nastavení'),
-      h('p', { class: 'small muted' }, 'Každý profil má vlastní vzhled, záhlaví a nastavení výstupů (např. „Otevřený turnaj“, „Liga“). Kliknutím na název profil přepnete.'),
+      h('p', { class: 'small muted' }, 'Každý profil má vlastní vzhled, záhlaví a nastavení výstupů (např. „Švýcar jednotlivců“, „Každý s každým – družstva“). Kliknutím na název profil přepnete. Profil pro turnaj vyberete i v horní liště – každá záložka turnaje si ho pamatuje.'),
       list,
-      h('div', { class: 'row', style: { marginTop: '10px' } },
-        h('button', { class: 'btn', type: 'button', onclick: () => { const n = prompt('Název nového profilu:', 'Nový profil'); if (n) { this.store.addProfile(n); this.onChange(); this.render(); } } }, '+ Nový profil')),
+      h('div', { class: 'row wrap', style: { marginTop: '10px' } },
+        h('button', { class: 'btn', type: 'button', onclick: () => { const n = prompt('Název nového profilu:', 'Nový profil'); if (n) { this.store.addProfile(n); this.onChange(); this.render(); } } }, '+ Nový profil'),
+        h('button', {
+          class: 'btn', type: 'button',
+          title: 'Přidá přednastavené profily (Švýcar jednotlivců, Každý s každým jednotlivci, Každý s každým – družstva školy), které ještě nemáte',
+          onclick: () => {
+            const added = this.store.addPresetProfiles();
+            this.onChange();
+            this.render();
+            alert(added.length ? `Přidáno: ${added.join(', ')}` : 'Všechny přednastavené profily už máte.');
+          },
+        }, '+ Přednastavené profily')),
       h('h3', {}, 'Přejmenovat aktivní profil'),
       h('div', { class: 'row' }, nameInput,
         h('button', { class: 'btn', type: 'button', onclick: () => { this.store.renameProfile(this.profile.id, nameInput.value); this.onChange(); this.render(); } }, 'Uložit')),

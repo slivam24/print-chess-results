@@ -51,8 +51,8 @@ const nm = (s, ctx) => esc(fmtName(s.name, ctx.nameFormat));
 /** Sloupce tabulky losu. */
 const PAIRING_COLUMNS = [
   { key: 'board', label: 'Š.', cls: 'c num', width: SYM_W.board, get: (p) => (p.black ? esc(p.board ?? '') : '') },
-  { key: 'wNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
-  { key: 'wTitle', hideEmpty: true, label: '', cls: 'c title', width: SYM_W.title, get: (p) => esc(p.white?.title || '') },
+  { key: 'wNo', label: 'č.', cls: 'c num muted', def: false, width: SYM_W.no, get: (p) => esc(p.white?.startNo ?? '') },
+  { key: 'wTitle', hideEmpty: true, label: '', cls: 'c title', def: false, width: SYM_W.title, get: (p) => esc(p.white?.title || '') },
   { key: 'wName', label: 'Bílý', cls: 'name', get: (p, ctx) => side(p.white, ctx, nm) },
   { key: 'wFed', hideEmpty: true, label: 'Fed', cls: 'c', def: false, width: SYM_W.fed, get: (p) => esc(p.white?.fed || '') },
   { key: 'wRating', hideEmpty: true, label: 'RtgF', cls: 'c num', width: SYM_W.rating, get: (p) => fmtRating(p.white?.rating) },
@@ -61,13 +61,13 @@ const PAIRING_COLUMNS = [
   { key: 'wPoints', hideEmpty: true, label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => fmtPoints(p.white?.points) },
   { key: 'result', label: 'Výs.', cls: 'c res', width: SYM_W.result, get: (p, ctx) => resultCell(p, ctx) },
   { key: 'bPoints', hideEmpty: true, label: 'B.', cls: 'c num', width: SYM_W.points, get: (p) => (p.black ? fmtPoints(p.black.points) : '') },
-  { key: 'bTitle', hideEmpty: true, label: '', cls: 'c title', width: SYM_W.title, get: (p) => esc(p.black?.title || '') },
+  { key: 'bTitle', hideEmpty: true, label: '', cls: 'c title', def: false, width: SYM_W.title, get: (p) => esc(p.black?.title || '') },
   { key: 'bName', label: 'Černý', cls: 'name', get: (p, ctx) => (p.black ? nm(p.black, ctx) : `<span class="bye">${esc(byeLabel(p.bye))}</span>`) },
   { key: 'bFed', hideEmpty: true, label: 'Fed', cls: 'c', def: false, width: SYM_W.fed, get: (p) => esc(p.black?.fed || '') },
   { key: 'bRating', hideEmpty: true, label: 'RtgF', cls: 'c num', width: SYM_W.rating, get: (p) => fmtRating(p.black?.rating) },
   { key: 'bRatingNat', hideEmpty: true, label: 'RtgN', cls: 'c num', def: false, width: SYM_W.ratingNat, get: (p) => fmtRating(p.black?.ratingNat) },
   { key: 'bClub', hideEmpty: true, label: 'Klub', cls: 'club', def: false, get: (p) => esc(p.black?.club || '') },
-  { key: 'bNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (p) => esc(p.black?.startNo ?? '') },
+  { key: 'bNo', label: 'č.', cls: 'c num muted', def: false, width: SYM_W.no, get: (p) => esc(p.black?.startNo ?? '') },
 ];
 
 /** Před kolem pomlčka (kdo s kým hraje), s volbou „Zobrazit výsledky“ výsledek, je-li známý. */

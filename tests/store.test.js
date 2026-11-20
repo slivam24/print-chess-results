@@ -43,12 +43,12 @@ describe('přenos profilů mezi počítači', () => {
 
   test('výchozí profil se stejným názvem (jiné id) se přepíše, ne zdvojí', () => {
     const a = computer();
-    a.update((s) => { s.profiles[0].header.text = 'z počítače A'; }); // „Otevřený turnaj“
-    const b = computer(); // má vlastní „Otevřený turnaj“ s jiným id
+    a.update((s) => { s.profiles[0].header.text = 'z počítače A'; }); // první přednastavený profil
+    const b = computer(); // má vlastní přednastavené profily s jinými id
     const plan = b.previewProfileImport(a.exportProfiles());
-    assert.deepEqual(plan.map((x) => x.action), ['replace', 'replace']);
+    assert.deepEqual(plan.map((x) => x.action), ['replace', 'replace', 'replace']);
     b.importProfiles(a.exportProfiles());
-    assert.equal(b.state.profiles.length, 2);
+    assert.equal(b.state.profiles.length, 3);
     assert.equal(b.state.profiles[0].header.text, 'z počítače A');
     // příště už se páruje podle id
     assert.equal(b.state.profiles[0].id, a.state.profiles[0].id);
@@ -100,3 +100,16 @@ test('migrace v6: startovní listina zapne dřív vypnutý sloupec skupiny', asy
   const s = normalizeState({ version: 5, profiles: [{ id: 'a', name: 'A', templates: { startlist: { columns: [{ key: 'name' }, { key: 'group', on: false }] } } }] });
   assert.equal(s.profiles[0].templates.startlist.columns[1].on, true);
 });
+
+test('přednastavené profily: při prvním spuštění a doplnění chybějících podle názvu', () => {
+  const a = computer();
+  assert.deepEqual(a.state.profiles.map((p) => p.name), ['Švýcar jednotlivců', 'Každý s každým jednotlivci', 'Každý s každým – družstva školy']);
+  assert.equal(new Set(a.state.profiles.map((p) => p.id)).size, 3);
+  const cats = a.state.profiles[0].templates['ranking-cat'].options.categories;
+  assert.deepEqual(cats.find((c) => c.name === 'U16').types, ['U10', 'U12', 'U16']);
+  assert.deepEqual(a.addPresetProfiles(), []); // všechny už jsou
+  a.update((s) => { s.profiles = s.profiles.slice(1); });
+  assert.deepEqual(a.addPresetProfiles(), ['Švýcar jednotlivců']);
+  assert.equal(a.state.profiles.length, 3);
+});
+
