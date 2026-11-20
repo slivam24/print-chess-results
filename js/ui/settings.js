@@ -333,12 +333,41 @@ export class SettingsPanel {
         onchange: (e) => { const l = current(); l[i][prop] = e.target.value === '' ? null : clampNum(e.target.value, min, max, null); save(l); },
       });
       const ul = h('ul', { class: 'col-editor' });
+      const move = (from, to) => {
+        if (from === to || to < 0 || to >= cols.length) return;
+        const l = current();
+        const [it] = l.splice(from, 1);
+        l.splice(to, 0, it);
+        save(l);
+      };
+      let dragFrom = null;
       ul.append(h('li', { class: 'col-head' },
-        h('span', { style: { width: '18px' } }), h('span', { class: 'c-label' }, 'Sloupec'),
+        h('span', { style: { width: '18px' } }), h('span', { style: { width: '18px' } }), h('span', { class: 'c-label' }, 'Sloupec'),
         h('span', { class: 'c-h-label' }, 'Vlastní nadpis'), h('span', { class: 'c-h-num' }, 'Šířka mm/%'),
-        h('span', { class: 'c-h-num' }, 'Písmo pt'), h('span', { class: 'c-h-btn' })));
+        h('span', { class: 'c-h-num' }, 'Písmo pt')));
       cols.forEach((c, i) => {
-        ul.append(h('li', { class: c.on ? '' : 'off' },
+        ul.append(h('li', {
+          class: c.on ? '' : 'off',
+          // Přetažení řádku myší za úchyt ⋮⋮ změní pořadí sloupců
+          // čára ukazuje, kam sloupec dopadne (nad řádek při přesunu nahoru, pod řádek při přesunu dolů)
+          ondragover: (e) => { if (dragFrom == null) return; e.preventDefault(); e.currentTarget.classList.add(dragFrom < i ? 'drop-below' : 'drop-target'); },
+          ondragleave: (e) => e.currentTarget.classList.remove('drop-target', 'drop-below'),
+          ondrop: (e) => { e.preventDefault(); e.currentTarget.classList.remove('drop-target', 'drop-below'); const f = dragFrom; dragFrom = null; if (f != null) move(f, i); },
+        },
+          h('span', {
+            class: 'c-drag', draggable: 'true', tabindex: '0', role: 'button',
+            title: 'Přetáhněte myší pro změnu pořadí (nebo šipkami ↑ ↓ na klávesnici)', 'aria-label': `Přesunout sloupec ${describeColumn(tpl.columns.find((d) => d.key === c.key))}`,
+            ondragstart: (e) => { dragFrom = i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); e.currentTarget.closest('li').classList.add('dragging'); },
+            ondragend: (e) => { dragFrom = null; e.currentTarget.closest('li')?.classList.remove('dragging'); },
+            onkeydown: (e) => {
+              if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                const to = i + (e.key === 'ArrowUp' ? -1 : 1);
+                move(i, to);
+                requestAnimationFrame(() => { const hs = this.root.querySelectorAll('.col-editor .c-drag'); if (hs[to]) hs[to].focus(); });
+              }
+            },
+          }, '⋮⋮'),
           h('input', { type: 'checkbox', checked: c.on, title: 'Zobrazit sloupec', onchange: (e) => { const l = current(); l[i].on = e.target.checked; save(l); } }),
           h('span', { class: 'c-label' }, describeColumn(tpl.columns.find((d) => d.key === c.key))),
           h('input', {
@@ -355,13 +384,11 @@ export class SettingsPanel {
               save(l);
             },
           }),
-          numInput(i, 'fontSize', 'Velikost písma sloupce v pt (prázdné = jako tabulka)', '–', 5, 30, 0.5),
-          h('button', { class: 'btn icon small', type: 'button', title: 'Nahoru', disabled: i === 0, onclick: () => { const l = current(); [l[i - 1], l[i]] = [l[i], l[i - 1]]; save(l); } }, '↑'),
-          h('button', { class: 'btn icon small', type: 'button', title: 'Dolů', disabled: i === cols.length - 1, onclick: () => { const l = current(); [l[i + 1], l[i]] = [l[i], l[i + 1]]; save(l); } }, '↓')));
+          numInput(i, 'fontSize', 'Velikost písma sloupce v pt (prázdné = jako tabulka)', '–', 5, 30, 0.5)));
       });
       add(card,
         h('h3', {}, 'Sloupce'),
-        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, šipkami změníte pořadí. Vlastní nadpis, šířka a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Úzké sloupce (čísla, body, rating…) se samy přizpůsobí nejdelšímu textu včetně nadpisu, protějškové sloupce (bílý/černý, domácí/hosté) mají stejnou šířku. Šířku můžete zadat v mm (např. 12) nebo v procentech šířky tabulky (např. 10 %); zbylé místo dostanou sloupce se jmény.'),
+        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, pořadí změníte přetažením za úchyt ⋮⋮. Vlastní nadpis, šířka a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Úzké sloupce (čísla, body, rating…) se samy přizpůsobí nejdelšímu textu včetně nadpisu, protějškové sloupce (bílý/černý, domácí/hosté) mají stejnou šířku. Šířku můžete zadat v mm (např. 12) nebo v procentech šířky tabulky (např. 10 %); zbylé místo dostanou sloupce se jmény.'),
         ul,
         h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; delete t.columnsVersion; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
       );

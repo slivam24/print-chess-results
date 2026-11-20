@@ -125,7 +125,7 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
-5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí,
+5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí (pořadí změníte přetažením za úchyt ⋮⋮),
    vlastní nadpisy, **šířka sloupce (v mm, nebo v % šířky tabulky, např. `10 %`)** a **velikost písma sloupce (pt)**,
    **výška řádku (mm)**, orientace, velikost písma, počet sloupců na stránce. Celá tabulka má jednotnou velikost písma,
    pokud ji u sloupce nezměníte. Bez zadané šířky se úzké sloupce (čísla, body, rating…) samy přizpůsobí nejdelšímu textu
@@ -139,12 +139,13 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 1. Ve Swiss-Manageru vylosujte kolo a nahrajte ho na chess-results.
 2. V appce zadejte **číslo turnaje** (např. `1495793`) nebo vložte **odkaz** z chess-results a klikněte **Stáhnout**.
    Odkaz na konkrétní stránku (např. `…art=2&rd=7`) rovnou předvybere výstup a kolo. Poslední turnaje jsou pod polem jako štítky.
-3. Vyberte **co tisknout** – náhled se zobrazí vpravo. Tlačítka nad náhledem jedním klikem přepnou orientaci a velikost
-   (opětovným klikem zpět na pevné písmo):
-   **Max. písmo ↕ / ↔** – co největší písmo, aby se vešly všechny sloupce (tabulka může pokračovat na další stránce);
-   **1 strana A4 ↕ / ↔** – písmo i výška řádků co největší, aby se vše vešlo na jednu stránku A4 a vyplnilo ji
-   (když se výstup nevejde ani při 6 pt, vytiskne se na co nejméně stránek). Šířku levého panelu změníte tažením svislé lišty mezi panelem
-   a náhledem (dvojklik = výchozí šířka); náhled ukazuje celou stránku, větší zobrazení vyberete v „Zvětšení“. Kolo je ve výchozím stavu **automaticky** poslední vylosované.
+3. Vyberte **co tisknout** – náhled se zobrazí vpravo. Nad náhledem jedním klikem přepnete **Orientaci** (↕ na výšku / ↔ na šířku)
+   a **Písmo**: *Pevné* (podle nastavení), *Co největší* (aby se vešly všechny sloupce, tabulka může pokračovat na další
+   stránce) nebo *1 strana A4* (písmo i výška řádků co největší, aby se vše vešlo na jednu stránku; když to nejde ani při 6 pt,
+   vytiskne se na co nejméně stránek). Šířku levého panelu změníte tažením svislé lišty mezi panelem a náhledem
+   (dvojklik = výchozí šířka); náhled ukazuje celou stránku, větší zobrazení vyberete v „Zvětšení“. Kolo je ve výchozím stavu
+   **automaticky** poslední vylosované. **Klávesy:** `←` / `→` předchozí / další kolo, `1`–`9` výstup v pořadí nabídky.
+   Upozornění nad náhledem jsou sbalená na jeden řádek, celá je zobrazíte odkazem „zobrazit“.
 4. **🖨 Tisknout** (nebo `Ctrl+P`). V tiskovém dialogu nechte měřítko 100 % a okraje „Výchozí“.
    Tisk **jedním klikem bez dialogu** si zapnete podle průvodce v ⚙ Nastavení → Tisk (viz níže).
 5. Po nahrání výsledků a dalšího losu klikněte **⟳ Aktualizovat data** a tiskněte znovu.
