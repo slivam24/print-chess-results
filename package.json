@@ -7,10 +7,12 @@
   "scripts": {
     "test": "node --test \"tests/**/*.test.js\"",
     "dev": "node tools/dev-server.mjs",
-    "fixtures": "tools/fetch-fixtures.sh"
+    "fixtures": "tools/fetch-fixtures.sh",
+    "test:e2e": "node --test \"tests/e2e/*.test.mjs\""
   },
   "license": "MIT",
   "devDependencies": {
-    "linkedom": "^0.18.15"
+    "linkedom": "^0.18.15",
+    "playwright": "1.63.0"
   }
 }
