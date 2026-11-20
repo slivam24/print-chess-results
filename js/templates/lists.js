@@ -349,6 +349,71 @@ export const rankingCat = {
 };
 
 // ---------------------------------------------------------------------------
+// Vyhlášení výsledků: nejlepší hráči celkově a v kategoriích (kategorie z „Pořadí + kategorie“)
+// ---------------------------------------------------------------------------
+
+const AWARD_COLUMNS = [
+  { key: 'place', label: 'Místo', cls: 'c num strong', width: '3.4em', get: (r) => `${esc(r.place)}.` },
+  { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (r) => esc(r.title) },
+  { key: 'name', label: 'Jméno', cls: 'name strong', get: (r, ctx) => esc(fmtName(r.name, ctx.nameFormat)) },
+  { key: 'type', hideEmpty: true, label: 'Typ', cls: 'c', width: '3em', def: false, get: (r) => esc(r.type) },
+  { key: 'club', hideEmpty: true, label: 'Klub', cls: 'club', get: (r) => esc(r.club) },
+  { key: 'points', label: 'Body', cls: 'c num strong', width: '3em', get: (r) => fmtPoints(r.points) },
+  { key: 'rank', label: 'Celk.', cls: 'c num muted', width: '3em', def: false, get: (r) => esc(r.rank ?? '') },
+];
+
+export const awards = {
+  id: 'awards',
+  name: 'Vyhlášení výsledků',
+  description: 'Nejlepší hráči celkově a v kategoriích velkým písmem – k vyhlášení. Kategorie se nastavují u „Pořadí + kategorie“.',
+  group: 'Seznamy',
+  supports: (info) => !info.isTeam,
+  roundMode: 'ranking',
+  options: [
+    { key: 'places', label: 'Počet míst', type: 'select', def: '3', choices: [['1', '1'], ['3', '3'], ['5', '5'], ['10', '10']] },
+    { key: 'withOverall', label: 'Celkové pořadí', type: 'bool', def: true },
+    { key: 'sectionPerPage', label: 'Každá kategorie na samostatné stránce', type: 'bool', def: false },
+  ],
+  columns: AWARD_COLUMNS,
+  // Velké písmo: vše na jednu stránku A4, co největší
+  defaults: { orientation: 'portrait', columns: 1, fontMode: 'page' },
+  needs: ({ round }) => [{ dataset: 'main' }, { dataset: 'ranking', round }],
+  render({ data, round, opts, cols, nameFormat, profile }) {
+    const rk = data.ranking || { rows: [], tiebreaks: [] };
+    const rows = rankingRows(rk, data.main?.players);
+    const ctx = { nameFormat };
+    const n = Math.max(1, Number(opts.places) || 3);
+    const catOpts = (profile && profile.templates && profile.templates['ranking-cat'] && profile.templates['ranking-cat'].options) || {};
+    const cats = activeCategories(catOpts);
+    const sections = [];
+    if (opts.withOverall !== false || !cats.length) sections.push({ name: 'Celkové pořadí', list: rows });
+    for (const cat of cats) {
+      sections.push({ name: String(cat.name || '').trim() || categoryDescription(cat) || 'Kategorie', list: rows.filter((r) => inCategory(cat, r)) });
+    }
+    // Kategorie bez hráčů se na vyhlášení nevypisují (jen upozornění)
+    const empty = sections.filter((sec) => !sec.list.length && sec.name !== 'Celkové pořadí').map((sec) => sec.name);
+    const shown = sections.filter((sec) => sec.list.length || sec.name === 'Celkové pořadí')
+      .map((sec) => ({ ...sec, list: sec.list.slice(0, n).map((r, i) => ({ ...r, place: i + 1 })) }));
+    const usable = pruneEmpty(cols, shown.flatMap((x) => x.list), ctx);
+    const blocks = [];
+    shown.forEach((sec, i) => {
+      const title = { ...sectionTitle(sec.name), blockClass: 'award-title' };
+      if (opts.sectionPerPage && i > 0) title.breakBefore = true;
+      else if (i > 0) title.spaceBefore = 4;
+      blocks.push(title);
+      blocks.push(sec.list.length
+        ? { type: 'table', className: 'grid awards', colgroup: colgroup(usable), thead: theadRow(usable), rows: sec.list.map((r) => bodyRow(usable, r, ctx)), keepTogether: true }
+        : noteBlock('V této kategorii nikdo není.'));
+    });
+    const warnings = [];
+    if (!rows.length) warnings.push(`Pořadí${round ? ` po ${round}. kole` : ''} zatím není na chess-results k dispozici.`);
+    if (rows.length && empty.length) warnings.push(`Kategorie bez hráčů (nevytisknou se): ${empty.join(', ')}.`);
+    const r = rk.round || round;
+    return { title: rk.final ? 'Vyhlášení výsledků' : r ? `Vyhlášení výsledků – po ${r}. kole` : 'Vyhlášení výsledků', sub: '', blocks, warnings };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Družstva: tabulka a soupisky
 // ---------------------------------------------------------------------------
 

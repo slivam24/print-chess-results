@@ -531,7 +531,7 @@ const COLUMN_NAMES = {
   homeRating: 'Elo domácího', awayRating: 'Elo hosta', homeRoster: 'Pořadí na soupisce (domácí)', awayRoster: 'Pořadí na soupisce (hosté)', homeNo: 'Č. domácích', awayNo: 'Č. hostů',
   check: 'Kontrola (✓)', note: 'Poznámka', startNo: 'Startovní číslo', no: 'Číslo',
   rating: 'Rating FIDE', ratingNat: 'Národní rating', type: 'Typ hráče (U16, S50…)', group: 'Skupina', sex: 'Pohlaví',
-  rank: 'Pořadí', rankAll: 'Celkové pořadí (u kategorií)',
+  rank: 'Pořadí', rankAll: 'Celkové pořadí (u kategorií)', cross: 'Výsledky proti soupeřům (1…N)', place: 'Místo',
 };
 
 function describeColumn(def) {

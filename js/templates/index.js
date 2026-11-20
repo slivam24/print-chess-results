@@ -3,7 +3,8 @@
 // Rozhraní šablony popisuje docs/ARCHITEKTURA.md.
 
 import { pairingsTable, pairingsBoard, pairingsAlpha } from './pairings.js';
-import { startList, alphaList, ranking, rankingCat, teamRanking, teamRoster } from './lists.js';
+import { startList, alphaList, ranking, rankingCat, awards, teamRanking, teamRoster } from './lists.js';
+import { crossTable } from './crosstable.js';
 import { arbiterSheet, scoreSlips } from './sheets.js';
 import { teamMatches, teamBoards, teamStartList } from './team.js';
 
@@ -12,6 +13,8 @@ export const TEMPLATES = [
   alphaList,
   ranking,
   rankingCat,
+  crossTable,
+  awards,
   pairingsTable,
   pairingsBoard,
   pairingsAlpha,
