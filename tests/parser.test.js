@@ -337,3 +337,20 @@ describe('šachovnice družstev: hlavička zápasu se sloupcem Rtg', () => {
     assert.equal(m.away.no, 6);
   });
 });
+
+describe('šachovnice družstev se sloupcem PGN', () => {
+  test('skóre se nepřilepí k názvu hostů a výsledky partií se načtou', () => {
+    const html = '<html><body><table class="CRs1">'
+      + '<tr class="CRg1b"><td class="none" colspan="8">Round 3 on 2026/11/15</td></tr>'
+      + '<tr class="CRng1b"><th>Bo.</th><th>2</th><th>Družstvo A</th><th>-</th><th>12</th><th>Družstvo B</th><th>2 : 6</th><th>PGN</th></tr>'
+      + '<tr class="CRng2"><td>1.1</td><td></td><td><table><tr><td><div class="FarbewT"></div></td><td>Hráč, Jedna</td></tr></table></td><td>-</td><td></td><td><table><tr><td><div class="FarbesT"></div></td><td>Hráč, Dva</td></tr></table></td><td>½ - ½</td><td></td></tr>'
+      + '<tr class="CRng1"><td>1.2</td><td></td><td><table><tr><td><div class="FarbesT"></div></td><td>Hráč, Tři</td></tr></table></td><td>-</td><td></td><td><table><tr><td><div class="FarbewT"></div></td><td>Hráč, Čtyři</td></tr></table></td><td>0 - 1</td><td><a class="CRlink" href="x">PGN</a></td></tr>'
+      + '</table></body></html>';
+    const m = parseBoardPairings(parseHtml(html)).rounds[0].matches[0];
+    assert.equal(m.away.name, 'Družstvo B');
+    assert.equal(m.score.home, 2);
+    assert.equal(m.score.away, 6);
+    assert.deepEqual(m.boards.map((b) => [b.home.name, b.away.name, b.result.played]), [['Hráč, Jedna', 'Hráč, Dva', true], ['Hráč, Tři', 'Hráč, Čtyři', true]]);
+    assert.equal(m.pgnCol, undefined);
+  });
+});

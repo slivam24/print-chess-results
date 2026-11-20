@@ -123,15 +123,16 @@ function playerHtml(s, ctx) {
 
 const BOARD_COLUMNS = [
   { key: 'board', label: 'Š.', cls: 'c num strong', width: '2.4em', get: (b) => esc(b.board ?? '') },
-  { key: 'homeColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.home.color) },
+  { key: 'homeColor', label: '', cls: 'c muted', width: SYM_W.color, def: false, get: (b) => colorLabel(b.home.color) },
   { key: 'homeRoster', label: 'Soup.', cls: 'c num', width: '4.2em', get: (b) => esc(b.home.rosterNo ?? '') },
   { key: 'home', label: 'Domácí', cls: 'name', get: (b, ctx) => playerHtml(b.home, ctx) },
-  { key: 'homeRating', label: 'RtgF', cls: 'c num', width: SYM_W.rating, get: (b) => fmtRating(b.home.rating) },
+  { key: 'homeRating', label: 'RtgF', cls: 'c num', width: SYM_W.rating, hideEmpty: true, get: (b) => fmtRating(b.home.rating) },
   { key: 'result', label: 'Výsledek', cls: 'c res write', width: '5.5em', get: (b, ctx) => (ctx.opts.showResults ? esc(fmtResult(b.result)) : '') },
-  { key: 'awayColor', label: '', cls: 'c muted', width: SYM_W.color, get: (b) => colorLabel(b.away.color) },
-  { key: 'awayRoster', label: 'Soup.', cls: 'c num', width: '4.2em', get: (b) => esc(b.away.rosterNo ?? '') },
+  { key: 'awayColor', label: '', cls: 'c muted', width: SYM_W.color, def: false, get: (b) => colorLabel(b.away.color) },
+  // hosté zrcadlově: jméno, pak pořadí na soupisce
   { key: 'away', label: 'Hosté', cls: 'name', get: (b, ctx) => playerHtml(b.away, ctx) },
-  { key: 'awayRating', label: 'RtgF', cls: 'c num', width: SYM_W.rating, get: (b) => fmtRating(b.away.rating) },
+  { key: 'awayRoster', label: 'Soup.', cls: 'c num', width: '4.2em', get: (b) => esc(b.away.rosterNo ?? '') },
+  { key: 'awayRating', label: 'RtgF', cls: 'c num', width: SYM_W.rating, hideEmpty: true, get: (b) => fmtRating(b.away.rating) },
 ];
 
 /**
@@ -195,10 +196,10 @@ function matchCols(cols, m) {
   });
 }
 
-function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
-  const blocks = [];
+/** Zápasy kola se sestavami (doplněné Elo, pořadí na soupisce, případně sestava ze soupisky). */
+function prepareMatches(round, data, opts) {
+  const list = [];
   const filledTeams = new Set();
-  let i = 0;
   for (const m0 of round.matches) {
     if (!m0.away) continue;
     let m = enrichBoards(m0, data.teamPlayers?.players, { ratings: opts.ratings !== false });
@@ -208,7 +209,15 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
       m = r.match;
       r.filled.forEach((t) => filledTeams.add(t));
     }
-    const boards = m.boards && m.boards.length ? m.boards : blankBoards(nBoards);
+    list.push({ m, boards: m.boards && m.boards.length ? m.boards : blankBoards(nBoards) });
+  }
+  return { list, filledTeams };
+}
+
+function boardsBlocks(round, rq, prepared, opts, cols, ctx, first) {
+  const blocks = [];
+  let i = 0;
+  for (const { m, boards } of prepared) {
     const played = opts.showResults && matchPlayed(m);
     const mc = matchCols(cols, m);
     // Názvy družstev jsou v hlavičce tabulky – nad ní stačí kolo a číslo zápasu (a skóre, je-li odehráno)
@@ -233,7 +242,7 @@ function boardsBlocks(round, rq, data, opts, cols, ctx, first) {
     }
     i += 1;
   }
-  return { blocks, filledTeams };
+  return blocks;
 }
 
 export const teamBoards = {
@@ -248,7 +257,7 @@ export const teamBoards = {
     { key: 'showResults', label: 'Zobrazit výsledky (pokud jsou známy)', type: 'bool', def: false },
     { key: 'matchPerPage', label: 'Každý zápas na samostatnou stránku', type: 'bool', def: false },
     { key: 'matchGap', label: 'Mezera mezi zápasy (mm)', type: 'number', def: 12, min: 0, max: 80, step: 1 },
-    { key: 'signatures', label: 'Podpisy kapitánů a rozhodčího', type: 'bool', def: true },
+    { key: 'signatures', label: 'Podpisy kapitánů a rozhodčího', type: 'bool', def: false },
     { key: 'prefill', label: 'Doplnit sestavu ze soupisky, když má družstvo přesně tolik hráčů jako šachovnic', type: 'bool', def: true },
     { key: 'blankBoards', label: 'Počet šachovnic, když sestavy nejsou známy', type: 'number', def: 8, min: 1, max: 20 },
     { key: 'ratings', label: 'Doplnit Elo ze soupisek', type: 'bool', def: true },
@@ -267,11 +276,14 @@ export const teamBoards = {
     const blocks = [];
     const filled = new Set();
     let notPublished = false;
+    const prepared = rounds.map((round) => prepareMatches(round, data, opts));
+    // Prázdné sloupce (např. Elo u soutěží bez ratingu) se skryjí – ve všech zápasech stejně
+    const usable = pruneEmpty(cols, prepared.flatMap((p) => p.list.flatMap((x) => x.boards)), ctx);
     rounds.forEach((round, ri) => {
-      const r = boardsBlocks(round, rq, data, opts, cols, ctx, ri === 0);
-      if (rq === 'all' && ri > 0 && !opts.matchPerPage && r.blocks[0]) r.blocks[0] = { ...r.blocks[0], breakBefore: true, spaceBefore: undefined };
-      blocks.push(...r.blocks);
-      r.filledTeams.forEach((t) => filled.add(t));
+      const b = boardsBlocks(round, rq, prepared[ri].list, opts, usable, ctx, ri === 0);
+      if (rq === 'all' && ri > 0 && !opts.matchPerPage && b[0]) b[0] = { ...b[0], breakBefore: true, spaceBefore: undefined };
+      blocks.push(...b);
+      prepared[ri].filledTeams.forEach((t) => filled.add(t));
       if (!round.lineupsPublished) notPublished = true;
     });
     const warnings = [];

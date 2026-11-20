@@ -109,7 +109,8 @@ describe('vykreslení šablon jednotlivců', () => {
   });
 
   test('záhlaví s proměnnými a zápatí s čísly stran', () => {
-    const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile, round: 7 });
+    const pf = { ...profile, footer: { ...profile.footer, enabled: true } };
+    const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile: pf, round: 7 });
     assert.match(doc.layout.header, /Vršovický podzimní open 2026/);
     assert.match(doc.layout.header, /Praha, 8\. 10\. 2026 – 10\. 12\. 2026/);
     assert.match(doc.layout.header, /Jan Kovář/);
@@ -297,12 +298,12 @@ describe('abecední seznam hráčů', () => {
 });
 
 describe('vzhled podle Swiss-Manageru', () => {
-  test('abecední seznam: sloupce Č., St.č., titul, Jméno, RtgN, RtgF, FED, Klub a pořadová čísla', () => {
+  test('abecední seznam: sloupce Č., St.č., titul, Jméno, RtgN, RtgF, Klub a pořadová čísla', () => {
     const info = parseInfo(fixture('categories-main'));
     const sl = parseStartList(fixture('categories-main'));
     const doc = buildDocument({ tpl: getTemplate('alphalist'), info, data: { main: { players: sl.players, ratingInfo: sl.ratingInfo } }, profile: defaultProfile() });
     const head = doc.blocks[0].thead.replace(/<[^>]+>/g, '|').split('|').filter(Boolean);
-    assert.deepEqual(head, ['Č.', 'St.č.', 'Jméno', 'RtgN', 'RtgF', 'FED', 'Klub']);
+    assert.deepEqual(head, ['Č.', 'St.č.', 'Jméno', 'RtgN', 'RtgF', 'Klub']);
     assert.match(doc.blocks[0].rows[0], /^<tr><td class="c num">1<\/td><td class="c num">17<\/td>/); // Č. 1, St.č. 17
     assert.match(doc.blocks[0].rows[0], /Barabas Aleš/); // výchozí formát „Příjmení Jméno“
     assert.match(doc.blocks[0].rows.join(''), /GM<\/td><td class="name">Druska Juraj/);
@@ -324,11 +325,14 @@ describe('vzhled podle Swiss-Manageru', () => {
     assert.match(doc.blocks[0].thead, />Elo FIDE</);
     assert.match(doc.blocks[0].thead, />RtgN</);
   });
-  test('styl mřížky a centrovaný nadpis jsou výchozí, pruhy lze zvolit', () => {
+  test('styl mřížky a nadpis vlevo jsou výchozí, pruhy a nadpis na střed lze zvolit', () => {
     const p = defaultProfile();
     const doc = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p });
     assert.match(doc.layout.docClass, /tbl-grid/);
-    assert.match(doc.layout.header, /hd-bar[^"]*center/);
+    assert.doesNotMatch(doc.layout.header, /hd-bar[^"]*center/);
+    assert.equal(doc.layout.footer, null); // zápatí ve výchozím stavu vypnuté
+    p.header.align = 'center';
+    assert.match(buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p }).layout.header, /hd-bar[^"]*center/);
     p.page.tableStyle = 'stripes';
     const doc2 = buildDocument({ tpl: getTemplate('startlist'), info: swiss.info, data: swiss.data, profile: p });
     assert.doesNotMatch(doc2.layout.docClass, /tbl-grid/);
@@ -415,7 +419,8 @@ describe('symetrické šířky sloupců v tabulkách s dvojicemi', () => {
     const w = widthsOf(t);
     const k = keysOf(t);
     // levá strana (bez čísla šachovnice) má stejné šířky jako pravá
-    const mid = k.indexOf('Výsledek');
+    const mid = k.indexOf('Výs.');
+    assert.ok(mid > 0);
     const left = w.slice(1, mid); const right = w.slice(mid + 1).reverse().slice(0, left.length);
     assert.deepEqual(new Set(w.filter((x) => x === 'auto')).size, 1);
     assert.equal(w.filter((x) => x === 'auto').length, 2); // Bílý a Černý
@@ -481,7 +486,7 @@ describe('pořadí + kategorie', () => {
   const data = { main: { players }, ranking };
   const build = (opts) => {
     const p = defaultProfile();
-    p.templates['ranking-cat'] = { options: opts };
+    p.templates['ranking-cat'] = { options: { withOverall: false, ...opts } };
     return buildDocument({ tpl: getTemplate('ranking-cat'), info: swiss.info, data, profile: p, round: 7 });
   };
   const heads = (b) => b.thead.replace(/<[^>]+>/g, '|').split('|').filter(Boolean);
@@ -553,11 +558,12 @@ describe('záhlaví a zápatí výstupu', () => {
     p.templates.ranking = t;
     return buildDocument({ tpl: getTemplate('ranking'), info: swiss.info, data: swiss.data, profile: p, round: 6 });
   };
-  test('podle profilu: záhlaví na první stránce, zápatí zapnuté', () => {
+  test('podle profilu: záhlaví na první stránce, zápatí vypnuté (výchozí profil), zapnout jde výstupem', () => {
     const d = build({});
     assert.match(d.layout.header, /hd-bar/);
     assert.equal(d.layout.headerEveryPage, false);
-    assert.equal(typeof d.layout.footer, 'function');
+    assert.equal(d.layout.footer, null);
+    assert.equal(typeof build({ footer: 'on' }).layout.footer, 'function');
   });
   test('na každé stránce / jen název výstupu / vypnuto', () => {
     assert.equal(build({ header: 'every' }).layout.headerEveryPage, true);

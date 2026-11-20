@@ -422,10 +422,12 @@ export function parseBoardPairings(doc) {
         if (!rd) { rd = { ...meta, matches: [] }; rounds.push(rd); }
         continue;
       }
-      const cells = cellsOf(tr);
+      let cells = cellsOf(tr);
       if (isHeaderRow(tr)) {
-        // [Bo.] [č. domácích] [domácí] [-] [č. hostů] [hosté] [výsledek]
-        const vals = cells.map(text);
+        // [Bo.] [č. domácích] [domácí] [-] [č. hostů] [hosté] [výsledek] ([PGN] – odkaz na partie)
+        let vals = cells.map(text);
+        const pgnCol = /^pgn$/i.test(vals[vals.length - 1] || '');
+        if (pgnCol) vals = vals.slice(0, -1);
         const dash = vals.findIndex((v, i) => i > 0 && v === '-');
         if (dash < 0) continue;
         if (!rd) {
@@ -450,11 +452,13 @@ export function parseBoardPairings(doc) {
           away: pick(rightTeam),
           score,
           boards: [],
+          pgnCol,
         });
         continue;
       }
       if (!isDataRow(tr) || !rd || !rd.matches.length) continue;
       const match = rd.matches[rd.matches.length - 1];
+      if (match.pgnCol && cells.length > 1) cells = cells.slice(0, -1); // buňka s odkazem PGN
       const vals = cells.map(text);
       const dash = vals.findIndex((v, i) => i > 0 && v === '-');
       if (dash < 0) continue;
@@ -475,6 +479,7 @@ export function parseBoardPairings(doc) {
     }
   }
   for (const r of rounds) {
+    for (const m of r.matches) delete m.pgnCol;
     r.published = r.matches.length > 0;
     r.lineupsPublished = r.matches.some((m) => m.boards.some((b) => b.home.name || b.away.name));
     r.hasResults = r.matches.some((m) => m.boards.some((b) => b.result.played));

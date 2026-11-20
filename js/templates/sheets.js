@@ -114,7 +114,7 @@ export const scoreSlips = {
     { key: 'shortTitle', label: 'Název na lístku (prázdné = název turnaje)', type: 'text', def: '' },
   ],
   columns: [],
-  defaults: { orientation: 'portrait', columns: 1 },
+  defaults: { orientation: 'portrait', columns: 1, fontMode: 'fixed' },
   needs: ({ round }) => [{ dataset: 'main' }, { dataset: 'pairings', round }],
   layout: (opts, page) => {
     const n = Number(opts.perPage) || 8;

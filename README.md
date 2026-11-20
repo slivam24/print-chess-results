@@ -9,7 +9,7 @@ Jednou si nastavíte, jak mají výstupy vypadat, a pak už jen: **stáhnout →
 - Startovní listina a pořadí (i po kategoriích)
 - Družstva: **los zápasů**, **rozpis hráčů na šachovnicích** (s podpisy kapitánů), soupisky, tabulka
 - Švýcar, každý s každým, družstva i turnaje s **více skupinami** (tisk jedné nebo všech)
-- **Profily** (např. „Otevřený turnaj“, „Liga“) s vlastním písmem, okraji, orientací, sloupci, záhlavím, logem a zápatím
+- **Profily** (přednastavené: „Švýcar jednotlivců“, „Každý s každým jednotlivci“, „Každý s každým – družstva školy“) s vlastním písmem, okraji, orientací, sloupci, záhlavím, logem a zápatím
 - Náhled přesně odpovídá tisku (A4, stránkování dělá appka sama)
 - Vše se pamatuje v prohlížeči, záloha do JSON jedním klikem
 - Proxy pro stahování z chess-results je součástí appky – nic se nenastavuje
@@ -116,7 +116,11 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
 ### Před turnajem (jednou)
 
 1. Proxy je vestavěná, není potřeba nic nastavovat. (V **⚙ Nastavení → Připojení** lze zadat vlastní.)
-2. **⚙ Nastavení → Profily**: vyberte nebo vytvořte profil (např. „Otevřený turnaj“). Profil můžete **duplikovat** a **přejmenovat**.
+2. **⚙ Nastavení → Profily**: vyberte nebo vytvořte profil. Appka má tři přednastavené profily podle skutečného použití
+   (**Švýcar jednotlivců** – vč. kategorií U10/U12/U16 a S50/S65, **Každý s každým jednotlivci**, **Každý s každým – družstva školy**);
+   chybějící doplní tlačítko **+ Přednastavené profily**. Profil můžete **duplikovat** a **přejmenovat**.
+   Výchozí nastavení vychází z toho, jak se appka používá: písmo co největší, záhlaví vlevo, zápatí vypnuté,
+   los bez startovních čísel a titulů, rozpis šachovnic bez barev a podpisů.
 3. **⚙ Nastavení → Záhlaví a zápatí**: název akce, pořadatel, rozhodčí, logo (obrázek se zmenší a uloží do prohlížeče), text zápatí.
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),

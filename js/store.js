@@ -1,6 +1,8 @@
 // Nastavení appky: profily, šablony, proxy, poslední turnaje.
 // Ukládá se do localStorage, export/import do JSON jako záloha.
 
+import { PRESET_PROFILES } from './presets.js';
+
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
 export const STATE_VERSION = 6;
@@ -33,7 +35,7 @@ export function defaultProfile(name = 'Výchozí') {
     hiddenTemplates: ['pairings-board', 'pairings-alpha', 'arbiter-sheet', 'scoresheets'],
     header: {
       enabled: true,
-      align: 'center',
+      align: 'left',
       title: '{turnaj}',
       subtitle: '{misto}, {datum}',
       organizer: '',
@@ -44,8 +46,9 @@ export function defaultProfile(name = 'Výchozí') {
       logoPosition: 'left',
       everyPage: false,
     },
+    // Zápatí ve výchozím stavu vypnuté (tak ho pořadatelé používají); zapíná se v Nastavení
     footer: {
-      enabled: true,
+      enabled: false,
       text: '',
       showPageNumbers: true,
       showPrinted: true,
@@ -55,15 +58,18 @@ export function defaultProfile(name = 'Výchozí') {
   };
 }
 
+/** Přednastavené profily jako nové profily (s vlastním id). */
+export function presetProfiles() {
+  return PRESET_PROFILES.map((p) => normalizeProfile({ ...JSON.parse(JSON.stringify(p)), id: uid() }));
+}
+
 export function defaultState() {
-  const open = defaultProfile('Otevřený turnaj');
-  const league = defaultProfile('Liga družstev');
-  league.header.subtitle = '{datum}';
+  const profiles = presetProfiles();
   return {
     version: STATE_VERSION,
     proxyUrl: '',
-    activeProfileId: open.id,
-    profiles: [open, league],
+    activeProfileId: profiles[0].id,
+    profiles,
     recent: [],
     // tabs: otevřené turnaje v horní liště – [{ tnr, title, profileId, templateId, round, group }]
     ui: { previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings', tabs: [], activeTab: null },
@@ -206,6 +212,15 @@ export class Store {
 
   setActiveProfile(id) {
     this.update((s) => { if (s.profiles.some((p) => p.id === id)) s.activeProfileId = id; });
+  }
+
+  /** Přidá přednastavené profily, které ještě nemáte (podle názvu). Vrací názvy přidaných. */
+  addPresetProfiles() {
+    const norm = (x) => String(x || '').trim().toLocaleLowerCase('cs');
+    const have = new Set(this.state.profiles.map((p) => norm(p.name)));
+    const add = presetProfiles().filter((p) => !have.has(norm(p.name)));
+    if (add.length) this.update((s) => { s.profiles.push(...add); });
+    return add.map((p) => p.name);
   }
 
   addProfile(name) {
@@ -425,7 +440,8 @@ export function templateSettings(profile, tpl) {
     rowHeight: Number(saved.rowHeight) > 0 ? Number(saved.rowHeight) : null,
     // 'fixed' = pevná velikost; 'max' = co největší písmo, při kterém se všechny sloupce vejdou na šířku;
     // 'page' = navíc vše na jednu stránku (písmo i výška řádků co největší)
-    fontMode: ['max', 'page'].includes(saved.fontMode) ? saved.fontMode : 'fixed',
+    // Výchozí je „co největší“ písmo (tak ho pořadatelé používají); šablona může mít vlastní výchozí
+    fontMode: ['fixed', 'max', 'page'].includes(saved.fontMode) ? saved.fontMode : (tpl.defaults && tpl.defaults.fontMode) || 'max',
     fontMax: Number(saved.fontMax) > 0 ? Number(saved.fontMax) : 20,
     pageColumns: saved.pageColumns ?? (tpl.defaults && tpl.defaults.columns) ?? 1,
     // Záhlaví / zápatí výstupu: 'inherit' = podle profilu (Nastavení → Záhlaví a zápatí)
