@@ -622,22 +622,37 @@ function renderProfileSelect() {
 async function loadDatasets(tnr, info, tpl, round, opts, { fresh }) {
   const data = {};
   const needs = datasetsFor(tpl, info, round, opts);
-  for (const n of needs) {
+  // Podklady výstupu se stahují souběžně (např. los + startovní listina + soupisky)
+  await Promise.all(needs.map(async (n) => {
     if (n.dataset === 'main') {
       data.main = (await source.get(tnr, 'main', null, { fresh: false })).data;
-      continue;
+      return;
     }
     try {
       const entry = await source.get(tnr, n.dataset, DATASETS[n.dataset].round ? n.round : null, { fresh });
       data[n.dataset] = entry.data;
     } catch (e) {
-      if (n.optional) continue;
+      if (n.optional) return;
       e.dataset = n.dataset;
       e.round = n.round;
       throw e;
     }
-  }
+  }));
   return data;
+}
+
+/** Zpracuje položky souběžně, nejvýš `limit` najednou; výsledky ve stejném pořadí. */
+async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return out;
 }
 
 async function refreshPreview({ fresh = false } = {}) {
@@ -652,10 +667,11 @@ async function refreshPreview({ fresh = false } = {}) {
   const docs = [];
   const tnrs = targetTnrs();
   try {
-    for (const tnr of tnrs) {
+    // Skupiny („Všechny skupiny“) se stahují souběžně, nejvýš 3 najednou – šetrné k chess-results i k proxy
+    const built = await mapLimit(tnrs, 3, async (tnr) => {
       const main = await source.get(tnr, 'main', null, { fresh: fresh && tnr !== session.tnr });
       const info = main.info;
-      if (!tpl.supports(info)) continue;
+      if (!tpl.supports(info)) return null;
       // Kolo: „automaticky“ se určí pro každou skupinu zvlášť
       let round = null;
       if (tpl.roundMode) {
@@ -677,11 +693,13 @@ async function refreshPreview({ fresh = false } = {}) {
         }
       }
       const data = await loadDatasets(tnr, info, tpl, round, ts.options, { fresh });
-      if (seq !== session.renderSeq) return;
+      if (seq !== session.renderSeq) return null;
       const doc = buildDocument({ tpl, info, data, profile, round });
       doc.groupName = tnrs.length > 1 ? groupName(tnr) : null;
-      docs.push(doc);
-    }
+      return doc;
+    });
+    if (seq !== session.renderSeq) return;
+    docs.push(...built.filter(Boolean));
   } catch (e) {
     if (seq !== session.renderSeq) return;
     reportError(e, targetTnrs()[0], e.dataset, e.round);
@@ -723,6 +741,7 @@ function layoutAll(docs) {
     }
   }
   els.pageRule.textContent = pageRule(orientation);
+  if (window.chessPrint) window.chessPrint.renders += 1;
   els.pageCount.textContent = pages ? `${pages} ${pages === 1 ? 'stránka' : pages < 5 ? 'stránky' : 'stránek'}` : '';
   els.btnPrint.disabled = !pages;
   showWarnings(warnings);
@@ -973,4 +992,8 @@ init();
 setTimeout(() => { checkForUpdate({ onReload: (t) => setStatus(t, 'loading') }); }, 800);
 
 // Pro ladění v konzoli
-window.chessPrint = { store, source, session, TEMPLATES };
+window.chessPrint = {
+  store, source, session, TEMPLATES,
+  // pro ladění a automatické testy vzhledu (tests/e2e)
+  loadTournament, refreshPreview, selectTemplate, renders: 0,
+};

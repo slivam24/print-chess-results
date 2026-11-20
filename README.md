@@ -274,12 +274,23 @@ Testy parseru běží nad uloženými stránkami v `tests/fixtures/` (kontakty j
 npm run fixtures
 ```
 
+Testy vzhledu v prohlížeči (Playwright, Chromium) vysází nad uloženými stránkami všechny výstupy ve všech režimech písma
+a orientacích a hlídají, že se nic neořezává na okraji stránky ani nezkracuje. Na GitHubu běží při každé změně (úloha „vzhled“):
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run test:e2e
+```
+
 Struktura projektu, datový model a návod na přidání nového výstupu: **[docs/ARCHITEKTURA.md](docs/ARCHITEKTURA.md)**.
 
 ### Proč vanilla JS bez frameworku
 
 - **Žádný build** – GitHub Pages servíruje soubory tak, jak jsou; nic nezastará, nic se nemusí znovu kompilovat.
-- **Žádné závislosti v prohlížeči** – appka funguje i za 5 let; jediná dev závislost (`linkedom`) slouží testům.
+- **Žádné závislosti v prohlížeči** – appka funguje i za 5 let; dev závislosti (`linkedom`, `playwright`) slouží jen testům.
 - **Většina práce není UI, ale data a tisk** – parser a šablony jsou čisté funkce (HTML → data → HTML), které framework nepotřebují
   a dají se testovat v Node.js. Rozhraní je jedna obrazovka s formuláři, na kterou stačí malý pomocník `h()`.
 - Tiskové šablony jsou obyčejné moduly – nový výstup = jeden soubor a jeden řádek v registru.
