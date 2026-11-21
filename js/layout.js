@@ -64,8 +64,27 @@ function buildPage(o, { withHeader, pageNo, pageCount }) {
   return { page, body, cols };
 }
 
-function tableHtml(b, rows) {
-  return `<table class="${b.className || 'grid'}">${b.colgroup || ''}${b.thead ? `<thead>${b.thead}</thead>` : ''}<tbody>${rows.join('')}</tbody></table>`;
+/**
+ * HTML tabulky (nebo jejího kusu). colPct = šířky sloupců v % změřené z celé tabulky – když se tabulka
+ * dělí na více stránek / sloupců, má každý kus stejné šířky sloupců jako celek.
+ */
+function tableHtml(b, rows, colPct = null) {
+  const fixed = colPct && colPct.length;
+  const cg = fixed ? `<colgroup>${colPct.map((w) => `<col style="width:${w.toFixed(4)}%">`).join('')}</colgroup>` : (b.colgroup || '');
+  return `<table class="${b.className || 'grid'}"${fixed ? ' style="table-layout:fixed"' : ''}>${cg}${b.thead ? `<thead>${b.thead}</thead>` : ''}<tbody>${rows.join('')}</tbody></table>`;
+}
+
+/** Šířky sloupců celé tabulky v % (podle řádku s nejvíce buňkami bez slučování). */
+function columnPercents(table) {
+  const tw = table.getBoundingClientRect().width;
+  if (!tw) return null;
+  let ref = null;
+  for (const tr of table.querySelectorAll('tr')) {
+    if ([...tr.children].some((c) => c.colSpan > 1)) continue;
+    if (!ref || tr.children.length > ref.children.length) ref = tr;
+  }
+  if (!ref) return null;
+  return [...ref.children].map((c) => (c.getBoundingClientRect().width / tw) * 100);
 }
 
 /** Protějškový sloupec (bílý ↔ černý, domácí ↔ hosté) – má mít stejnou šířku. */
@@ -189,7 +208,7 @@ function measureBlocks(col, blocks) {
       const trs = wrap.querySelectorAll(':scope > table > tbody > tr');
       const rowH = [...trs].map((tr) => tr.getBoundingClientRect().height);
       const sum = theadH + rowH.reduce((a, c) => a + c, 0);
-      out.push({ b, h: total, theadH, rowH, extra: Math.max(0, total - sum) });
+      out.push({ b, h: total, theadH, rowH, extra: Math.max(0, total - sum), colPct: columnPercents(wrap.querySelector('table')) });
     }
     const needW = Math.max(wrap.scrollWidth, wrap.firstElementChild ? wrap.firstElementChild.getBoundingClientRect().width : 0);
     if (needW > colW + 1) {
@@ -340,8 +359,12 @@ export function layoutDocument(target, blocks0, o) {
   } else if (o.fitWidth && o.fitWidth.enabled) {
     opts = fitToWidth(host, blocks, o);
   }
-  const { pages, overflowX } = measureAndPack(host, blocks, opts);
+  const { pages, overflowX, measured } = measureAndPack(host, blocks, opts);
   host.innerHTML = '';
+  // Tabulky rozdělené na více kusů (stránky, sloupce): všechny kusy se šířkami sloupců celé tabulky
+  const pctOf = new Map(measured.filter((m) => m.colPct).map((m) => [m.b, m.colPct]));
+  const pieces = new Map();
+  for (const pg of pages) for (const col of pg) for (const it of col) if (it.kind === 'table') pieces.set(it.b, (pieces.get(it.b) || 0) + 1);
 
   applyDocStyle(target, opts);
   target.innerHTML = '';
@@ -354,7 +377,7 @@ export function layoutDocument(target, blocks0, o) {
         const wrap = el('div', `blk ${it.b.blockClass || ''}`.trim());
         if (it.space) wrap.style.marginTop = `${it.b.spaceBefore}mm`;
         if (it.kind === 'html') wrap.innerHTML = it.b.html;
-        else wrap.innerHTML = tableHtml(it.b, it.b.rows.slice(it.from, it.to));
+        else wrap.innerHTML = tableHtml(it.b, it.b.rows.slice(it.from, it.to), pieces.get(it.b) > 1 ? pctOf.get(it.b) : null);
         colEls[ci].appendChild(wrap);
       }
     });

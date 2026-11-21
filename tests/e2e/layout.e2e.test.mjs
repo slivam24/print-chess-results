@@ -80,6 +80,17 @@ async function render(page, tplId, { round = 'auto', orientation, fontMode, opti
         if (r.bottom > c.bottom + 0.5 || r.right > c.right + 0.5) problems.push(`přetéká o ${Math.round(Math.max(r.bottom - c.bottom, r.right - c.right))} px: ${k.textContent.trim().slice(0, 40)}`);
       }
     }
+    // Tabulka rozdělená na více stránek / sloupců: stejné šířky sloupců ve všech kusech
+    const cols = [...document.querySelectorAll('#pages .pg-col')];
+    for (let i = 1; i < cols.length; i++) {
+      const prevTables = cols[i - 1].querySelectorAll('table');
+      const prev = prevTables[prevTables.length - 1];
+      const first = cols[i].firstElementChild && cols[i].firstElementChild.querySelector('table');
+      if (!prev || !first || !prev.tHead || !first.tHead || prev.tHead.innerHTML !== first.tHead.innerHTML) continue;
+      const w = (t) => [...t.tHead.rows[0].cells].map((c) => Math.round(c.getBoundingClientRect().width));
+      const a = w(prev); const b = w(first);
+      if (a.some((x, j) => Math.abs(x - b[j]) > 1)) problems.push(`jiné šířky sloupců na další stránce: ${a.join(',')} × ${b.join(',')}`);
+    }
     if (fontMode !== 'fixed') {
       for (const cell of document.querySelectorAll('#pages table.sym td, #pages table.one-line th')) {
         if (!cell.firstChild) continue;
