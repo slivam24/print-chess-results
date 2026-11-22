@@ -202,3 +202,43 @@ test('nastavení se načte až při otevření; export a import profilů', async
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('nová verze se načte i u modulů načítaných podle potřeby (nastavení)', async () => {
+  // Server jako GitHub Pages: mezipaměť 10 minut a ETag; nastavení pak „vyjde v nové verzi“
+  let version = 1;
+  const marker = () => `\n// verze ${version}\n`;
+  const srv = http.createServer((req, res) => {
+    const u = new URL(req.url, 'http://x');
+    const f = path.join(root, u.pathname === '/' ? 'index.html' : decodeURIComponent(u.pathname));
+    if (!f.startsWith(root) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+    let body = fs.readFileSync(f);
+    const isSettings = u.pathname.endsWith('/js/ui/settings.js');
+    if (isSettings) body = Buffer.concat([body, Buffer.from(marker())]);
+    const etag = `"${isSettings ? `s${version}` : 'v1'}-${body.length}"`;
+    if (req.headers['if-none-match'] === etag) { res.writeHead(304, { etag, 'cache-control': 'max-age=600' }); res.end(); return; }
+    res.writeHead(200, { 'content-type': TYPES[path.extname(f)] || 'application/octet-stream', etag, 'cache-control': 'max-age=600' });
+    res.end(body);
+  });
+  await new Promise((r) => srv.listen(0, r));
+  const url = `http://127.0.0.1:${srv.address().port}/`;
+  const context = await browser.newContext();
+  try {
+    const page = await context.newPage();
+    await page.goto(url);
+    await page.waitForFunction(() => window.chessPrint);
+    await page.click('#btn-settings'); // nastavení verze 1 je teď v mezipaměti prohlížeče
+    await page.waitForSelector('#side-settings .tabs');
+    await page.waitForTimeout(1200); // kontrola nové verze po startu proběhne a nic nenajde
+    version = 2;
+    // Uživatel appku znovu otevře – kontrola najde novější nastavení a stránku jednou obnoví
+    await page.goto(url);
+    await page.waitForEvent('framenavigated', { timeout: 8000 }).catch(() => null);
+    await page.waitForFunction(() => window.chessPrint);
+    const text = await page.evaluate(async (u) => (await fetch(new URL('js/ui/settings.js', u), { cache: 'force-cache' })).text(), url);
+    assert.match(text, /verze 2/, 'prohlížeč by při otevření nastavení použil starou verzi z mezipaměti');
+  } finally {
+    await context.close();
+    srv.closeAllConnections();
+    srv.close();
+  }
+});

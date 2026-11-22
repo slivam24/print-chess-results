@@ -5,6 +5,15 @@
 
 const GUARD_KEY = 'chessPrint.updateReload';
 
+/**
+ * Moduly, které se načítají až podle potřeby (nastavení, editor kategorií, přednastavené profily,
+ * QR kód). Při startu je appka ještě nenačetla, a tak by je kontrola jinak přehlédla – prohlížeč
+ * by pak při otevření nastavení použil starou kopii z mezipaměti. Seznam hlídá tests/modules.test.js.
+ */
+export const LAZY_MODULES = [
+  'js/ui/settings.js', 'js/ui/printSetup.js', 'js/ui/categories.js', 'js/presets.js', 'js/qr.js', 'js/vendor/qrcode.mjs',
+];
+
 function stamp(res) {
   return (res && (res.headers.get('etag') || res.headers.get('last-modified'))) || null;
 }
@@ -27,7 +36,8 @@ export function appFiles(entries = performance.getEntriesByType('resource'), ori
  */
 export async function checkForUpdate({ onReload } = {}) {
   if (!('fetch' in globalThis) || location.protocol === 'file:') return false;
-  const files = [location.href.split('#')[0], ...appFiles()];
+  const base = new URL('.', location.href);
+  const files = [...new Set([location.href.split('#')[0], ...appFiles(), ...LAZY_MODULES.map((m) => new URL(m, base).href)])];
   let changed = false;
   await Promise.all(files.map(async (url) => {
     try {
