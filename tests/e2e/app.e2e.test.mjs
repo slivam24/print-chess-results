@@ -242,3 +242,56 @@ test('nová verze se načte i u modulů načítaných podle potřeby (nastavení
     srv.close();
   }
 });
+
+test('loga sponzorů: 10 najednou, rovnou černobíle, úsporně uložená; stará PNG loga se zmenší', async () => {
+  const { page, errors, context } = await newApp();
+  await open(page, SWISS);
+  // Obrázky jako soubory (PNG s barevným přechodem – takové bývají velké)
+  const pngs = await page.evaluate(async () => {
+    const out = [];
+    for (let i = 0; i < 11; i++) {
+      const c = document.createElement('canvas');
+      c.width = 1200; c.height = 600;
+      const x = c.getContext('2d');
+      const g = x.createLinearGradient(0, 0, 1200, 600);
+      g.addColorStop(0, `hsl(${i * 33},80%,50%)`); g.addColorStop(1, '#fff');
+      x.fillStyle = g; x.fillRect(0, 0, 1200, 600);
+      x.fillStyle = '#000'; x.font = 'bold 200px sans-serif'; x.fillText(`Sponzor ${i}`, 40, 380);
+      out.push(c.toDataURL('image/png'));
+    }
+    return out;
+  });
+  // Starší verze appky uložila logo jako velké PNG
+  await page.evaluate((png) => {
+    window.chessPrint.store.update((s) => { s.profiles.find((p) => p.id === s.activeProfileId).header.logos = [{ src: png, height: 16, position: 'left' }]; }, { silent: true });
+  }, pngs[10]);
+  const oldLen = pngs[10].length;
+  await page.click('#btn-settings');
+  await page.locator('#side-settings').getByRole('tab', { name: /Záhlaví/ }).click();
+  await page.waitForFunction((n) => window.chessPrint.store.profile.header.logos[0].src.length < n * 0.5, oldLen, { timeout: 10000 });
+
+  page.on('dialog', (d) => d.dismiss()); // případné upozornění na plné úložiště by test odhalil níže
+  const input = page.locator('#side-settings .img-list').nth(1).locator('input[type=file]');
+  await input.setInputFiles(pngs.slice(0, 10).map((u, i) => ({ name: `s${i}.png`, mimeType: 'image/png', buffer: Buffer.from(u.split(',')[1], 'base64') })));
+  await page.waitForFunction(() => window.chessPrint.store.profile.footer.sponsors.length === 10, null, { timeout: 15000 });
+  const st = await page.evaluate(() => {
+    const p = window.chessPrint.store.profile;
+    window.chessPrint.store.flush();
+    return {
+      gray: p.footer.sponsors.every((x) => x.gray === true),
+      webp: p.footer.sponsors.every((x) => x.src.startsWith('data:image/webp')),
+      kb: Math.round(p.footer.sponsors.reduce((n, x) => n + x.src.length, 0) / 1024),
+      saveError: !!window.chessPrint.store.lastSaveError,
+      rows: document.querySelectorAll('#side-settings .img-list')[1].querySelectorAll('.img-row').length,
+      checked: [...document.querySelectorAll('#side-settings .img-list')[1].querySelectorAll('.img-row input[type=checkbox]')].every((c) => c.checked),
+      previewGray: [...document.querySelectorAll('#side-settings .img-list')[1].querySelectorAll('.logo-prev')].every((i) => i.style.filter === 'grayscale(1)'),
+    };
+  });
+  assert.deepEqual({ ...st, kb: st.kb < 400 }, { gray: true, webp: true, kb: true, saveError: false, rows: 10, checked: true, previewGray: true }, `${st.kb} kB`);
+  assert.match(await page.locator('#side-settings').innerText(), /Obrázky tohoto profilu zabírají v prohlížeči \d+ kB/);
+  // Jedno logo přepnout na barevné
+  await page.locator('#side-settings .img-list').nth(1).locator('.img-row').first().getByLabel('černobíle').uncheck();
+  assert.equal(await page.evaluate(() => window.chessPrint.store.profile.footer.sponsors[0].gray), false);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

@@ -85,6 +85,8 @@
 }
 .hd-logo { display: flex; align-items: center; gap: 3mm; flex: none; }
 .hd-logo img { display: block; max-width: 60mm; object-fit: contain; }
+/* Obrázky „černobíle“ (výchozí) – tak, jak je vytiskne černobílá tiskárna */
+img.logo.gray, img.ft-logo.gray { filter: grayscale(1); }
 .hd-title-line { display: block; }
 .hd-title-line.small { font-size: .72em; font-weight: 600; }
 .hd-main { flex: 1; min-width: 0; }

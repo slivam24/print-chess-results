@@ -122,7 +122,7 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
    Výchozí nastavení vychází z toho, jak se appka používá: písmo co největší, záhlaví vlevo, zápatí vypnuté,
    los bez startovních čísel a titulů, rozpis šachovnic bez barev a podpisů.
 3. **⚙ Nastavení → Záhlaví a zápatí**: nadpis i na více řádků (např. „Okresní kolo přeboru škol“ / „{skupina}“, druhý řádek
-   může být menší), pořadatel, rozhodčí, libovolný počet log vlevo i vpravo (obrázky se zmenší a uloží do prohlížeče),
+   může být menší), pořadatel, rozhodčí, libovolný počet log vlevo i vpravo (obrázky se zmenší a uloží do prohlížeče; každé lze tisknout černobíle – výchozí – nebo barevně),
    text zápatí a poděkování sponzorům s jejich logy. **⚙ Nastavení → Stránka → Vodoznak**: logo světle přes celou
    stránku – viditelnost v %, černobíle nebo barevně, velikost; u jednotlivého výstupu ho jde vypnout.
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
@@ -249,7 +249,7 @@ Kdyby to nestačilo, pomůže `Ctrl+F5` (úplné obnovení stránky).
 | Proxy nefunguje vůbec | **Vložit HTML ručně**: otevřete stránku turnaje na chess-results, uložte ji (`Ctrl+S`, „pouze HTML“) a nahrajte. Appka pozná turnaj, druh stránky i kolo. Potřebujete hlavní stránku turnaje a stránku losu/pořadí daného kola. |
 | Starý turnaj (déle než 2 týdny po skončení) | Proxy sama „klikne“ na *Show tournament details*. Při ručním vkládání to udělejte na chess-results před uložením. |
 | Tisk má prázdnou stránku navíc / je zmenšený | V dialogu tisku nastavte měřítko 100 % a okraje „Výchozí“; vypněte „Přizpůsobit stránce“. |
-| Logo / vodoznak se neuloží | Úložiště prohlížeče je plné – odeberte některé obrázky nebo použijte menší (appka loga zmenšuje na 600 px, vodoznak na 1000 px). |
+| Logo / vodoznak se neuloží | Úložiště prohlížeče je plné – odeberte některé obrázky. Appka obrázky ukládá úsporně (WebP, loga max. 600 px, sponzoři 500 px, vodoznak 1000 px) a při nedostatku místa nejdřív smaže uložená data turnajů (dají se znovu stáhnout). |
 
 Nejlépe funguje Chrome / Edge (náhled je vyladěný pro jejich tisk), Firefox funguje také.
 

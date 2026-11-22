@@ -66,6 +66,25 @@ export function readFileText(file) {
   });
 }
 
+/**
+ * Obrázek na canvasu → data URL. WebP (s průhledností, ~10× menší než PNG), kde ho prohlížeč
+ * neumí, PNG (JPEG u fotek). Loga se ukládají do úložiště prohlížeče, které má jen pár MB.
+ */
+function canvasToDataUrl(c, sourceType) {
+  const webp = c.toDataURL('image/webp', 0.9);
+  if (webp.startsWith('data:image/webp')) return webp;
+  return sourceType === 'image/jpeg' ? c.toDataURL('image/jpeg', 0.9) : c.toDataURL('image/png');
+}
+
+function drawScaled(img, maxPx) {
+  const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.width * scale));
+  c.height = Math.max(1, Math.round(img.height * scale));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
 /** Načte obrázek, zmenší ho (max. rozměr) a vrátí data URL – logo nezabere moc místa v localStorage. */
 export function imageToDataUrl(file, maxPx = 600) {
   return new Promise((resolve, reject) => {
@@ -79,16 +98,30 @@ export function imageToDataUrl(file, maxPx = 600) {
           resolve(String(r.result));
           return;
         }
-        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(img.width * scale));
-        c.height = Math.max(1, Math.round(img.height * scale));
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        // Fotky (JPEG) zůstanou JPEG, ostatní PNG kvůli průhlednosti
-        resolve(file.type === 'image/jpeg' ? c.toDataURL('image/jpeg', 0.9) : c.toDataURL('image/png'));
+        resolve(canvasToDataUrl(drawScaled(img, maxPx), file.type));
       };
       img.src = String(r.result);
     };
     r.readAsDataURL(file);
+  });
+}
+
+/**
+ * Zmenší už uložený obrázek (data URL), pokud to ušetří místo – např. loga uložená dřívější verzí
+ * jako PNG. Vrací původní adresu, když zmenšení nepomůže.
+ */
+export function compactDataUrl(url, maxPx = 600) {
+  return new Promise((resolve) => {
+    if (typeof url !== 'string' || !url.startsWith('data:image/') || url.startsWith('data:image/svg') || url.startsWith('data:image/webp') || url.length < 40000) {
+      resolve(url);
+      return;
+    }
+    const img = new Image();
+    img.onerror = () => resolve(url);
+    img.onload = () => {
+      const out = canvasToDataUrl(drawScaled(img, maxPx), url.startsWith('data:image/jpeg') ? 'image/jpeg' : 'image/png');
+      resolve(out.length < url.length * 0.8 ? out : url);
+    };
+    img.src = url;
   });
 }
