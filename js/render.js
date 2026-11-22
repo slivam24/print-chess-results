@@ -15,6 +15,33 @@ export function headerMode(profile, ts) {
   return h.everyPage ? 'every' : 'first';
 }
 
+/** Veřejná adresa stránky turnaje na chess-results (pro QR kód). */
+export function publicUrl(tnr, art = null, round = null) {
+  const p = new URLSearchParams({ lan: '5' });
+  if (art != null) p.set('art', String(art));
+  if (art != null && round) p.set('rd', String(round));
+  return `https://chess-results.com/tnr${tnr}.aspx?${p.toString()}`;
+}
+
+/** Stránka chess-results, která odpovídá výstupu (los, pořadí, …). */
+const OUTPUT_ART = {
+  startlist: 0, alphalist: 0, ranking: 1, 'ranking-cat': 1, awards: 1, crosstable: 4,
+  pairings: 2, 'pairings-board': 2, 'pairings-alpha': 2, 'arbiter-sheet': 2, scoresheets: 2,
+  'team-matches': 2, 'team-boards': 3, 'team-ranking': 46, 'team-roster': 16, 'team-startlist': 32,
+};
+
+/**
+ * QR kód do záhlaví (Nastavení → Záhlaví a zápatí → QR kód). qr = funkce (text, mm) → SVG,
+ * načtená předem (js/qr.js); bez ní nebo při vypnutém QR kódu ''.
+ */
+function qrFor(qr, profile, tpl, info, round) {
+  const hd = profile.header || {};
+  if (!qr || hd.qr !== 'on' || !info || !info.tnr) return '';
+  const art = hd.qrTarget === 'output' ? OUTPUT_ART[tpl.id] ?? null : null;
+  const rd = typeof round === 'number' && [1, 2, 3, 46].includes(art) ? round : null;
+  return qr(publicUrl(info.tnr, art, rd), hd.qrSize);
+}
+
 /** Které kolo použít, když uživatel zvolí „automaticky“. */
 export function autoRound(tpl, info, data = {}) {
   if (!tpl.roundMode) return null;
@@ -45,7 +72,7 @@ export function datasetsFor(tpl, info, round, opts) {
  * Vytvoří dokument pro jednu skupinu (turnaj).
  * Vrací { title, sub, blocks, warnings, layout }.
  */
-export function buildDocument({ tpl, info, data, profile, round, optionsOverride }) {
+export function buildDocument({ tpl, info, data, profile, round, optionsOverride, qr = null }) {
   const ts = templateSettings(profile, tpl);
   const opts = { ...ts.options, ...(optionsOverride || {}) };
   const cols = ratingLabels(visibleColumns(tpl.columns || [], ts.columns), ratingPresence(data));
@@ -59,7 +86,9 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
   const hMode = headerMode(profile, ts);
   const headerHtml = ('header' in extra && extra.header === null) || hMode === 'off'
     ? null
-    : renderHeader(hMode === 'title' ? { ...profile, header: { ...profile.header, enabled: false } } : profile, info, { outputTitle: out.title, outputSub: out.sub, vars });
+    : renderHeader(hMode === 'title' ? { ...profile, header: { ...profile.header, enabled: false } } : profile, info, {
+      outputTitle: out.title, outputSub: out.sub, vars, qr: qrFor(qr, profile, tpl, info, round),
+    });
   const footerFn = ('footer' in extra && extra.footer === null) || ts.footer === 'off'
     ? null
     : renderFooter(ts.footer === 'on' ? { ...profile, footer: { ...profile.footer, enabled: true } } : profile, info, { vars });

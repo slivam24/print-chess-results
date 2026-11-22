@@ -83,6 +83,12 @@
 .hd-output { display: flex; align-items: baseline; gap: 3mm; margin-top: 2.5mm; }
 .hd-output-title { font-size: 1.35em; font-weight: 700; }
 .hd-output-sub { font-size: 1em; color: var(--grey); }
+/* QR kód s odkazem na turnaj vpravo vedle hlavičky (velikost v mm nezávisle na písmu) */
+.hd-with-qr { display: flex; align-items: flex-start; gap: 4mm; }
+.hd-col { flex: 1; min-width: 0; }
+.hd-qr { flex: none; text-align: center; line-height: 1; }
+.hd-qr svg { display: block; }
+.hd-qr-cap { font-size: 6.5pt; color: var(--grey); margin-top: .4mm; white-space: nowrap; }
 
 .sec-title { font-size: 1.2em; margin: 1.5mm 0 0; padding-bottom: .8mm; border-bottom: .5pt solid var(--rule); }
 .sec-title small { font-weight: 400; color: var(--grey); font-size: .8em; margin-left: 2mm; }

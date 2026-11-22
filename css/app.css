@@ -157,22 +157,22 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .small { font-size: 12px; }
 kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); border-radius: 3px; background: #fafafa; }
 
-/* Poslední turnaje */
-.recent { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 100%;
-  padding: 2px 4px 2px 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: #fff;
-  font-size: 12px;
-}
-.chip button { border: 0; background: none; cursor: pointer; padding: 0 2px; color: var(--muted); font: inherit; }
-.chip .chip-main { color: var(--ink); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chip:hover { border-color: var(--accent); }
+/* Naposledy otevřené turnaje */
+.recent { margin-top: 8px; }
+.recent:empty { display: none; }
+.recent-head { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .04em; margin-bottom: 4px; }
+.recent-fold > summary { cursor: pointer; font-size: 12px; color: var(--muted); padding: 2px 0; }
+.recent-fold[open] > summary { margin-bottom: 4px; }
+.recent-filter { width: 100%; margin-bottom: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; font: inherit; font-size: 13px; }
+.recent-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow-y: auto; }
+.recent-list li { display: flex; align-items: stretch; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.recent-list li:hover { border-color: var(--accent); }
+.recent-main { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 8px; border: 0; background: none; cursor: pointer; font: inherit; text-align: left; color: var(--ink); }
+.recent-title { max-width: 100%; font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recent-meta { font-size: 11px; color: var(--muted); }
+.recent-open { margin-left: 6px; padding: 0 5px; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.recent-del { flex: none; width: 28px; border: 0; border-left: 1px solid var(--line); background: none; color: var(--muted); cursor: pointer; font-size: 15px; border-radius: 0 6px 6px 0; }
+.recent-del:hover { color: #b42318; background: var(--err-bg); }
 
 /* Info o turnaji */
 .tinfo { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
@@ -202,6 +202,8 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 .tpl .tpl-name { flex: 1; font-weight: 600; line-height: 1.25; }
 .tpl .tpl-key { flex: none; min-width: 1.5em; padding: 0 4px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 11px; text-align: center; background: #fafbfc; }
 .tpl[aria-pressed="true"] .tpl-key { border-color: var(--accent); color: var(--accent); }
+.tpl .tpl-printed { flex: none; width: 16px; height: 16px; border-radius: 50%; font-size: 11px; line-height: 16px; text-align: center; font-weight: 700; color: #fff; background: var(--ok); }
+.tpl.printed-changed .tpl-printed { background: #d08a00; }
 
 /* Možnosti vybraného výstupu – hned pod dlaždicemi */
 .options-wrap { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--line); }
@@ -269,6 +271,11 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 .status { font-size: 13px; min-width: 0; }
 .page-count { font-size: 13px; white-space: nowrap; }
 .page-count:not(:empty)::before { content: '· '; }
+/* Značka „vytištěno“ (kliknutím se zruší) */
+.print-mark { font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid #a6d9b8; background: #e8f6ee; color: var(--ok); cursor: pointer; white-space: nowrap; }
+.print-mark[hidden] { display: none; }
+.print-mark.changed { border-color: var(--warn-line); background: var(--warn-bg); color: #8a5a00; }
+.print-mark:hover { text-decoration: line-through; }
 .status.loading::before {
   content: "";
   display: inline-block;
@@ -288,6 +295,7 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 .warnings[hidden] { display: none; }
 .warnings.error { background: var(--err-bg); border-color: var(--err-line); }
 .warnings p { margin: 2px 0; }
+.warnings .warn-check { font-weight: 600; }
 .warn-list { flex: 1; min-width: 0; }
 .warnings.collapsed .warn-list > :not(:first-child) { display: none; }
 .warnings.collapsed .warn-list > :first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
