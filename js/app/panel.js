@@ -337,7 +337,13 @@ export function renderOptions() {
           options([['inherit', `podle profilu (${HEADER[profHeader]})`], ...Object.entries(HEADER)], ts.header))),
       h('label', { class: 'field' }, 'Zápatí',
         h('select', { onchange: (e) => setTpl('footer', e.target.value) },
-          options([['inherit', `podle profilu (${profFooter})`], ['on', 'na každé stránce'], ['off', 'vypnuto']], ts.footer)))));
+          options([['inherit', `podle profilu (${profFooter})`], ['on', 'na každé stránce'], ['off', 'vypnuto']], ts.footer))),
+      // Vodoznak jen když ho profil má (Nastavení → Stránka)
+      store.profile.page.watermark && store.profile.page.watermark.src
+        ? h('label', { class: 'field' }, 'Vodoznak',
+          h('select', { onchange: (e) => setTpl('watermark', e.target.value) },
+            options([['inherit', 'podle profilu (zapnutý)'], ['off', 'vypnuto']], ts.watermark)))
+        : null));
   }
   els.options.append(h('button', {
     type: 'button', class: 'btn small', style: { marginTop: '6px' },

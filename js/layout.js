@@ -62,6 +62,17 @@ function buildPage(o, { withHeader, pageNo, pageCount }) {
   }
   page.appendChild(body);
   if (o.footer) page.appendChild(el('footer', 'pg-foot', o.footer(pageNo, pageCount)));
+  const wm = o.watermark;
+  if (wm && wm.src) {
+    const box = el('div', `pg-wm${wm.color === 'color' ? '' : ' gray'}`);
+    const img = document.createElement('img');
+    img.src = wm.src;
+    img.alt = '';
+    img.style.width = `${wm.size || 70}%`;
+    img.style.opacity = String(Math.max(0.01, Math.min(1, (Number(wm.opacity) || 10) / 100)));
+    box.appendChild(img);
+    page.appendChild(box);
+  }
   return { page, body, cols };
 }
 
@@ -369,7 +380,8 @@ function measureAndPack(host, blocks, o) {
 /**
  * Vysází bloky do stránek v elementu target.
  * o: { orientation, margins, fontFamily, fontSize, columns, header (html), headerEveryPage,
- *      footer (fn(pageNo, pageCount) → html), fit: { enabled, minPt, maxPt, autoColumns } }
+ *      footer (fn(pageNo, pageCount) → html), watermark ({ src, opacity %, color: 'gray'|'color', size % }),
+ *      fit: { enabled, minPt, maxPt, autoColumns } }
  * Vrací { pageCount, fontSize, columns }.
  */
 export function layoutDocument(target, blocks0, o) {

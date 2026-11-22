@@ -9,7 +9,7 @@ Jednou si nastavíte, jak mají výstupy vypadat, a pak už jen: **stáhnout →
 - Startovní listina a pořadí (i po kategoriích)
 - Družstva: **los zápasů**, **rozpis hráčů na šachovnicích** (s podpisy kapitánů), soupisky, tabulka
 - Švýcar, každý s každým, družstva i turnaje s **více skupinami** (tisk jedné nebo všech)
-- **Profily** (přednastavené: „Švýcar jednotlivců“, „Každý s každým jednotlivci“, „Každý s každým – družstva školy“) s vlastním písmem, okraji, orientací, sloupci, záhlavím, logem a zápatím
+- **Profily** (přednastavené: „Švýcar jednotlivců“, „Každý s každým jednotlivci“, „Každý s každým – družstva školy“) s vlastním písmem, okraji, orientací, sloupci, záhlavím (nadpis na více řádků, loga turnaje / pořadatele / svazu), zápatím (i s logy sponzorů) a vodoznakem
 - Náhled přesně odpovídá tisku (A4, stránkování dělá appka sama)
 - Vše se pamatuje v prohlížeči, záloha do JSON jedním klikem
 - Proxy pro stahování z chess-results je součástí appky – nic se nenastavuje
@@ -121,7 +121,10 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
    chybějící doplní tlačítko **+ Přednastavené profily**. Profil můžete **duplikovat** a **přejmenovat**.
    Výchozí nastavení vychází z toho, jak se appka používá: písmo co největší, záhlaví vlevo, zápatí vypnuté,
    los bez startovních čísel a titulů, rozpis šachovnic bez barev a podpisů.
-3. **⚙ Nastavení → Záhlaví a zápatí**: název akce, pořadatel, rozhodčí, logo (obrázek se zmenší a uloží do prohlížeče), text zápatí.
+3. **⚙ Nastavení → Záhlaví a zápatí**: nadpis i na více řádků (např. „Okresní kolo přeboru škol“ / „{skupina}“, druhý řádek
+   může být menší), pořadatel, rozhodčí, libovolný počet log vlevo i vpravo (obrázky se zmenší a uloží do prohlížeče),
+   text zápatí a poděkování sponzorům s jejich logy. **⚙ Nastavení → Stránka → Vodoznak**: logo světle přes celou
+   stránku – viditelnost v %, černobíle nebo barevně, velikost; u jednotlivého výstupu ho jde vypnout.
    Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
@@ -210,7 +213,7 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
 U každého výstupu jde v „Možnostech“ (pod výběrem výstupu) nastavit **Záhlaví** (jen na první stránce / na každé stránce / jen název výstupu /
-vypnuto) a **Zápatí** (na každé stránce / vypnuto); „podle profilu“ = nastavení z ⚙ Nastavení → Záhlaví a zápatí.
+vypnuto), **Zápatí** (na každé stránce / vypnuto) a **Vodoznak** (když ho profil má); „podle profilu“ = nastavení z ⚙ Nastavení → Záhlaví a zápatí.
 Méně používané výstupy (los na nástěnku, kdo kde hraje, rozhodcovský list, výsledkové lístky) jsou ve výchozím stavu schované – zapnete je
 v ⚙ Nastavení → Nabídka výstupů.
 Ratingy: když turnaj zveřejňuje oba ratingy, sloupce se jmenují **RtgF** (FIDE) a **RtgN** (národní); když jen jeden
@@ -246,7 +249,7 @@ Kdyby to nestačilo, pomůže `Ctrl+F5` (úplné obnovení stránky).
 | Proxy nefunguje vůbec | **Vložit HTML ručně**: otevřete stránku turnaje na chess-results, uložte ji (`Ctrl+S`, „pouze HTML“) a nahrajte. Appka pozná turnaj, druh stránky i kolo. Potřebujete hlavní stránku turnaje a stránku losu/pořadí daného kola. |
 | Starý turnaj (déle než 2 týdny po skončení) | Proxy sama „klikne“ na *Show tournament details*. Při ručním vkládání to udělejte na chess-results před uložením. |
 | Tisk má prázdnou stránku navíc / je zmenšený | V dialogu tisku nastavte měřítko 100 % a okraje „Výchozí“; vypněte „Přizpůsobit stránce“. |
-| Logo se neuloží | Úložiště prohlížeče je plné – použijte menší obrázek (appka ho sama zmenšuje na 600 px). |
+| Logo / vodoznak se neuloží | Úložiště prohlížeče je plné – odeberte některé obrázky nebo použijte menší (appka loga zmenšuje na 600 px, vodoznak na 1000 px). |
 
 Nejlépe funguje Chrome / Edge (náhled je vyladěný pro jejich tisk), Firefox funguje také.
 

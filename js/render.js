@@ -102,6 +102,8 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     header: headerHtml,
     headerEveryPage: hMode === 'every',
     footer: footerFn,
+    // Vodoznak z profilu (Nastavení → Stránka); výstup ho může vypnout, lístky k rozstříhání ho nemají
+    watermark: ts.watermark !== 'off' && tpl.pageChrome !== false && profile.page.watermark && profile.page.watermark.src ? profile.page.watermark : null,
     ...extra,
     docClass: [profile.page.tableStyle === 'stripes' ? '' : 'tbl-grid', extra.docClass || ''].join(' ').trim(),
   };
