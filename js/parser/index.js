@@ -4,14 +4,14 @@
 export { parseInfo, classifyType, detectTnr } from './info.js';
 export {
   parseStartList, parseRanking, parsePairings, parseTeamList,
-  parseTeamPairings, parseBoardPairings, detectPageKind, parseTiebreakLegend,
+  parseTeamPairings, parseBoardPairings, parseBoardList, detectPageKind, parseTiebreakLegend,
 } from './tables.js';
 export { fmtPoints, parseNum, parseResult } from './dom.js';
 
 import { parseInfo } from './info.js';
 import {
   parseStartList, parseRanking, parsePairings, parseTeamList,
-  parseTeamPairings, parseBoardPairings, detectPageKind,
+  parseTeamPairings, parseBoardPairings, parseBoardList, detectPageKind,
 } from './tables.js';
 import { dataTables } from './dom.js';
 
@@ -26,6 +26,7 @@ export const PAGE_PARSERS = {
   teams: parseTeamList,
   teamPairings: parseTeamPairings,
   boards: parseBoardPairings,
+  boardList: parseBoardList,
 };
 
 /** Zpracuje stránku daného druhu; vrací { info, data, empty }. */

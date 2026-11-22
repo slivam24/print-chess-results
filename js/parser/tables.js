@@ -224,6 +224,71 @@ export function parseRanking(doc) {
 }
 
 // ---------------------------------------------------------------------------
+// Nejlepší hráči na šachovnicích (družstva, art=81 „Board list“): pořadí pro každou šachovnici
+// ---------------------------------------------------------------------------
+
+const BOARD_HEAD = /^(board|brett|sachovnice|sach\.?|bo\.?)\s*(\d+)\b|^(\d+)\s*\.?\s*(board|brett|sachovnice)\b/;
+
+/** Je to stránka „Board list“? (sekce „Board 1“, „Board 2“… s pořadím hráčů) */
+function isBoardListTable(table) {
+  const secs = splitTable(table).filter((s) => s.header);
+  return secs.length > 0 && secs.every((s) => s.heading && BOARD_HEAD.test(norm(s.heading)))
+    && mapHeader(secs[0].header).some((c) => c.key === 'rank') && mapHeader(secs[0].header).some((c) => c.key === 'name');
+}
+
+export function parseBoardList(doc) {
+  const table = dataTables(doc).find(isBoardListTable);
+  const empty = { round: null, final: false, boards: [], tiebreaks: [], heading: null, determination: '' };
+  if (!table) return empty;
+  const hEl = [...doc.querySelectorAll('h2,h3')].find((x) => /board list|brett|šachovnic|sachovnic/i.test(text(x))) || headingBefore(table);
+  const heading = hEl ? text(hEl) : '';
+  const boards = [];
+  let tbCount = 0;
+  for (const sec of splitTable(table)) {
+    if (!sec.header) continue;
+    const m = norm(sec.heading).match(BOARD_HEAD);
+    const board = m ? Number(m[2] || m[3]) : boards.length + 1;
+    const cols = mapHeader(sec.header);
+    tbCount = Math.max(tbCount, cols.filter((c) => c.key === 'tb').length);
+    let lastRank = null;
+    const rows = [];
+    for (const tr of sec.rows) {
+      const r = readRow(tr, cols);
+      if (!r.name) continue;
+      if (typeof r.rank === 'number') lastRank = r.rank;
+      rows.push({
+        rank: typeof r.rank === 'number' ? r.rank : lastRank,
+        tie: typeof r.rank !== 'number' && lastRank != null,
+        title: r.title || '',
+        name: r.name,
+        fed: r.fed || '',
+        rating: typeof r.rating === 'number' && r.rating > 0 ? r.rating : null,
+        ratingNat: typeof r.ratingNat === 'number' && r.ratingNat > 0 ? r.ratingNat : null,
+        team: r.team || r.club || '',
+        tb: r.tb.map((x) => x ?? ''),
+      });
+    }
+    let b = boards.find((x) => x.board === board);
+    if (!b) { b = { board, rows: [] }; boards.push(b); }
+    b.rows.push(...rows);
+  }
+  // Vysvětlivky: „Tie Break1: points (game-points)“ … poslední bývá slepená s dalšími poznámkami
+  const legend = parseTiebreakLegend(doc).map((l) => l.split(/forfeit points|kontumační|kampflos|board determination|určení šachovnice/i)[0].trim());
+  const body = text(doc.body || doc.documentElement);
+  const det = body.match(/(?:Board determination|Určení šachovnice|Brettermittlung)\s*:\s*(.+?)(?=Board \d|Šachovnice \d|Brett \d|$)/i);
+  // „Final Ranking after 5 Rounds“, „po 5 kolech“
+  const after = norm(heading).match(/(?:after|po|nach)\s+(\d+)\s*\.?\s*(?:rounds?|kol|kolech|kole|runden?)\b/);
+  return {
+    round: roundFromText(heading) ?? (after ? Number(after[1]) : null),
+    final: /final|konecne|endstand|schluss/.test(norm(heading)),
+    boards: boards.sort((a, b) => a.board - b.board),
+    tiebreaks: Array.from({ length: tbCount }, (_, i) => ({ key: `TB${i + 1}`, label: legend[i] || '' })),
+    heading,
+    determination: det ? det[1].trim() : '',
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Los kola jednotlivců (art=2&rd=N). Kruhový systém vrací všechna kola najednou.
 // ---------------------------------------------------------------------------
 
@@ -493,6 +558,7 @@ export function parseBoardPairings(doc) {
 
 export function detectPageKind(doc) {
   const tables = dataTables(doc);
+  if (tables.some(isBoardListTable)) return 'boardList';
   for (const t of tables) {
     for (const sec of splitTable(t)) {
       if (!sec.header) continue;

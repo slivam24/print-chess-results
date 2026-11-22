@@ -149,11 +149,20 @@ test('jednotlivci – každý s každým: los všech kol, křížová tabulka', 
 });
 
 test('družstva', async (t) => {
-  const { page, errors } = await openTournament(['team-main', 'team-boards-r3', 'team-pairings-r3', 'team-players', 'team-teams', 'team-table']);
+  const { page, errors } = await openTournament(['team-main', 'team-boards-r3', 'team-pairings-r3', 'team-players', 'team-teams', 'team-table', 'team-boardlist']);
   await checkAll(t, page, [
     ['team-matches', { round: 3 }], ['team-boards', { round: 3 }],
     ['team-startlist', {}], ['team-roster', {}], ['team-ranking', {}],
+    ['team-board-best', {}], ['team-board-best', { options: { places: '3', boardPerPage: true } }],
   ]);
+  // Nejlepší na šachovnicích: všechny šachovnice mají stejné šířky sloupců
+  for (const fontMode of ['fixed', 'max', 'page']) {
+    await render(page, 'team-board-best', { fontMode, options: { places: 'all', boardPerPage: false } });
+    const widths = await page.evaluate(() => [...document.querySelectorAll('#pages table')]
+      .map((t) => [...t.rows[0].cells].map((c) => Math.round(c.getBoundingClientRect().width)).join(',')));
+    assert.ok(widths.length >= 4, `${fontMode}: ${widths.length} tabulek`);
+    assert.equal(new Set(widths).size, 1, `${fontMode}: různé šířky sloupců ${widths.join(' × ')}`);
+  }
   assert.deepEqual(errors, []);
   await page.close();
 });

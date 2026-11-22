@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { fixture } from './helpers.js';
 import {
   parseInfo, parseStartList, parseRanking, parsePairings, parseTeamList, parseBoardPairings, parseTeamPairings,
+  parseBoardList, detectPageKind,
 } from '../js/parser/index.js';
 import { TEMPLATES, getTemplate, templatesFor } from '../js/templates/index.js';
 import { buildDocument, autoRound, datasetsFor } from '../js/render.js';
@@ -754,5 +755,47 @@ describe('vyhlášení výsledků', () => {
     assert.ok(tables.every((t) => t.rows.length === 3 && t.keepTogether));
     assert.match(tables[0].rows[0], /<td class="c num strong">1\.<\/td>/);
     assert.equal(templateSettings(p, getTemplate('awards')).fontMode, 'page');
+  });
+});
+
+describe('nejlepší na šachovnicích (družstva, Board list)', () => {
+  const doc = fixture('team-boardlist');
+  const bl = parseBoardList(doc);
+
+  test('parser: šachovnice, dělená místa, pomocná hodnocení, kolo', () => {
+    assert.equal(detectPageKind(doc), 'boardList');
+    assert.deepEqual(bl.boards.map((b) => [b.board, b.rows.length]), [[1, 5], [2, 5], [3, 6], [4, 7]]);
+    assert.equal(bl.final, true);
+    assert.equal(bl.round, 5);
+    assert.deepEqual(bl.tiebreaks.map((t) => t.label), ['points (game-points)', 'Games ascending (Less is better)', 'Performance (variable with parameter)']);
+    const b4 = bl.boards[3].rows;
+    assert.deepEqual(b4.slice(0, 4).map((r) => [r.rank, r.tie]), [[1, false], [1, true], [3, false], [3, true]]);
+    assert.equal(b4[2].tb[0], '1,5');
+    assert.equal(bl.boards[0].rows[0].rating, null); // Rtg 0 = bez ratingu
+    assert.equal(bl.boards[0].rows[0].team, 'ZŠ Vzorová A');
+  });
+
+  test('výstup: šachovnice jako oddíly, body s ½, české názvy hodnocení, jen první místa', () => {
+    const tpl = getTemplate('team-board-best');
+    assert.ok(tpl.supports({ isTeam: true }) && !tpl.supports({ isTeam: false }));
+    const info = { tnr: 1464724, title: 'Turnaj', isTeam: true, groups: [] };
+    const doc1 = buildDocument({ tpl, info, data: { boardList: bl }, profile: defaultProfile(), round: null });
+    assert.equal(doc1.title, 'Nejlepší hráči na šachovnicích – konečné pořadí');
+    const titles = doc1.blocks.filter((b) => /sec-title/.test(b.html || '')).map((b) => b.html.replace(/<[^>]+>/g, ''));
+    assert.deepEqual(titles, ['1. šachovnice', '2. šachovnice', '3. šachovnice', '4. šachovnice']);
+    const tables = doc1.blocks.filter((b) => b.type === 'table');
+    assert.match(tables[0].thead, />Body<.*>Partie<.*>Výkon</);
+    assert.doesNotMatch(tables[0].thead, />Elo</); // bez ratingu
+    assert.ok(tables.every((t) => t.keepTogether));
+    assert.match(tables[3].rows[2], />1½</);
+    assert.match(doc1.blocks.at(-1).html, /méně je lépe/);
+    const p = defaultProfile();
+    p.templates['team-board-best'] = { options: { places: '1', boardPerPage: true } };
+    const doc2 = buildDocument({ tpl, info, data: { boardList: bl }, profile: p, round: null });
+    const t2 = doc2.blocks.filter((b) => b.type === 'table');
+    assert.deepEqual(t2.map((t) => t.rows.length), [1, 1, 1, 2]); // dělené 1. místo na 4. šachovnici
+    assert.equal(doc2.blocks.filter((b) => b.breakBefore).length, 3);
+    const empty = buildDocument({ tpl, info, data: {}, profile: p, round: null });
+    assert.match(empty.warnings[0], /Board list/);
   });
 });
