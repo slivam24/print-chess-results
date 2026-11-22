@@ -215,7 +215,95 @@ export class SettingsPanel {
         onchange: (e) => this.edit((pp) => { pp.nameFormat = e.target.value; }),
       }, options(NAME_FORMATS, p.nameFormat))),
       h('p', { class: 'help' }, 'Písmo a orientaci lze pro jednotlivé výstupy přepsat na kartě „Výstup“.'),
+      this.renderWatermark(),
     );
+  }
+
+  /** Vodoznak: logo přes celou stránku, nastavitelná viditelnost, černobíle / barevně. */
+  renderWatermark() {
+    const wm = this.profile.page.watermark || {};
+    const set = (fn, opt) => this.edit((pp) => { pp.page.watermark = pp.page.watermark || {}; fn(pp.page.watermark); }, opt);
+    const file = h('input', {
+      type: 'file', accept: 'image/*',
+      onchange: async (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        try {
+          const url = await imageToDataUrl(f, 1000);
+          set((w) => { w.src = url; }, { rerenderPanel: true });
+          this.checkSaved();
+        } catch (err) {
+          alert(err.message);
+        }
+      },
+    });
+    const pct = h('span', { class: 'small muted' }, `${wm.opacity || 10} %`);
+    return h('div', {},
+      h('h2', { style: { marginTop: '16px' } }, 'Vodoznak'),
+      h('p', { class: 'small muted' }, 'Logo turnaje nebo pořadatele světle přes celou stránku. Lze vypnout u jednotlivého výstupu v jeho možnostech; lístky k rozstříhání ho nemají.'),
+      wm.src
+        ? h('div', { class: 'row wrap' },
+          h('img', { class: 'logo-prev', src: wm.src, alt: 'Vodoznak', style: { opacity: String((wm.opacity || 10) / 100 * 3), filter: wm.color === 'color' ? '' : 'grayscale(1)' } }),
+          h('button', { class: 'btn small danger', type: 'button', onclick: () => set((w) => { w.src = null; }, { rerenderPanel: true }) }, 'Odebrat vodoznak'))
+        : h('div', { class: 'row wrap' }, h('label', { class: 'btn', style: { cursor: 'pointer' } }, '+ Vybrat obrázek vodoznaku…', file)),
+      wm.src ? h('div', {},
+        field(h('span', {}, 'Viditelnost ', pct), h('input', {
+          type: 'range', min: 2, max: 40, step: 1, value: wm.opacity || 10,
+          oninput: (e) => { pct.textContent = `${e.target.value} %`; set((w) => { w.opacity = clampNum(e.target.value, 1, 100, 10); }); },
+        })),
+        h('div', { class: 'row wrap' },
+          field('Barvy', h('select', { onchange: (e) => set((w) => { w.color = e.target.value; }, { rerenderPanel: true }) },
+            options([['gray', 'černobíle'], ['color', 'barevně']], wm.color || 'gray')), true),
+          field('Velikost (% šířky stránky)', h('input', {
+            type: 'number', min: 10, max: 100, step: 5, value: wm.size || 70,
+            oninput: (e) => set((w) => { w.size = clampNum(e.target.value, 10, 100, 70); }),
+          }), true)),
+        h('p', { class: 'help' }, 'Doporučená viditelnost 5–15 %, aby text zůstal dobře čitelný. Pro černobílou tiskárnu zvolte černobíle – barevné logo by se vytisklo nerovnoměrně šedé.')) : null);
+  }
+
+  /**
+   * Seznam obrázků (loga v záhlaví, sponzoři): náhled, výška v mm, (umístění), pořadí, smazání, přidání.
+   * path(profil) vrací pole v profilu, které se upravuje.
+   */
+  imageList({ items, path, addLabel, heightRange: [min, max, def], withPosition = false }) {
+    const edit = (fn, rerender = true) => this.edit((pp) => fn(path(pp)), { rerenderPanel: rerender });
+    const file = h('input', {
+      type: 'file', accept: 'image/*', multiple: true,
+      onchange: async (e) => {
+        const files = [...e.target.files];
+        try {
+          const urls = [];
+          for (const f of files) urls.push(await imageToDataUrl(f));
+          edit((list) => { for (const src of urls) list.push(withPosition ? { src, height: def, position: 'left' } : { src, height: def }); });
+          this.checkSaved();
+        } catch (err) {
+          alert(err.message);
+        }
+      },
+    });
+    return h('div', { class: 'img-list' },
+      items.map((it, i) => h('div', { class: 'img-row' },
+        h('img', { class: 'logo-prev', src: it.src, alt: `Logo ${i + 1}` }),
+        h('div', { class: 'img-ctrls' },
+          field('Výška (mm)', h('input', {
+            type: 'number', min, max, value: it.height || def,
+            oninput: (e) => edit((list) => { list[i].height = clampNum(e.target.value, min, max, def); }, false),
+          }), true),
+          withPosition ? field('Umístění', h('select', { onchange: (e) => edit((list) => { list[i].position = e.target.value; }, false) },
+            options([['left', 'vlevo'], ['right', 'vpravo']], it.position || 'left')), true) : null,
+          h('div', { class: 'row' },
+            h('button', { class: 'btn icon small', type: 'button', title: 'Posunout dříve', disabled: i === 0, onclick: () => edit((list) => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; }) }, '↑'),
+            h('button', { class: 'btn icon small', type: 'button', title: 'Posunout později', disabled: i === items.length - 1, onclick: () => edit((list) => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; }) }, '↓'),
+            h('button', { class: 'btn small danger', type: 'button', onclick: () => edit((list) => { list.splice(i, 1); }) }, 'Odebrat'))))),
+      h('label', { class: 'btn', style: { cursor: 'pointer', alignSelf: 'flex-start' } }, addLabel, file));
+  }
+
+  /** Po přidání obrázku: uloží hned a upozorní, když se nevejde do úložiště prohlížeče. */
+  checkSaved() {
+    this.store.flush();
+    if (this.store.lastSaveError) {
+      alert('Nastavení se nepodařilo uložit – úložiště prohlížeče je plné. Odeberte některé obrázky nebo použijte menší (méně podrobné) soubory.');
+    }
   }
 
   // --- Záhlaví a zápatí ---------------------------------------------------------
@@ -225,42 +313,34 @@ export class SettingsPanel {
     const hd = p.header;
     const ft = p.footer;
     const text = (label, key, obj, opt = {}) => field(label, h(opt.area ? 'textarea' : 'input', {
-      type: 'text', rows: opt.area ? 3 : null, value: obj === 'header' ? hd[key] ?? '' : ft[key] ?? '', placeholder: opt.ph || '',
+      type: 'text', rows: opt.area ? opt.rows || 3 : null, value: obj === 'header' ? hd[key] ?? '' : ft[key] ?? '', placeholder: opt.ph || '',
       oninput: (e) => this.edit((pp) => { pp[obj][key] = e.target.value; }),
     }));
     const check = (label, key, obj) => h('label', { class: 'check' },
       h('input', { type: 'checkbox', checked: obj === 'header' ? hd[key] !== false : ft[key] !== false, onchange: (e) => this.edit((pp) => { pp[obj][key] = e.target.checked; }) }),
       label);
-    const logoInput = h('input', {
-      type: 'file', accept: 'image/*',
-      onchange: async (e) => {
-        const f = e.target.files[0];
-        if (!f) return;
-        try {
-          const url = await imageToDataUrl(f);
-          this.edit((pp) => { pp.header.logo = url; }, { rerenderPanel: true });
-        } catch (err) {
-          alert(err.message);
-        }
-      },
-    });
     add(card, 
       h('h2', {}, 'Záhlaví'),
       check('Zobrazit záhlaví (název, logo, pořadatel)', 'enabled', 'header'),
       field('Zarovnání nadpisu', h('select', { onchange: (e) => this.edit((pp) => { pp.header.align = e.target.value; }) },
         options([['center', 'na střed (jako Swiss-Manager)'], ['left', 'vlevo']], hd.align || 'center'))),
-      text('Nadpis', 'title', 'header', { ph: '{turnaj}' }),
+      text('Nadpis (Enter = další řádek)', 'title', 'header', { area: true, rows: 2, ph: '{turnaj}' }),
+      h('p', { class: 'help' }, 'Nadpis může mít více řádků – např. 1. řádek název festivalu a 2. řádek „{turnaj}“, nebo „Okresní kolo přeboru škol“ a pod tím „kategorie A“ (případně „{skupina}“ = název skupiny z chess-results). Každý profil si nadpis upraví podle sebe.'),
+      field('Velikost řádků nadpisu', h('select', { onchange: (e) => this.edit((pp) => { pp.header.titleLines = e.target.value; }) },
+        options([['same', 'všechny řádky stejně velké'], ['second-smaller', '2. řádek menší'], ['first-smaller', '1. řádek menší']], hd.titleLines || 'same'))),
       text('Podnadpis', 'subtitle', 'header', { area: true, ph: '{misto}, {datum}' }),
       text('Pořadatel', 'organizer', 'header', { ph: 'např. ŠK Štětí' }),
       text('Rozhodčí', 'arbiter', 'header', { ph: '{rozhodci}' }),
       text('Volný text (vpravo)', 'text', 'header', { area: true }),
-      h('div', { class: 'field' }, 'Logo',
-        hd.logo ? h('img', { class: 'logo-prev', src: hd.logo, alt: 'Logo' }) : h('span', { class: 'small muted' }, 'Bez loga'),
-        h('div', { class: 'row wrap' }, logoInput,
-          hd.logo ? h('button', { class: 'btn small danger', type: 'button', onclick: () => this.edit((pp) => { pp.header.logo = null; }, { rerenderPanel: true }) }, 'Odebrat logo') : null)),
-      h('div', { class: 'row wrap' },
-        field('Výška loga (mm)', h('input', { type: 'number', min: 5, max: 50, value: hd.logoHeight, oninput: (e) => this.edit((pp) => { pp.header.logoHeight = clampNum(e.target.value, 5, 50, 16); }) }), true),
-        field('Umístění', h('select', { onchange: (e) => this.edit((pp) => { pp.header.logoPosition = e.target.value; }) }, options([['left', 'vlevo'], ['right', 'vpravo']], hd.logoPosition)), true)),
+      h('h3', {}, 'Loga v záhlaví'),
+      h('p', { class: 'small muted' }, 'Logo turnaje, pořadatele, svazu… Každé logo může být vlevo nebo vpravo od nadpisu.'),
+      this.imageList({
+        items: hd.logos || [],
+        path: (pp) => pp.header.logos,
+        addLabel: '+ Přidat logo',
+        heightRange: [5, 60, 16],
+        withPosition: true,
+      }),
       check('Záhlaví na každé stránce (jinak jen na první)', 'everyPage', 'header'),
       h('h3', {}, 'QR kód'),
       field('QR kód s odkazem na turnaj', h('select', { onchange: (e) => this.edit((pp) => { pp.header.qr = e.target.value; }, { rerenderPanel: true }) },
@@ -270,13 +350,22 @@ export class SettingsPanel {
           options([['main', 'hlavní stránku turnaje'], ['output', 'stránku výstupu (los, pořadí…)']], hd.qrTarget || 'main')), true),
         field('Velikost (mm)', h('input', { type: 'number', min: 12, max: 40, value: hd.qrSize || 18, oninput: (e) => this.edit((pp) => { pp.header.qrSize = clampNum(e.target.value, 12, 40, 18); }) }), true)) : null,
       h('p', { class: 'help' }, 'Hráči a rodiče si QR kód načtou mobilem a uvidí aktuální výsledky na chess-results. Zobrazí se u výstupů se záhlavím (podle nastavení záhlaví i jen na první stránce). Hlavní stránka turnaje platí i po dalších kolech.'),
-      h('p', { class: 'help', html: 'Proměnné: <code>{turnaj}</code> <code>{misto}</code> <code>{datum}</code> <code>{kolo}</code> <code>{rozhodci}</code> <code>{zastupce}</code> <code>{reditel}</code> <code>{poradatel}</code> <code>{tempo}</code> <code>{kol}</code> <code>{rating}</code> (průměrný rating) – doplní se z chess-results.' }),
+      h('p', { class: 'help', html: 'Proměnné: <code>{turnaj}</code> <code>{misto}</code> <code>{datum}</code> <code>{kolo}</code> <code>{rozhodci}</code> <code>{zastupce}</code> <code>{reditel}</code> <code>{poradatel}</code> <code>{tempo}</code> <code>{kol}</code> <code>{rating}</code> (průměrný rating) <code>{skupina}</code> (název skupiny) – doplní se z chess-results.' }),
       h('h2', { style: { marginTop: '16px' } }, 'Zápatí'),
       check('Zobrazit zápatí', 'enabled', 'footer'),
       text('Text vlevo', 'text', 'footer', { ph: 'např. www.mujklub.cz' }),
       check('Čísla stránek', 'showPageNumbers', 'footer'),
       check('Čas tisku', 'showPrinted', 'footer'),
       check('Zdroj a čas aktualizace na chess-results', 'showSource', 'footer'),
+      h('h3', {}, 'Poděkování sponzorům'),
+      h('p', { class: 'small muted' }, 'Text a loga sponzorů se vytisknou vystředěně nad čarou zápatí na každé stránce (zápatí musí být zapnuté – v profilu, nebo jen u vybraného výstupu v jeho možnostech).'),
+      text('Text', 'sponsorsText', 'footer', { ph: 'např. Děkujeme partnerům turnaje:' }),
+      this.imageList({
+        items: ft.sponsors || [],
+        path: (pp) => pp.footer.sponsors,
+        addLabel: '+ Přidat logo sponzora',
+        heightRange: [4, 40, 10],
+      }),
     );
   }
 
@@ -491,7 +580,7 @@ export class SettingsPanel {
     const stamp = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     add(card, 
       h('h2', {}, 'Záloha nastavení'),
-      h('p', { class: 'small' }, 'Nastavení se ukládá v tomto prohlížeči (localStorage). Zálohu do souboru JSON doporučujeme po každé větší úpravě – obsahuje všechny profily, logo, adresu proxy a poslední turnaje.'),
+      h('p', { class: 'small' }, 'Nastavení se ukládá v tomto prohlížeči (localStorage). Zálohu do souboru JSON doporučujeme po každé větší úpravě – obsahuje všechny profily (i s logy a vodoznakem), adresu proxy a poslední turnaje.'),
       h('div', { class: 'row wrap' },
         h('button', { class: 'btn primary', type: 'button', onclick: () => downloadText(`chess-print-zaloha-${stamp}.json`, this.store.exportJson()) }, '⬇ Exportovat zálohu')),
       h('h3', {}, 'Obnovit ze zálohy'),
@@ -502,7 +591,7 @@ export class SettingsPanel {
         class: 'btn danger', type: 'button',
         onclick: () => { if (confirm('Smazat všechna nastavení a profily a začít znovu?')) { this.store.reset(); this.onChange({ proxyChanged: true }); this.render(); } },
       }, 'Smazat vše a začít znovu'),
-      this.store.lastSaveError ? h('p', { class: 'manual-err small' }, 'Pozor: poslední uložení selhalo (plné úložiště prohlížeče?). Zkuste zmenšit logo.') : null,
+      this.store.lastSaveError ? h('p', { class: 'manual-err small' }, 'Pozor: poslední uložení selhalo (plné úložiště prohlížeče?). Zkuste odebrat nebo zmenšit loga či vodoznak.') : null,
     );
   }
 }

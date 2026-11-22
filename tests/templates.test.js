@@ -799,3 +799,54 @@ describe('nejlepší na šachovnicích (družstva, Board list)', () => {
     assert.match(empty.warnings[0], /Board list/);
   });
 });
+
+describe('záhlaví a zápatí: nadpis na více řádků, loga, sponzoři, vodoznak', () => {
+  const info = { tnr: 1, title: 'Okresní kolo přeboru škol kategorie A', groups: [{ tnr: 1, name: 'kat. A', current: true }, { tnr: 2, name: 'kat. B' }] };
+  const logo = (c) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect width="10" height="10" fill="${c}"/></svg>`)}`;
+  const tpl = getTemplate('startlist');
+  const data = { main: { players: [{ startNo: 1, name: 'Novák Jan' }] } };
+
+  test('nadpis na 2 řádky, {skupina}, menší 2. řádek', () => {
+    const p = defaultProfile();
+    p.header.title = 'Okresní kolo přeboru škol\n{skupina}';
+    p.header.titleLines = 'second-smaller';
+    const hd = buildDocument({ tpl, info, data, profile: p, round: null }).layout.header;
+    assert.match(hd, /<span class="hd-title-line">Okresní kolo přeboru škol<\/span><span class="hd-title-line small">kat\. A<\/span>/);
+    p.header.title = '{turnaj}';
+    assert.match(buildDocument({ tpl, info, data, profile: p, round: null }).layout.header, /<div class="hd-title">Okresní kolo přeboru škol kategorie A<\/div>/);
+  });
+
+  test('více log vlevo i vpravo', () => {
+    const p = defaultProfile();
+    p.header.logos = [{ src: logo('red'), height: 20, position: 'left' }, { src: logo('blue'), height: 12, position: 'right' }, { src: logo('green'), height: 12, position: 'right' }];
+    const hd = buildDocument({ tpl, info, data, profile: p, round: null }).layout.header;
+    const [left, right] = hd.split('hd-main');
+    assert.equal((left.match(/<img class="logo"/g) || []).length, 1);
+    assert.match(left, /height:20mm/);
+    assert.equal((right.match(/<img class="logo"/g) || []).length, 2);
+  });
+
+  test('sponzoři v zápatí', () => {
+    const p = defaultProfile();
+    p.footer.enabled = true;
+    p.footer.sponsorsText = 'Děkujeme partnerům:';
+    p.footer.sponsors = [{ src: logo('red'), height: 8 }];
+    const ft = buildDocument({ tpl, info, data, profile: p, round: null }).layout.footer(1, 2);
+    assert.match(ft, /^<div class="ft-sponsors"><span class="ft-thanks">Děkujeme partnerům:<\/span><img class="ft-logo"[^>]*height:8mm/);
+    assert.match(ft, /<div class="ft-line">.*Strana 1 \/ 2/);
+    p.footer.sponsors = [];
+    p.footer.sponsorsText = '';
+    assert.doesNotMatch(buildDocument({ tpl, info, data, profile: p, round: null }).layout.footer(1, 1), /ft-sponsors/);
+  });
+
+  test('vodoznak z profilu; výstup ho může vypnout; lístky ho nemají', () => {
+    const p = defaultProfile();
+    assert.equal(buildDocument({ tpl, info, data, profile: p, round: null }).layout.watermark, null);
+    p.page.watermark = { src: logo('red'), opacity: 12, color: 'gray', size: 60 };
+    assert.deepEqual(buildDocument({ tpl, info, data, profile: p, round: null }).layout.watermark, p.page.watermark);
+    p.templates.startlist = { watermark: 'off' };
+    assert.equal(buildDocument({ tpl, info, data, profile: p, round: null }).layout.watermark, null);
+    const slips = getTemplate('scoresheets');
+    assert.equal(buildDocument({ tpl: slips, info, data: { ...data, pairings: { rounds: [] } }, profile: p, round: 1 }).layout.watermark, null);
+  });
+});

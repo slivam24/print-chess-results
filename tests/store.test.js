@@ -77,12 +77,22 @@ describe('přenos profilů mezi počítači', () => {
     assert.throws(() => b.importJson(b.exportProfiles()), /soubor s profily/);
   });
 
-  test('logo jde s profilem', () => {
+  test('loga, sponzoři a vodoznak jdou s profilem; staré jediné logo se převede', () => {
     const a = computer();
-    a.update((s) => { s.profiles[0].header.logo = 'data:image/png;base64,AAAA'; });
+    a.update((s) => {
+      const p = s.profiles[0];
+      p.header.logo = 'data:image/png;base64,AAAA'; // starší verze appky
+      p.header.logoPosition = 'right';
+      p.footer.sponsors = [{ src: 'data:image/png;base64,BBBB', height: 12 }, { src: 'http://cizi/obr.png' }];
+      p.page.watermark = { src: 'data:image/png;base64,CCCC', opacity: 15, color: 'color', size: 500 };
+    });
     const b = computer();
     b.importProfiles(a.exportProfiles([a.state.profiles[0].id]));
-    assert.equal(b.state.profiles[0].header.logo, 'data:image/png;base64,AAAA');
+    const p = b.state.profiles.find((x) => x.id === a.state.profiles[0].id);
+    assert.deepEqual(p.header.logos, [{ src: 'data:image/png;base64,AAAA', height: 16, position: 'right' }]);
+    assert.equal(p.header.logo, undefined);
+    assert.deepEqual(p.footer.sponsors, [{ src: 'data:image/png;base64,BBBB', height: 12 }]);
+    assert.deepEqual(p.page.watermark, { src: 'data:image/png;base64,CCCC', opacity: 15, color: 'color', size: 70 });
   });
 
   test('defaultProfile je použitelný sám o sobě', () => {

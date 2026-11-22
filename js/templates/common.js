@@ -267,6 +267,8 @@ export function infoVars(info, extra = {}) {
     kol: info && info.totalRounds ? String(info.totalRounds) : '',
     rating: (f.avgRating && String(f.avgRating).match(/\d+/)?.[0]) || '',
     cislo: info && info.tnr ? String(info.tnr) : '',
+    // název skupiny / turnaje z „Tournament selection“ (např. „kat. A“)
+    skupina: (info && (info.groups || []).find((g) => g.current || g.tnr === info.tnr)?.name) || '',
     ...extra,
   };
 }
@@ -274,6 +276,19 @@ export function infoVars(info, extra = {}) {
 /** Prostý text → HTML s odstavci podle řádků. */
 function lines(s) {
   return esc(s).split(/\n/).map((x) => x.trim()).filter(Boolean).join('<br>');
+}
+
+/**
+ * Nadpis na více řádků (Enter v nastavení), např. „Okresní kolo přeboru škol“ / „kategorie A“.
+ * mode: 'same' | 'second-smaller' (2. a další řádky menší) | 'first-smaller' (1. řádek menší).
+ */
+export function titleLines(title, mode = 'same') {
+  const rows = String(title || '').split(/\n/).map((x) => x.trim()).filter(Boolean);
+  if (rows.length < 2) return esc(rows[0] || '');
+  return rows.map((r, i) => {
+    const small = (mode === 'second-smaller' && i > 0) || (mode === 'first-smaller' && i === 0);
+    return `<span class="hd-title-line${small ? ' small' : ''}">${esc(r)}</span>`;
+  }).join('');
 }
 
 /**
@@ -292,18 +307,24 @@ export function renderHeader(profile, info, { outputTitle, outputSub, vars = {},
   if (org) right.push(`<div><span class="lbl">Pořadatel:</span> ${esc(org)}</div>`);
   if (arb) right.push(`<div><span class="lbl">Rozhodčí:</span> ${esc(arb)}</div>`);
   if (txt) right.push(`<div>${lines(txt)}</div>`);
-  const logo = h.logo ? `<img class="logo" src="${h.logo}" alt="" style="height:${Number(h.logoHeight) || 18}mm">` : '';
-  const logoRight = h.logoPosition === 'right';
-  const showBar = h.enabled !== false && (title || subtitle || right.length || logo);
+  // Loga (turnaj, pořadatel, svaz) vlevo a vpravo od nadpisu
+  const logos = (Array.isArray(h.logos) ? h.logos : []).filter((l) => l && l.src);
+  const logoBox = (pos) => {
+    const list = logos.filter((l) => (l.position === 'right' ? 'right' : 'left') === pos);
+    return list.length
+      ? `<div class="hd-logo">${list.map((l) => `<img class="logo" src="${esc(l.src)}" alt="" style="height:${Number(l.height) || 16}mm">`).join('')}</div>`
+      : '';
+  };
+  const showBar = h.enabled !== false && (title || subtitle || right.length || logos.length);
   const bar = showBar
     ? `<div class="hd-bar${compact ? ' compact' : ''}${h.align === 'left' ? '' : ' center'}">
-        ${logo && !logoRight ? `<div class="hd-logo">${logo}</div>` : ''}
+        ${logoBox('left')}
         <div class="hd-main">
-          ${title ? `<div class="hd-title">${esc(title)}</div>` : ''}
+          ${title ? `<div class="hd-title">${titleLines(title, h.titleLines)}</div>` : ''}
           ${subtitle ? `<div class="hd-sub">${lines(subtitle)}</div>` : ''}
         </div>
         ${right.length ? `<div class="hd-right">${right.join('')}</div>` : ''}
-        ${logo && logoRight ? `<div class="hd-logo">${logo}</div>` : ''}
+        ${logoBox('right')}
       </div>`
     : '';
   const out = outputTitle
@@ -327,7 +348,13 @@ export function renderFooter(profile, info, { vars = {}, fetchedAt } = {}) {
   if (f.showSource !== false && info) {
     mid.push(`chess-results.com${info.tnr ? ` (${info.tnr})` : ''}${info.lastUpdateText ? `, aktualizace ${esc(info.lastUpdateText)}` : ''}`);
   }
-  return (no, count) => `<div class="ft-left">${left}</div><div class="ft-mid">${mid.join(' · ')}</div><div class="ft-right">${f.showPageNumbers !== false ? `Strana ${no} / ${count}` : ''}</div>`;
+  // Poděkování sponzorům: text a loga v řádku nad patičkou (na každé stránce se zápatím)
+  const sponsors = (Array.isArray(f.sponsors) ? f.sponsors : []).filter((l) => l && l.src);
+  const thanks = f.sponsorsText ? esc(fillVars(f.sponsorsText, v)) : '';
+  const sponsorRow = sponsors.length || thanks
+    ? `<div class="ft-sponsors">${thanks ? `<span class="ft-thanks">${thanks}</span>` : ''}${sponsors.map((l) => `<img class="ft-logo" src="${esc(l.src)}" alt="" style="height:${Number(l.height) || 10}mm">`).join('')}</div>`
+    : '';
+  return (no, count) => `${sponsorRow}<div class="ft-line"><div class="ft-left">${left}</div><div class="ft-mid">${mid.join(' · ')}</div><div class="ft-right">${f.showPageNumbers !== false ? `Strana ${no} / ${count}` : ''}</div></div>`;
 }
 
 /** Nadpis sekce uvnitř dokumentu (např. kategorie nebo skupina). */

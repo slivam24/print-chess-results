@@ -166,3 +166,39 @@ test('družstva', async (t) => {
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+test('záhlaví na 2 řádky s logy, sponzoři v zápatí a vodoznak', async (t) => {
+  const { page, errors } = await openTournament(['swiss-main', 'swiss-pairings-r7', 'swiss-ranking-r6']);
+  await page.evaluate(() => {
+    const img = (w, hgt, color) => {
+      const c = document.createElement('canvas');
+      c.width = w; c.height = hgt;
+      const x = c.getContext('2d');
+      x.fillStyle = color; x.fillRect(0, 0, w, hgt);
+      return c.toDataURL('image/png');
+    };
+    window.chessPrint.store.update((s) => {
+      const p = s.profiles.find((q) => q.id === s.activeProfileId);
+      p.header.title = 'Šachový festival 2026\n{turnaj}';
+      p.header.titleLines = 'second-smaller';
+      p.header.logos = [{ src: img(300, 200, '#1f5fbf'), height: 20, position: 'left' }, { src: img(200, 200, '#c0392b'), height: 14, position: 'right' }];
+      p.footer.enabled = true;
+      p.footer.sponsorsText = 'Děkujeme partnerům:';
+      p.footer.sponsors = [1, 2, 3, 4].map(() => ({ src: img(300, 100, '#27ae60'), height: 10 }));
+      p.page.watermark = { src: img(400, 400, '#8e44ad'), opacity: 10, color: 'gray', size: 70 };
+    }, { silent: true });
+  });
+  await checkAll(t, page, [['ranking', {}], ['startlist', {}], ['pairings', { round: 7 }]]);
+  const info = await page.evaluate(() => ({
+    lines: document.querySelectorAll('#pages .page:first-child .hd-title-line').length,
+    logos: document.querySelectorAll('#pages .page:first-child .hd-logo img').length,
+    sponsors: document.querySelectorAll('#pages .page .ft-logo').length,
+    wm: [...document.querySelectorAll('#pages .page')].every((pg) => pg.querySelector('.pg-wm.gray img')),
+  }));
+  assert.equal(info.lines, 2);
+  assert.equal(info.logos, 2);
+  assert.ok(info.sponsors >= 4);
+  assert.ok(info.wm, 'vodoznak na každé stránce');
+  assert.deepEqual(errors, []);
+  await page.close();
+});

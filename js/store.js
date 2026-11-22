@@ -27,6 +27,9 @@ export function defaultProfile(name = 'Výchozí') {
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: 10,
       tableStyle: 'grid',
+      // Vodoznak přes celou stránku (logo turnaje / pořadatele): viditelnost v %, černobíle / barevně,
+      // velikost v % šířky stránky
+      watermark: { src: null, opacity: 10, color: 'gray', size: 70 },
     },
     nameFormat: 'last-first',
     // Výstupy schované z nabídky (zapínají se v Nastavení → Výstupy)
@@ -39,9 +42,10 @@ export function defaultProfile(name = 'Výchozí') {
       organizer: '',
       arbiter: '{rozhodci}',
       text: '',
-      logo: null,
-      logoHeight: 16,
-      logoPosition: 'left',
+      // Velikost řádků víceřádkového nadpisu: 'same' | 'second-smaller' | 'first-smaller'
+      titleLines: 'same',
+      // Loga v záhlaví (turnaj, pořadatel, svaz): [{ src (data URL), position: 'left' | 'right', height (mm) }]
+      logos: [],
       everyPage: false,
       // QR kód s odkazem na turnaj (vpravo v záhlaví): 'off' | 'on'; odkaz na hlavní stránku
       // turnaje ('main') nebo na stránku výstupu na chess-results ('output')
@@ -56,6 +60,9 @@ export function defaultProfile(name = 'Výchozí') {
       showPageNumbers: true,
       showPrinted: true,
       showSource: true,
+      // Poděkování sponzorům: text a loga v řádku nad patičkou
+      sponsorsText: '',
+      sponsors: [], // [{ src (data URL), height (mm) }]
     },
     templates: {},
   };
@@ -115,11 +122,31 @@ function deepFill(target, defaults) {
   return out;
 }
 
+const validImage = (x) => x && typeof x.src === 'string' && x.src.startsWith('data:image/');
+const mm = (v, min, max, def) => (Number(v) >= min && Number(v) <= max ? Number(v) : def);
+
 export function normalizeProfile(p) {
   const d = defaultProfile(p && p.name ? p.name : 'Profil');
   const out = deepFill(p, d);
   if (!out.id) out.id = uid();
   if (!isObj(out.templates)) out.templates = {};
+  // Dřívější jediné logo (header.logo) → seznam log
+  const hd = out.header;
+  const logos = Array.isArray(hd.logos) ? hd.logos : [];
+  if (hd.logo) logos.unshift({ src: hd.logo, height: hd.logoHeight, position: hd.logoPosition });
+  delete hd.logo;
+  delete hd.logoHeight;
+  delete hd.logoPosition;
+  hd.logos = logos.filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 5, 60, 16), position: l.position === 'right' ? 'right' : 'left' }));
+  const ft = out.footer;
+  ft.sponsors = (Array.isArray(ft.sponsors) ? ft.sponsors : []).filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 4, 40, 10) }));
+  const wm = isObj(out.page.watermark) ? out.page.watermark : {};
+  out.page.watermark = {
+    src: typeof wm.src === 'string' && wm.src.startsWith('data:image/') ? wm.src : null,
+    opacity: mm(wm.opacity, 1, 100, 10),
+    color: wm.color === 'color' ? 'color' : 'gray',
+    size: mm(wm.size, 10, 100, 70),
+  };
   return out;
 }
 
@@ -471,6 +498,8 @@ export function templateSettings(profile, tpl) {
     // Záhlaví / zápatí výstupu: 'inherit' = podle profilu (Nastavení → Záhlaví a zápatí)
     // (šablona může mít vlastní výchozí hodnotu, např. rozpis šachovnic k rozstříhání bez záhlaví)
     header: ['first', 'every', 'title', 'off', 'inherit'].includes(saved.header) ? saved.header : (tpl.defaults && tpl.defaults.header) || 'inherit',
+    // Vodoznak výstupu: 'inherit' = podle profilu (Nastavení → Stránka), 'off' = bez vodoznaku
+    watermark: ['inherit', 'off'].includes(saved.watermark) ? saved.watermark : 'inherit',
     footer: ['on', 'off', 'inherit'].includes(saved.footer) ? saved.footer : (tpl.defaults && tpl.defaults.footer) || 'inherit',
     options: opts,
   };
