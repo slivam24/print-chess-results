@@ -44,7 +44,7 @@ export function defaultProfile(name = 'Výchozí') {
       text: '',
       // Velikost řádků víceřádkového nadpisu: 'same' | 'second-smaller' | 'first-smaller'
       titleLines: 'same',
-      // Loga v záhlaví (turnaj, pořadatel, svaz): [{ src (data URL), position: 'left' | 'right', height (mm) }]
+      // Loga v záhlaví (turnaj, pořadatel, svaz): [{ src (data URL), position: 'left' | 'right', height (mm), gray (černobíle) }]
       logos: [],
       everyPage: false,
       // QR kód s odkazem na turnaj (vpravo v záhlaví): 'off' | 'on'; odkaz na hlavní stránku
@@ -62,7 +62,7 @@ export function defaultProfile(name = 'Výchozí') {
       showSource: true,
       // Poděkování sponzorům: text a loga v řádku nad patičkou
       sponsorsText: '',
-      sponsors: [], // [{ src (data URL), height (mm) }]
+      sponsors: [], // [{ src (data URL), height (mm), gray (černobíle) }]
     },
     templates: {},
   };
@@ -137,9 +137,10 @@ export function normalizeProfile(p) {
   delete hd.logo;
   delete hd.logoHeight;
   delete hd.logoPosition;
-  hd.logos = logos.filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 5, 60, 16), position: l.position === 'right' ? 'right' : 'left' }));
+  // gray: tisknout černobíle (výchozí – většina turnajů se tiskne na černobílé tiskárně)
+  hd.logos = logos.filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 5, 60, 16), position: l.position === 'right' ? 'right' : 'left', gray: l.gray !== false }));
   const ft = out.footer;
-  ft.sponsors = (Array.isArray(ft.sponsors) ? ft.sponsors : []).filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 4, 40, 10) }));
+  ft.sponsors = (Array.isArray(ft.sponsors) ? ft.sponsors : []).filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 4, 40, 10), gray: l.gray !== false }));
   const wm = isObj(out.page.watermark) ? out.page.watermark : {};
   out.page.watermark = {
     src: typeof wm.src === 'string' && wm.src.startsWith('data:image/') ? wm.src : null,
@@ -223,13 +224,29 @@ export class Store {
   }
 
   save() {
+    const value = JSON.stringify(this.state);
     try {
-      this.storage && this.storage.setItem(KEY, JSON.stringify(this.state));
+      this.storage && this.storage.setItem(KEY, value);
       this.lastSaveError = null;
     } catch (e) {
-      this.lastSaveError = e;
-      console.warn('Nastavení se nepodařilo uložit', e);
+      // Plné úložiště: nastavení (profily, loga) má přednost před uloženými daty turnajů,
+      // ta se dají kdykoli znovu stáhnout
+      for (const k of snapshotKeys(this.storage)) safeRemove(this.storage, k);
+      safeRemove(this.storage, SNAP_KEY);
+      try {
+        this.storage.setItem(KEY, value);
+        this.lastSaveError = null;
+      } catch (e2) {
+        this.lastSaveError = e2;
+        console.warn('Nastavení se nepodařilo uložit', e2);
+      }
     }
+  }
+
+  /** Kolik znaků zabírají obrázky profilu (loga, sponzoři, vodoznak). */
+  static imageBytes(profile) {
+    const imgs = [...(profile.header.logos || []), ...(profile.footer.sponsors || []), profile.page.watermark || {}];
+    return imgs.reduce((n, x) => n + (typeof x.src === 'string' ? x.src.length : 0), 0);
   }
 
   /** Změna stavu: fn dostane stav a upraví ho. Uloží s malým zpožděním. */

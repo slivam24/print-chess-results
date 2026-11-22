@@ -312,7 +312,7 @@ export function renderHeader(profile, info, { outputTitle, outputSub, vars = {},
   const logoBox = (pos) => {
     const list = logos.filter((l) => (l.position === 'right' ? 'right' : 'left') === pos);
     return list.length
-      ? `<div class="hd-logo">${list.map((l) => `<img class="logo" src="${esc(l.src)}" alt="" style="height:${Number(l.height) || 16}mm">`).join('')}</div>`
+      ? `<div class="hd-logo">${list.map((l) => `<img class="logo${l.gray !== false ? ' gray' : ''}" src="${esc(l.src)}" alt="" style="height:${Number(l.height) || 16}mm">`).join('')}</div>`
       : '';
   };
   const showBar = h.enabled !== false && (title || subtitle || right.length || logos.length);
@@ -352,7 +352,7 @@ export function renderFooter(profile, info, { vars = {}, fetchedAt } = {}) {
   const sponsors = (Array.isArray(f.sponsors) ? f.sponsors : []).filter((l) => l && l.src);
   const thanks = f.sponsorsText ? esc(fillVars(f.sponsorsText, v)) : '';
   const sponsorRow = sponsors.length || thanks
-    ? `<div class="ft-sponsors">${thanks ? `<span class="ft-thanks">${thanks}</span>` : ''}${sponsors.map((l) => `<img class="ft-logo" src="${esc(l.src)}" alt="" style="height:${Number(l.height) || 10}mm">`).join('')}</div>`
+    ? `<div class="ft-sponsors">${thanks ? `<span class="ft-thanks">${thanks}</span>` : ''}${sponsors.map((l) => `<img class="ft-logo${l.gray !== false ? ' gray' : ''}" src="${esc(l.src)}" alt="" style="height:${Number(l.height) || 10}mm">`).join('')}</div>`
     : '';
   return (no, count) => `${sponsorRow}<div class="ft-line"><div class="ft-left">${left}</div><div class="ft-mid">${mid.join(' · ')}</div><div class="ft-right">${f.showPageNumbers !== false ? `Strana ${no} / ${count}` : ''}</div></div>`;
 }

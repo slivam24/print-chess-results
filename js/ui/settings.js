@@ -1,8 +1,8 @@
 // Panel nastavení: profily, stránka a písmo, záhlaví/zápatí, šablona, připojení, záloha.
 
-import { h, clear, options, downloadText, readFileText, imageToDataUrl } from './dom.js';
+import { h, clear, options, downloadText, readFileText, imageToDataUrl, compactDataUrl } from './dom.js';
 import { resolveColumns, parseColWidth } from '../templates/common.js';
-import { templateSettings, DEFAULT_PROXY_URL, loadPresets } from '../store.js';
+import { Store, templateSettings, DEFAULT_PROXY_URL, loadPresets } from '../store.js';
 import { TEMPLATES } from '../templates/index.js';
 import { renderPrintSetup } from './printSetup.js';
 
@@ -46,6 +46,26 @@ export class SettingsPanel {
     this.onClose = onClose;
     this.testProxy = testProxy;
     this.tab = 'profiles';
+    this.compactImages();
+  }
+
+  /**
+   * Loga uložená dřívější verzí appky jako PNG zabírají v úložišti prohlížeče až 10× víc místa.
+   * Při prvním otevření nastavení je jednou převedeme (WebP, menší rozměr) – vzhled se nezmění.
+   */
+  async compactImages() {
+    const jobs = [];
+    for (const p of this.store.state.profiles) {
+      for (const l of p.header.logos || []) jobs.push([l, 600]);
+      for (const l of p.footer.sponsors || []) jobs.push([l, 500]);
+      if (p.page.watermark && p.page.watermark.src) jobs.push([p.page.watermark, 1000]);
+    }
+    let changed = false;
+    for (const [item, px] of jobs) {
+      const out = await compactDataUrl(item.src, px);
+      if (out !== item.src) { item.src = out; changed = true; }
+    }
+    if (changed) this.store.update(() => {}, { silent: true });
   }
 
   get profile() {
@@ -230,7 +250,7 @@ export class SettingsPanel {
         if (!f) return;
         try {
           const url = await imageToDataUrl(f, 1000);
-          set((w) => { w.src = url; }, { rerenderPanel: true });
+          set((w) => { w.src = url; w.color = w.color || 'gray'; }, { rerenderPanel: true });
           this.checkSaved();
         } catch (err) {
           alert(err.message);
@@ -245,15 +265,16 @@ export class SettingsPanel {
         ? h('div', { class: 'row wrap' },
           h('img', { class: 'logo-prev', src: wm.src, alt: 'Vodoznak', style: { opacity: String((wm.opacity || 10) / 100 * 3), filter: wm.color === 'color' ? '' : 'grayscale(1)' } }),
           h('button', { class: 'btn small danger', type: 'button', onclick: () => set((w) => { w.src = null; }, { rerenderPanel: true }) }, 'Odebrat vodoznak'))
-        : h('div', { class: 'row wrap' }, h('label', { class: 'btn', style: { cursor: 'pointer' } }, '+ Vybrat obrázek vodoznaku…', file)),
+        : h('div', { class: 'row wrap' }, h('label', { class: 'btn', style: { cursor: 'pointer' } }, '+ Vybrat obrázek vodoznaku…', hidden(file))),
       wm.src ? h('div', {},
         field(h('span', {}, 'Viditelnost ', pct), h('input', {
           type: 'range', min: 2, max: 40, step: 1, value: wm.opacity || 10,
           oninput: (e) => { pct.textContent = `${e.target.value} %`; set((w) => { w.opacity = clampNum(e.target.value, 1, 100, 10); }); },
         })),
         h('div', { class: 'row wrap' },
-          field('Barvy', h('select', { onchange: (e) => set((w) => { w.color = e.target.value; }, { rerenderPanel: true }) },
-            options([['gray', 'černobíle'], ['color', 'barevně']], wm.color || 'gray')), true),
+          h('label', { class: 'check' },
+            h('input', { type: 'checkbox', checked: wm.color !== 'color', onchange: (e) => set((w) => { w.color = e.target.checked ? 'gray' : 'color'; }, { rerenderPanel: true }) }),
+            'Černobíle'),
           field('Velikost (% šířky stránky)', h('input', {
             type: 'number', min: 10, max: 100, step: 5, value: wm.size || 70,
             oninput: (e) => set((w) => { w.size = clampNum(e.target.value, 10, 100, 70); }),
@@ -265,7 +286,7 @@ export class SettingsPanel {
    * Seznam obrázků (loga v záhlaví, sponzoři): náhled, výška v mm, (umístění), pořadí, smazání, přidání.
    * path(profil) vrací pole v profilu, které se upravuje.
    */
-  imageList({ items, path, addLabel, heightRange: [min, max, def], withPosition = false }) {
+  imageList({ items, path, addLabel, heightRange: [min, max, def], withPosition = false, maxPx = 600 }) {
     const edit = (fn, rerender = true) => this.edit((pp) => fn(path(pp)), { rerenderPanel: rerender });
     const file = h('input', {
       type: 'file', accept: 'image/*', multiple: true,
@@ -273,8 +294,9 @@ export class SettingsPanel {
         const files = [...e.target.files];
         try {
           const urls = [];
-          for (const f of files) urls.push(await imageToDataUrl(f));
-          edit((list) => { for (const src of urls) list.push(withPosition ? { src, height: def, position: 'left' } : { src, height: def }); });
+          for (const f of files) urls.push(await imageToDataUrl(f, maxPx));
+          // Nové obrázky rovnou černobíle – tak je vytiskne černobílá tiskárna (lze přepnout)
+          edit((list) => { for (const src of urls) list.push(withPosition ? { src, height: def, position: 'left', gray: true } : { src, height: def, gray: true }); });
           this.checkSaved();
         } catch (err) {
           alert(err.message);
@@ -283,7 +305,7 @@ export class SettingsPanel {
     });
     return h('div', { class: 'img-list' },
       items.map((it, i) => h('div', { class: 'img-row' },
-        h('img', { class: 'logo-prev', src: it.src, alt: `Logo ${i + 1}` }),
+        h('img', { class: 'logo-prev', src: it.src, alt: `Logo ${i + 1}`, style: { filter: it.gray !== false ? 'grayscale(1)' : '' } }),
         h('div', { class: 'img-ctrls' },
           field('Výška (mm)', h('input', {
             type: 'number', min, max, value: it.height || def,
@@ -291,11 +313,20 @@ export class SettingsPanel {
           }), true),
           withPosition ? field('Umístění', h('select', { onchange: (e) => edit((list) => { list[i].position = e.target.value; }, false) },
             options([['left', 'vlevo'], ['right', 'vpravo']], it.position || 'left')), true) : null,
+          h('label', { class: 'check', title: 'Vytisknout v odstínech šedi – tak, jak ho vytiskne černobílá tiskárna' },
+            h('input', { type: 'checkbox', checked: it.gray !== false, onchange: (e) => edit((list) => { list[i].gray = e.target.checked; }) }),
+            'černobíle'),
           h('div', { class: 'row' },
             h('button', { class: 'btn icon small', type: 'button', title: 'Posunout dříve', disabled: i === 0, onclick: () => edit((list) => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; }) }, '↑'),
             h('button', { class: 'btn icon small', type: 'button', title: 'Posunout později', disabled: i === items.length - 1, onclick: () => edit((list) => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; }) }, '↓'),
             h('button', { class: 'btn small danger', type: 'button', onclick: () => edit((list) => { list.splice(i, 1); }) }, 'Odebrat'))))),
-      h('label', { class: 'btn', style: { cursor: 'pointer', alignSelf: 'flex-start' } }, addLabel, file));
+      h('label', { class: 'btn', style: { cursor: 'pointer', alignSelf: 'flex-start' }, title: 'Můžete vybrat i více obrázků najednou' }, addLabel, hidden(file)));
+  }
+
+  /** Kolik místa zabírají obrázky profilu (úložiště prohlížeče má zhruba 5 MB pro vše). */
+  imageUsage() {
+    const kb = Math.round(Store.imageBytes(this.profile) / 1024);
+    return kb ? h('p', { class: 'small muted' }, `Obrázky tohoto profilu zabírají v prohlížeči ${kb} kB (úložiště má zhruba 5 MB pro všechny profily).`) : null;
   }
 
   /** Po přidání obrázku: uloží hned a upozorní, když se nevejde do úložiště prohlížeče. */
@@ -337,7 +368,7 @@ export class SettingsPanel {
       this.imageList({
         items: hd.logos || [],
         path: (pp) => pp.header.logos,
-        addLabel: '+ Přidat logo',
+        addLabel: '+ Přidat logo (i více najednou)',
         heightRange: [5, 60, 16],
         withPosition: true,
       }),
@@ -363,9 +394,11 @@ export class SettingsPanel {
       this.imageList({
         items: ft.sponsors || [],
         path: (pp) => pp.footer.sponsors,
-        addLabel: '+ Přidat logo sponzora',
+        addLabel: '+ Přidat loga sponzorů (i více najednou)',
         heightRange: [4, 40, 10],
+        maxPx: 500,
       }),
+      this.imageUsage(),
     );
   }
 
@@ -599,6 +632,12 @@ export class SettingsPanel {
 /** append bez null/false (DOM by jinak vypsal text „null“). */
 function add(el, ...kids) {
   el.append(...kids.flat().filter((k) => k != null && k !== false));
+}
+
+/** Pole pro výběr souboru schované v tlačítku (label) – systémové „Vybrat soubor“ by rušilo. */
+function hidden(input) {
+  input.style.display = 'none';
+  return input;
 }
 
 function field(label, control, inline = false) {

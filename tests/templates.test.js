@@ -818,21 +818,24 @@ describe('záhlaví a zápatí: nadpis na více řádků, loga, sponzoři, vodoz
 
   test('více log vlevo i vpravo', () => {
     const p = defaultProfile();
-    p.header.logos = [{ src: logo('red'), height: 20, position: 'left' }, { src: logo('blue'), height: 12, position: 'right' }, { src: logo('green'), height: 12, position: 'right' }];
+    p.header.logos = [{ src: logo('red'), height: 20, position: 'left' }, { src: logo('blue'), height: 12, position: 'right', gray: false }, { src: logo('green'), height: 12, position: 'right', gray: true }];
     const hd = buildDocument({ tpl, info, data, profile: p, round: null }).layout.header;
     const [left, right] = hd.split('hd-main');
-    assert.equal((left.match(/<img class="logo"/g) || []).length, 1);
+    assert.equal((left.match(/<img class="logo gray"/g) || []).length, 1); // bez volby = černobíle
     assert.match(left, /height:20mm/);
-    assert.equal((right.match(/<img class="logo"/g) || []).length, 2);
+    assert.equal((right.match(/<img class="logo[ "]/g) || []).length, 2);
+    assert.equal((right.match(/<img class="logo gray"/g) || []).length, 1); // barevné logo bez filtru
   });
 
   test('sponzoři v zápatí', () => {
     const p = defaultProfile();
     p.footer.enabled = true;
     p.footer.sponsorsText = 'Děkujeme partnerům:';
-    p.footer.sponsors = [{ src: logo('red'), height: 8 }];
+    p.footer.sponsors = Array.from({ length: 10 }, (_, i) => ({ src: logo('red'), height: 8, gray: i > 0 }));
     const ft = buildDocument({ tpl, info, data, profile: p, round: null }).layout.footer(1, 2);
     assert.match(ft, /^<div class="ft-sponsors"><span class="ft-thanks">Děkujeme partnerům:<\/span><img class="ft-logo"[^>]*height:8mm/);
+    assert.equal((ft.match(/<img class="ft-logo/g) || []).length, 10);
+    assert.equal((ft.match(/<img class="ft-logo gray"/g) || []).length, 9);
     assert.match(ft, /<div class="ft-line">.*Strana 1 \/ 2/);
     p.footer.sponsors = [];
     p.footer.sponsorsText = '';

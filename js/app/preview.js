@@ -163,9 +163,33 @@ export async function refreshPreview({ fresh = false } = {}) {
     key: printKeyFor(tpl, docs.map((d) => d.round ?? '').join(',')),
     hash: docs.length ? hashString(docs.map((d) => d.dataHash).join('|')) : null,
   };
+  // Loga v záhlaví / zápatí a vodoznak musí být načtené dřív, než se změří výška záhlaví a zápatí
+  // (nenačtený obrázek nemá šířku – loga by se po načtení zalomila a stránka přetekla)
+  await preloadImages(docs);
+  if (seq !== session.renderSeq) return;
   layoutAll(docs);
   if (fresh) saveSnapshot(session.tnr);
 }
+
+const decoded = new Set();
+/** Načte (dekóduje) obrázky ze záhlaví, zápatí a vodoznaku dokumentů. */
+async function preloadImages(docs) {
+  const srcs = new Set();
+  for (const d of docs) {
+    const html = `${d.layout.header || ''}${d.layout.footer ? d.layout.footer(1, 1) : ''}`;
+    for (const m of html.matchAll(/<img[^>]+src="([^"]+)"/g)) srcs.add(m[1].replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>'));
+    if (d.layout.watermark && d.layout.watermark.src) srcs.add(d.layout.watermark.src);
+  }
+  await Promise.all([...srcs].filter((s) => !decoded.has(s)).map(async (src) => {
+    const img = new Image();
+    img.src = src;
+    try { await img.decode(); } catch { /* poškozený obrázek – vysází se bez něj */ }
+    decoded.add(src);
+    // Dekódované obrázky držíme, aby je prohlížeč při sazbě měl hned k dispozici
+    keep.push(img);
+  }));
+}
+const keep = [];
 
 function layoutAll(docs) {
   clear(els.pages);

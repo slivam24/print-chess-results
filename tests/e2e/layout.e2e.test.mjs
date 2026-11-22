@@ -184,7 +184,7 @@ test('záhlaví na 2 řádky s logy, sponzoři v zápatí a vodoznak', async (t)
       p.header.logos = [{ src: img(300, 200, '#1f5fbf'), height: 20, position: 'left' }, { src: img(200, 200, '#c0392b'), height: 14, position: 'right' }];
       p.footer.enabled = true;
       p.footer.sponsorsText = 'Děkujeme partnerům:';
-      p.footer.sponsors = [1, 2, 3, 4].map(() => ({ src: img(300, 100, '#27ae60'), height: 10 }));
+      p.footer.sponsors = Array.from({ length: 10 }, (_, i) => ({ src: img(300, 100, '#27ae60'), height: 10, gray: i % 2 === 0 }));
       p.page.watermark = { src: img(400, 400, '#8e44ad'), opacity: 10, color: 'gray', size: 70 };
     }, { silent: true });
   });
@@ -197,7 +197,7 @@ test('záhlaví na 2 řádky s logy, sponzoři v zápatí a vodoznak', async (t)
   }));
   assert.equal(info.lines, 2);
   assert.equal(info.logos, 2);
-  assert.ok(info.sponsors >= 4);
+  assert.ok(info.sponsors >= 10);
   assert.ok(info.wm, 'vodoznak na každé stránce');
   assert.deepEqual(errors, []);
   await page.close();
