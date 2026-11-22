@@ -1,6 +1,6 @@
 import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { Store, defaultProfile, loadPresets, hasSavedState } from '../js/store.js';
+import { Store, defaultProfile, loadPresets, hasSavedState, imageId, resolveImages } from '../js/store.js';
 
 // Jako appka při prvním spuštění (main.js): přednastavené profily se načtou předem
 before(() => loadPresets());
@@ -77,24 +77,56 @@ describe('přenos profilů mezi počítači', () => {
     assert.throws(() => b.importJson(b.exportProfiles()), /soubor s profily/);
   });
 
-  test('loga, sponzoři a vodoznak jdou s profilem; staré jediné logo se převede', () => {
+  test('loga, sponzoři a vodoznak jdou s profilem; staré obrázky se převedou do knihovny', () => {
     const a = computer();
     a.update((s) => {
       const p = s.profiles[0];
-      p.header.logo = 'data:image/png;base64,AAAA'; // starší verze appky
+      p.header.logo = 'data:image/png;base64,AAAA'; // starší verze appky: obrázky přímo v profilu
       p.header.logoPosition = 'right';
-      p.footer.sponsors = [{ src: 'data:image/png;base64,BBBB', height: 12, gray: false }, { src: 'http://cizi/obr.png' }];
+      p.footer.sponsors = [{ src: 'data:image/png;base64,BBBB', height: 12, gray: false }, { src: 'http://cizi/obr.png' }, { src: 'data:image/png;base64,AAAA' }];
       p.page.watermark = { src: 'data:image/png;base64,CCCC', opacity: 15, color: 'color', size: 500 };
     });
+    // Starší export (obrázky v profilu) → nový počítač: obrázky skončí v knihovně, profil na ně odkazuje
+    const old = JSON.parse(a.exportProfiles([a.state.profiles[0].id]));
+    delete old.images;
+    old.stateVersion = 6;
     const b = computer();
-    b.importProfiles(a.exportProfiles([a.state.profiles[0].id]));
+    b.importProfiles(JSON.stringify(old));
     const p = b.state.profiles.find((x) => x.id === a.state.profiles[0].id);
-    // starší logo bez volby barev → černobíle (výchozí)
-    assert.deepEqual(p.header.logos, [{ src: 'data:image/png;base64,AAAA', height: 16, position: 'right', gray: true }]);
+    const idA = imageId('data:image/png;base64,AAAA');
+    assert.deepEqual(p.header.logos, [{ img: idA, height: 16, position: 'right', gray: true }]); // bez volby barev → černobíle
     assert.equal(p.header.logo, undefined);
-    assert.deepEqual(p.footer.sponsors, [{ src: 'data:image/png;base64,BBBB', height: 12, gray: false }]);
-    assert.deepEqual(p.page.watermark, { src: 'data:image/png;base64,CCCC', opacity: 15, color: 'color', size: 70 });
+    assert.deepEqual(p.footer.sponsors.map((x) => [x.img, x.gray]), [[imageId('data:image/png;base64,BBBB'), false], [idA, true]]);
+    assert.deepEqual(p.page.watermark, { img: imageId('data:image/png;base64,CCCC'), opacity: 15, color: 'color', size: 70 });
+    // stejné logo (AAAA) je v knihovně jen jednou
+    assert.deepEqual(b.state.images.map((x) => x.src).sort(), ['data:image/png;base64,AAAA', 'data:image/png;base64,BBBB', 'data:image/png;base64,CCCC']);
+    // Sazba dostane profil s obrázky
+    const r = resolveImages(p, b.state.images);
+    assert.equal(r.header.logos[0].src, 'data:image/png;base64,AAAA');
+    assert.equal(r.page.watermark.src, 'data:image/png;base64,CCCC');
   });
+
+  test('knihovna obrázků: nový export nese obrázky, smazání odstraní i odkazy', () => {
+    const a = computer();
+    const [id1, id2] = a.addImages([{ name: 'Klub', src: 'data:image/webp;base64,K' }, { name: 'Svaz', src: 'data:image/webp;base64,S' }]);
+    assert.deepEqual(a.addImages([{ name: 'Klub znovu', src: 'data:image/webp;base64,K' }]), [id1]); // nezdvojí se
+    assert.equal(a.state.images.length, 2);
+    a.update((s) => {
+      s.profiles[0].header.logos = [{ img: id1, height: 16, position: 'left', gray: true }];
+      s.profiles[0].footer.sponsors = [{ img: id2, height: 10, gray: true }];
+    });
+    assert.deepEqual(a.imageUsage(id1), [`${a.state.profiles[0].name}: logo 1 v záhlaví`]);
+    const file = JSON.parse(a.exportProfiles([a.state.profiles[0].id]));
+    assert.deepEqual(file.images.map((x) => x.name).sort(), ['Klub', 'Svaz']);
+    const b = computer();
+    b.importProfiles(JSON.stringify(file));
+    assert.deepEqual(b.state.images.map((x) => x.id).sort(), [id1, id2].sort());
+    a.deleteImage(id1);
+    assert.deepEqual(a.state.profiles[0].header.logos, []);
+    assert.equal(a.state.images.length, 1);
+    assert.ok(a.imageBytes() > 0);
+  });
+
 
   test('defaultProfile je použitelný sám o sobě', () => {
     assert.ok(defaultProfile('X').id);

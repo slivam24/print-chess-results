@@ -107,7 +107,8 @@ export async function refreshPreview({ fresh = false } = {}) {
   if (!tpl || !session.rootInfo) return;
   setStatus('Připravuji náhled…', 'loading');
   showWarnings([]);
-  const profile = store.profile;
+  // Profil s obrázky (loga, sponzoři, vodoznak) doplněnými z knihovny obrázků
+  const profile = store.resolvedProfile;
   const ts = templateSettings(profile, tpl);
   const docs = [];
   const tnrs = targetTnrs();

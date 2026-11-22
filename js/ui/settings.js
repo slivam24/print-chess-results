@@ -2,7 +2,7 @@
 
 import { h, clear, options, downloadText, readFileText, imageToDataUrl, compactDataUrl } from './dom.js';
 import { resolveColumns, parseColWidth } from '../templates/common.js';
-import { Store, templateSettings, DEFAULT_PROXY_URL, loadPresets } from '../store.js';
+import { templateSettings, DEFAULT_PROXY_URL, loadPresets } from '../store.js';
 import { TEMPLATES } from '../templates/index.js';
 import { renderPrintSetup } from './printSetup.js';
 
@@ -30,6 +30,7 @@ const TABS = [
   ['profiles', 'Profily'],
   ['page', 'Stránka'],
   ['header', 'Záhlaví a zápatí'],
+  ['images', 'Obrázky'],
   ['template', 'Výstup'],
   ['outputs', 'Nabídka výstupů'],
   ['print', 'Tisk'],
@@ -50,22 +51,16 @@ export class SettingsPanel {
   }
 
   /**
-   * Loga uložená dřívější verzí appky jako PNG zabírají v úložišti prohlížeče až 10× víc místa.
+   * Obrázky uložené dřívější verzí appky jako PNG zabírají v úložišti prohlížeče až 10× víc místa.
    * Při prvním otevření nastavení je jednou převedeme (WebP, menší rozměr) – vzhled se nezmění.
    */
   async compactImages() {
-    const jobs = [];
-    for (const p of this.store.state.profiles) {
-      for (const l of p.header.logos || []) jobs.push([l, 600]);
-      for (const l of p.footer.sponsors || []) jobs.push([l, 500]);
-      if (p.page.watermark && p.page.watermark.src) jobs.push([p.page.watermark, 1000]);
-    }
     let changed = false;
-    for (const [item, px] of jobs) {
-      const out = await compactDataUrl(item.src, px);
-      if (out !== item.src) { item.src = out; changed = true; }
+    for (const im of [...this.store.state.images]) {
+      const out = await compactDataUrl(im.src, 1000);
+      if (out !== im.src) { this.store.replaceImageSrc(im.id, out); changed = true; }
     }
-    if (changed) this.store.update(() => {}, { silent: true });
+    if (changed) this.onChange();
   }
 
   get profile() {
@@ -103,6 +98,7 @@ export class SettingsPanel {
       profiles: () => this.renderProfiles(card),
       page: () => this.renderPage(card),
       header: () => this.renderHeader(card),
+      images: () => this.renderImages(card),
       template: () => this.renderTemplate(card),
       outputs: () => this.renderOutputs(card),
       print: () => renderPrintSetup(card, { appUrl: `${location.origin}${location.pathname}`, onTestPrint: () => window.print() }),
@@ -239,34 +235,27 @@ export class SettingsPanel {
     );
   }
 
-  /** Vodoznak: logo přes celou stránku, nastavitelná viditelnost, černobíle / barevně. */
+  /** Vodoznak: obrázek z knihovny přes celou stránku, nastavitelná viditelnost, černobíle / barevně. */
   renderWatermark() {
     const wm = this.profile.page.watermark || {};
+    const src = this.imageSrc(wm.img);
     const set = (fn, opt) => this.edit((pp) => { pp.page.watermark = pp.page.watermark || {}; fn(pp.page.watermark); }, opt);
-    const file = h('input', {
-      type: 'file', accept: 'image/*',
-      onchange: async (e) => {
-        const f = e.target.files[0];
-        if (!f) return;
-        try {
-          const url = await imageToDataUrl(f, 1000);
-          set((w) => { w.src = url; w.color = w.color || 'gray'; }, { rerenderPanel: true });
-          this.checkSaved();
-        } catch (err) {
-          alert(err.message);
-        }
-      },
-    });
     const pct = h('span', { class: 'small muted' }, `${wm.opacity || 10} %`);
+    const picking = this.openPicker === 'watermark';
     return h('div', {},
       h('h2', { style: { marginTop: '16px' } }, 'Vodoznak'),
       h('p', { class: 'small muted' }, 'Logo turnaje nebo pořadatele světle přes celou stránku. Lze vypnout u jednotlivého výstupu v jeho možnostech; lístky k rozstříhání ho nemají.'),
-      wm.src
+      src
         ? h('div', { class: 'row wrap' },
-          h('img', { class: 'logo-prev', src: wm.src, alt: 'Vodoznak', style: { opacity: String((wm.opacity || 10) / 100 * 3), filter: wm.color === 'color' ? '' : 'grayscale(1)' } }),
-          h('button', { class: 'btn small danger', type: 'button', onclick: () => set((w) => { w.src = null; }, { rerenderPanel: true }) }, 'Odebrat vodoznak'))
-        : h('div', { class: 'row wrap' }, h('label', { class: 'btn', style: { cursor: 'pointer' } }, '+ Vybrat obrázek vodoznaku…', hidden(file))),
-      wm.src ? h('div', {},
+          h('img', { class: 'logo-prev', src, alt: 'Vodoznak', style: { opacity: String((wm.opacity || 10) / 100 * 3), filter: wm.color === 'color' ? '' : 'grayscale(1)' } }),
+          h('button', { class: 'btn small', type: 'button', onclick: () => this.togglePicker('watermark') }, picking ? 'Zavřít výběr' : 'Změnit obrázek'),
+          h('button', { class: 'btn small danger', type: 'button', onclick: () => set((w) => { w.img = null; }, { rerenderPanel: true }) }, 'Odebrat vodoznak'))
+        : h('button', { class: 'btn', type: 'button', onclick: () => this.togglePicker('watermark') }, picking ? 'Zavřít výběr' : '+ Vybrat obrázek vodoznaku'),
+      picking ? this.picker({
+        selected: [wm.img],
+        onPick: (id) => { this.openPicker = null; set((w) => { w.img = id; w.color = w.color || 'gray'; }, { rerenderPanel: true }); },
+      }) : null,
+      src ? h('div', {},
         field(h('span', {}, 'Viditelnost ', pct), h('input', {
           type: 'range', min: 2, max: 40, step: 1, value: wm.opacity || 10,
           oninput: (e) => { pct.textContent = `${e.target.value} %`; set((w) => { w.opacity = clampNum(e.target.value, 1, 100, 10); }); },
@@ -279,33 +268,79 @@ export class SettingsPanel {
             type: 'number', min: 10, max: 100, step: 5, value: wm.size || 70,
             oninput: (e) => set((w) => { w.size = clampNum(e.target.value, 10, 100, 70); }),
           }), true)),
-        h('p', { class: 'help' }, 'Doporučená viditelnost 5–15 %, aby text zůstal dobře čitelný. Pro černobílou tiskárnu zvolte černobíle – barevné logo by se vytisklo nerovnoměrně šedé.')) : null);
+        h('p', { class: 'help' }, 'Doporučená viditelnost 5–15 %, aby text zůstal dobře čitelný. Pro černobílou tiskárnu nechte černobíle – barevné logo by se vytisklo nerovnoměrně šedé.')) : null);
   }
 
-  /**
-   * Seznam obrázků (loga v záhlaví, sponzoři): náhled, výška v mm, (umístění), pořadí, smazání, přidání.
-   * path(profil) vrací pole v profilu, které se upravuje.
-   */
-  imageList({ items, path, addLabel, heightRange: [min, max, def], withPosition = false, maxPx = 600 }) {
-    const edit = (fn, rerender = true) => this.edit((pp) => fn(path(pp)), { rerenderPanel: rerender });
-    const file = h('input', {
+  // --- Knihovna obrázků ------------------------------------------------------
+
+  imageSrc(id) {
+    const im = id && this.store.state.images.find((x) => x.id === id);
+    return im ? im.src : null;
+  }
+
+  togglePicker(key) {
+    this.openPicker = this.openPicker === key ? null : key;
+    this.render();
+  }
+
+  /** Nahraje soubory do knihovny (zmenšené, úsporně) a vrátí id obrázků. */
+  async uploadImages(files) {
+    const list = [];
+    try {
+      for (const f of files) list.push({ name: String(f.name || 'Obrázek').replace(/\.[a-z0-9]+$/i, ''), src: await imageToDataUrl(f, 1000) });
+    } catch (err) {
+      alert(err.message);
+    }
+    const ids = this.store.addImages(list);
+    this.checkSaved();
+    return ids;
+  }
+
+  /** Tlačítko pro nahrání obrázků do knihovny (i více najednou). */
+  uploadButton(label, onDone) {
+    const input = h('input', {
       type: 'file', accept: 'image/*', multiple: true,
       onchange: async (e) => {
         const files = [...e.target.files];
-        try {
-          const urls = [];
-          for (const f of files) urls.push(await imageToDataUrl(f, maxPx));
-          // Nové obrázky rovnou černobíle – tak je vytiskne černobílá tiskárna (lze přepnout)
-          edit((list) => { for (const src of urls) list.push(withPosition ? { src, height: def, position: 'left', gray: true } : { src, height: def, gray: true }); });
-          this.checkSaved();
-        } catch (err) {
-          alert(err.message);
-        }
+        e.target.value = '';
+        if (!files.length) return;
+        const ids = await this.uploadImages(files);
+        await onDone(ids);
       },
     });
+    return h('label', { class: 'btn', style: { cursor: 'pointer' }, title: 'Můžete vybrat i více obrázků najednou' }, label, hidden(input));
+  }
+
+  /**
+   * Výběr z knihovny obrázků: náhledy ke kliknutí (vybrané jsou označené) a nahrání nových.
+   * onPick(id) – kliknutí na obrázek.
+   */
+  picker({ selected = [], onPick }) {
+    const images = this.store.state.images;
+    const chosen = new Set(selected.filter(Boolean));
+    return h('div', { class: 'img-picker' },
+      images.length
+        ? h('div', { class: 'img-grid' }, images.map((im) => h('button', {
+          type: 'button', class: 'img-pick', 'aria-pressed': String(chosen.has(im.id)), title: im.name,
+          onclick: () => onPick(im.id),
+        }, h('img', { src: im.src, alt: '' }), h('span', {}, im.name))))
+        : h('p', { class: 'small muted' }, 'Knihovna obrázků je zatím prázdná.'),
+      h('div', { class: 'row wrap' },
+        this.uploadButton('+ Nahrát nové obrázky…', async (ids) => { for (const id of ids) await onPick(id); this.render(); }),
+        h('button', { type: 'button', class: 'linklike', onclick: () => { this.openPicker = null; this.show('images'); } }, 'Spravovat obrázky…')));
+  }
+
+  /**
+   * Seznam vybraných obrázků (loga v záhlaví, sponzoři): náhled, výška v mm, (umístění), černobíle,
+   * pořadí, odebrání; nové se přidávají výběrem z knihovny obrázků.
+   * path(profil) vrací pole v profilu, které se upravuje.
+   */
+  imageList({ key, items, path, addLabel, heightRange: [min, max, def], withPosition = false }) {
+    const edit = (fn, rerender = true) => this.edit((pp) => fn(path(pp)), { rerenderPanel: rerender });
+    const picking = this.openPicker === key;
     return h('div', { class: 'img-list' },
       items.map((it, i) => h('div', { class: 'img-row' },
-        h('img', { class: 'logo-prev', src: it.src, alt: `Logo ${i + 1}`, style: { filter: it.gray !== false ? 'grayscale(1)' : '' } }),
+        h('img', { class: 'logo-prev', src: this.imageSrc(it.img) || '', alt: `Logo ${i + 1}`, style: { filter: it.gray !== false ? 'grayscale(1)' : '' } }),
         h('div', { class: 'img-ctrls' },
           field('Výška (mm)', h('input', {
             type: 'number', min, max, value: it.height || def,
@@ -319,14 +354,52 @@ export class SettingsPanel {
           h('div', { class: 'row' },
             h('button', { class: 'btn icon small', type: 'button', title: 'Posunout dříve', disabled: i === 0, onclick: () => edit((list) => { [list[i - 1], list[i]] = [list[i], list[i - 1]]; }) }, '↑'),
             h('button', { class: 'btn icon small', type: 'button', title: 'Posunout později', disabled: i === items.length - 1, onclick: () => edit((list) => { [list[i + 1], list[i]] = [list[i], list[i + 1]]; }) }, '↓'),
-            h('button', { class: 'btn small danger', type: 'button', onclick: () => edit((list) => { list.splice(i, 1); }) }, 'Odebrat'))))),
-      h('label', { class: 'btn', style: { cursor: 'pointer', alignSelf: 'flex-start' }, title: 'Můžete vybrat i více obrázků najednou' }, addLabel, hidden(file)));
+            h('button', { class: 'btn small danger', type: 'button', title: 'Odebrat odsud (v knihovně obrázků zůstane)', onclick: () => edit((list) => { list.splice(i, 1); }) }, 'Odebrat'))))),
+      h('button', { type: 'button', class: 'btn', style: { alignSelf: 'flex-start' }, onclick: () => this.togglePicker(key) }, picking ? 'Hotovo' : addLabel),
+      picking ? h('div', {},
+        h('p', { class: 'small muted' }, 'Kliknutím obrázek přidáte (rovnou černobíle), dalším kliknutím ho zase odeberete.'),
+        this.picker({
+          selected: items.map((x) => x.img),
+          onPick: (id) => edit((list) => {
+            const i = list.findIndex((x) => x.img === id);
+            if (i >= 0) list.splice(i, 1);
+            else list.push(withPosition ? { img: id, height: def, position: 'left', gray: true } : { img: id, height: def, gray: true });
+          }),
+        })) : null);
   }
 
-  /** Kolik místa zabírají obrázky profilu (úložiště prohlížeče má zhruba 5 MB pro vše). */
-  imageUsage() {
-    const kb = Math.round(Store.imageBytes(this.profile) / 1024);
-    return kb ? h('p', { class: 'small muted' }, `Obrázky tohoto profilu zabírají v prohlížeči ${kb} kB (úložiště má zhruba 5 MB pro všechny profily).`) : null;
+  /** Záložka „Obrázky“: jedno místo pro nahrání všech obrázků (společné pro všechny profily). */
+  renderImages(card) {
+    const images = this.store.state.images;
+    const kb = Math.round(this.store.imageBytes() / 1024);
+    const refresh = () => { this.onChange(); this.render(); };
+    add(card,
+      h('h2', {}, 'Obrázky'),
+      h('p', { class: 'small' }, 'Sem nahrajte loga turnaje, pořadatele, svazu a sponzorů. V záhlaví, zápatí a u vodoznaku je pak jen vyberete. Obrázky jsou společné pro všechny profily, takže stejné logo zabírá místo jen jednou.'),
+      h('div', { class: 'row wrap' }, this.uploadButton('+ Nahrát obrázky (i více najednou)', () => this.render())),
+      images.length
+        ? h('div', { class: 'img-list' }, images.map((im) => {
+          const used = this.store.imageUsage(im.id);
+          return h('div', { class: 'img-row' },
+            h('img', { class: 'logo-prev', src: im.src, alt: im.name }),
+            h('div', { class: 'img-ctrls' },
+              h('input', {
+                type: 'text', class: 'img-name', value: im.name, 'aria-label': 'Název obrázku',
+                onchange: (e) => { this.store.renameImage(im.id, e.target.value); },
+              }),
+              h('span', { class: 'small muted img-used' }, used.length ? `Použito: ${used.join(', ')}` : 'Zatím nepoužito'),
+              h('button', {
+                class: 'btn small danger', type: 'button',
+                onclick: () => {
+                  if (used.length && !confirm(`Obrázek „${im.name}“ se používá (${used.join(', ')}). Opravdu ho smazat? Z těchto míst zmizí.`)) return;
+                  this.store.deleteImage(im.id);
+                  refresh();
+                },
+              }, 'Smazat')));
+        }))
+        : h('p', { class: 'muted small' }, 'Zatím žádné obrázky.'),
+      kb ? h('p', { class: 'small muted' }, `Obrázky zabírají v prohlížeči ${kb} kB (úložiště má zhruba 5 MB). Ukládají se zmenšené a úsporně.`) : null,
+      h('p', { class: 'help' }, 'Obrázky jdou s profilem i do exportu profilů (pro jiný počítač) a do zálohy.'));
   }
 
   /** Po přidání obrázku: uloží hned a upozorní, když se nevejde do úložiště prohlížeče. */
@@ -366,9 +439,10 @@ export class SettingsPanel {
       h('h3', {}, 'Loga v záhlaví'),
       h('p', { class: 'small muted' }, 'Logo turnaje, pořadatele, svazu… Každé logo může být vlevo nebo vpravo od nadpisu.'),
       this.imageList({
+        key: 'logos',
         items: hd.logos || [],
         path: (pp) => pp.header.logos,
-        addLabel: '+ Přidat logo (i více najednou)',
+        addLabel: '+ Přidat logo z obrázků',
         heightRange: [5, 60, 16],
         withPosition: true,
       }),
@@ -392,13 +466,12 @@ export class SettingsPanel {
       h('p', { class: 'small muted' }, 'Text a loga sponzorů se vytisknou vystředěně nad čarou zápatí na každé stránce (zápatí musí být zapnuté – v profilu, nebo jen u vybraného výstupu v jeho možnostech).'),
       text('Text', 'sponsorsText', 'footer', { ph: 'např. Děkujeme partnerům turnaje:' }),
       this.imageList({
+        key: 'sponsors',
         items: ft.sponsors || [],
         path: (pp) => pp.footer.sponsors,
-        addLabel: '+ Přidat loga sponzorů (i více najednou)',
+        addLabel: '+ Přidat loga sponzorů z obrázků',
         heightRange: [4, 40, 10],
-        maxPx: 500,
       }),
-      this.imageUsage(),
     );
   }
 
