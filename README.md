@@ -121,11 +121,12 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
    chybějící doplní tlačítko **+ Přednastavené profily**. Profil můžete **duplikovat** a **přejmenovat**.
    Výchozí nastavení vychází z toho, jak se appka používá: písmo co největší, záhlaví vlevo, zápatí vypnuté,
    los bez startovních čísel a titulů, rozpis šachovnic bez barev a podpisů.
-3. **⚙ Nastavení → Záhlaví a zápatí**: nadpis i na více řádků (např. „Okresní kolo přeboru škol“ / „{skupina}“, druhý řádek
-   může být menší), pořadatel, rozhodčí, libovolný počet log vlevo i vpravo (obrázky se zmenší a uloží do prohlížeče; každé lze tisknout černobíle – výchozí – nebo barevně),
-   text zápatí a poděkování sponzorům s jejich logy. **⚙ Nastavení → Stránka → Vodoznak**: logo světle přes celou
-   stránku – viditelnost v %, černobíle nebo barevně, velikost; u jednotlivého výstupu ho jde vypnout.
-   Texty mohou obsahovat proměnné `{turnaj}`, `{misto}`, `{datum}`, `{kolo}`, `{rozhodci}`, `{zastupce}`, `{reditel}`, `{poradatel}`, `{tempo}`, `{kol}` – doplní se z chess-results.
+3. **⚙ Nastavení → Obrázky**: jedno místo, kam se nahrávají všechna loga (turnaj, pořadatel, svaz, sponzoři) –
+   společná pro všechny profily, ukládají se zmenšená a úsporně. **Záhlaví a zápatí**: nadpis i na více řádků
+   (např. „Okresní kolo přeboru škol“ / „{skupina}“, druhý řádek může být menší), pořadatel, rozhodčí, loga vlevo
+   i vpravo a poděkování sponzorům s logy – obojí se vybírá z Obrázků, každé logo jde tisknout černobíle (výchozí)
+   nebo barevně. **Stránka → Vodoznak**: obrázek z Obrázků světle přes celou stránku – viditelnost v %, černobíle
+   nebo barevně, velikost; u jednotlivého výstupu ho jde vypnout.
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
 5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí (pořadí změníte přetažením za úchyt ⋮⋮),

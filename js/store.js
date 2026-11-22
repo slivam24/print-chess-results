@@ -1,9 +1,11 @@
 // Nastavení appky: profily, šablony, proxy, poslední turnaje.
 // Ukládá se do localStorage, export/import do JSON jako záloha.
 
+import { hashString } from './printLog.js';
+
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
-export const STATE_VERSION = 6;
+export const STATE_VERSION = 7;
 
 /**
  * Vestavěná proxy (Cloudflare Worker z worker/worker.js nasazený pro tuto appku).
@@ -27,9 +29,9 @@ export function defaultProfile(name = 'Výchozí') {
       fontFamily: 'Arial, Helvetica, sans-serif',
       fontSize: 10,
       tableStyle: 'grid',
-      // Vodoznak přes celou stránku (logo turnaje / pořadatele): viditelnost v %, černobíle / barevně,
-      // velikost v % šířky stránky
-      watermark: { src: null, opacity: 10, color: 'gray', size: 70 },
+      // Vodoznak přes celou stránku (logo turnaje / pořadatele): obrázek z knihovny, viditelnost v %,
+      // černobíle / barevně, velikost v % šířky stránky
+      watermark: { img: null, opacity: 10, color: 'gray', size: 70 },
     },
     nameFormat: 'last-first',
     // Výstupy schované z nabídky (zapínají se v Nastavení → Výstupy)
@@ -44,7 +46,7 @@ export function defaultProfile(name = 'Výchozí') {
       text: '',
       // Velikost řádků víceřádkového nadpisu: 'same' | 'second-smaller' | 'first-smaller'
       titleLines: 'same',
-      // Loga v záhlaví (turnaj, pořadatel, svaz): [{ src (data URL), position: 'left' | 'right', height (mm), gray (černobíle) }]
+      // Loga v záhlaví (turnaj, pořadatel, svaz): [{ img (id obrázku z knihovny), position: 'left' | 'right', height (mm), gray (černobíle) }]
       logos: [],
       everyPage: false,
       // QR kód s odkazem na turnaj (vpravo v záhlaví): 'off' | 'on'; odkaz na hlavní stránku
@@ -62,7 +64,7 @@ export function defaultProfile(name = 'Výchozí') {
       showSource: true,
       // Poděkování sponzorům: text a loga v řádku nad patičkou
       sponsorsText: '',
-      sponsors: [], // [{ src (data URL), height (mm), gray (černobíle) }]
+      sponsors: [], // [{ img (id obrázku z knihovny), height (mm), gray (černobíle) }]
     },
     templates: {},
   };
@@ -103,6 +105,9 @@ export function defaultState() {
     activeProfileId: profiles[0].id,
     profiles,
     recent: [],
+    // Knihovna obrázků (loga, sponzoři, vodoznak) – společná pro všechny profily:
+    // [{ id, name, src (data URL) }]; profily na obrázky odkazují přes id
+    images: [],
     // tabs: otevřené turnaje v horní liště – [{ tnr, title, profileId, templateId, round, group }]
     ui: DEFAULT_UI(),
   };
@@ -122,8 +127,16 @@ function deepFill(target, defaults) {
   return out;
 }
 
-const validImage = (x) => x && typeof x.src === 'string' && x.src.startsWith('data:image/');
+const isDataImage = (src) => typeof src === 'string' && src.startsWith('data:image/');
+// Odkaz na obrázek: id z knihovny (img), nebo obrázek přímo (src – starší verze, převede se do knihovny)
+const validRef = (x) => x && ((typeof x.img === 'string' && x.img) || isDataImage(x.src));
+const refOf = (x) => (isDataImage(x.src) ? { src: x.src } : { img: x.img });
 const mm = (v, min, max, def) => (Number(v) >= min && Number(v) <= max ? Number(v) : def);
+
+/** Id obrázku podle obsahu – stejný obrázek má na každém počítači stejné id (import ho nezdvojí). */
+export function imageId(src) {
+  return `img-${hashString(src)}-${String(src).length.toString(36)}`;
+}
 
 export function normalizeProfile(p) {
   const d = defaultProfile(p && p.name ? p.name : 'Profil');
@@ -138,17 +151,69 @@ export function normalizeProfile(p) {
   delete hd.logoHeight;
   delete hd.logoPosition;
   // gray: tisknout černobíle (výchozí – většina turnajů se tiskne na černobílé tiskárně)
-  hd.logos = logos.filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 5, 60, 16), position: l.position === 'right' ? 'right' : 'left', gray: l.gray !== false }));
+  hd.logos = logos.filter(validRef).map((l) => ({ ...refOf(l), height: mm(l.height, 5, 60, 16), position: l.position === 'right' ? 'right' : 'left', gray: l.gray !== false }));
   const ft = out.footer;
-  ft.sponsors = (Array.isArray(ft.sponsors) ? ft.sponsors : []).filter(validImage).map((l) => ({ src: l.src, height: mm(l.height, 4, 40, 10), gray: l.gray !== false }));
+  ft.sponsors = (Array.isArray(ft.sponsors) ? ft.sponsors : []).filter(validRef).map((l) => ({ ...refOf(l), height: mm(l.height, 4, 40, 10), gray: l.gray !== false }));
   const wm = isObj(out.page.watermark) ? out.page.watermark : {};
   out.page.watermark = {
-    src: typeof wm.src === 'string' && wm.src.startsWith('data:image/') ? wm.src : null,
+    ...(validRef(wm) ? refOf(wm) : { img: null }),
     opacity: mm(wm.opacity, 1, 100, 10),
     color: wm.color === 'color' ? 'color' : 'gray',
     size: mm(wm.size, 10, 100, 70),
   };
   return out;
+}
+
+/** Všechny odkazy na obrázky v profilu: [{ ref, kind, label }]. */
+function imageRefs(p) {
+  const out = [];
+  (p.header.logos || []).forEach((l, i) => out.push({ ref: l, kind: 'logo', label: `logo ${i + 1} v záhlaví` }));
+  (p.footer.sponsors || []).forEach((l, i) => out.push({ ref: l, kind: 'sponsor', label: `sponzor ${i + 1}` }));
+  if (p.page.watermark) out.push({ ref: p.page.watermark, kind: 'watermark', label: 'vodoznak' });
+  return out;
+}
+
+/**
+ * Knihovna obrázků: obrázky vložené přímo do profilů (starší verze appky, starší export) přesune
+ * do knihovny a nahradí odkazem; odkazy na neexistující obrázky odstraní.
+ */
+function libraryFor(profiles, images) {
+  const lib = new Map();
+  for (const im of Array.isArray(images) ? images : []) {
+    if (im && isDataImage(im.src)) {
+      const id = typeof im.id === 'string' && im.id ? im.id : imageId(im.src);
+      if (!lib.has(id)) lib.set(id, { id, name: String(im.name || '').slice(0, 80) || 'Obrázek', src: im.src });
+    }
+  }
+  const NAMES = { logo: 'Logo', sponsor: 'Sponzor', watermark: 'Vodoznak' };
+  for (const p of profiles) {
+    for (const { ref, kind } of imageRefs(p)) {
+      if (!isDataImage(ref.src)) continue;
+      const id = imageId(ref.src);
+      if (!lib.has(id)) lib.set(id, { id, name: `${NAMES[kind]} (${p.name})`, src: ref.src });
+      ref.img = id;
+      delete ref.src;
+    }
+    p.header.logos = p.header.logos.filter((l) => lib.has(l.img));
+    p.footer.sponsors = p.footer.sponsors.filter((l) => lib.has(l.img));
+    if (!lib.has(p.page.watermark.img)) p.page.watermark.img = null;
+  }
+  return [...lib.values()];
+}
+
+/**
+ * Profil s doplněnými obrázky (src) z knihovny – pro sazbu. Obrázek uvedený přímo (src) zůstane.
+ */
+export function resolveImages(profile, images) {
+  const lib = new Map((images || []).map((i) => [i.id, i.src]));
+  const src = (x) => (x && (x.src || lib.get(x.img))) || null;
+  const list = (arr) => (arr || []).map((l) => ({ ...l, src: src(l) })).filter((l) => l.src);
+  return {
+    ...profile,
+    header: { ...profile.header, logos: list(profile.header.logos) },
+    footer: { ...profile.footer, sponsors: list(profile.footer.sponsors) },
+    page: { ...profile.page, watermark: profile.page.watermark ? { ...profile.page.watermark, src: src(profile.page.watermark) } : null },
+  };
 }
 
 /** Ověří a doplní stav (z localStorage nebo importu). */
@@ -195,6 +260,7 @@ export function normalizeState(raw) {
       : [],
     ui: deepFill(raw.ui, DEFAULT_UI()),
   };
+  s.images = libraryFor(s.profiles, raw.images);
   const ids = new Set();
   for (const p of s.profiles) {
     if (ids.has(p.id)) p.id = uid();
@@ -243,10 +309,58 @@ export class Store {
     }
   }
 
-  /** Kolik znaků zabírají obrázky profilu (loga, sponzoři, vodoznak). */
-  static imageBytes(profile) {
-    const imgs = [...(profile.header.logos || []), ...(profile.footer.sponsors || []), profile.page.watermark || {}];
-    return imgs.reduce((n, x) => n + (typeof x.src === 'string' ? x.src.length : 0), 0);
+  // --- Knihovna obrázků --------------------------------------------------
+
+  /** Kolik znaků zabírají obrázky v knihovně. */
+  imageBytes() {
+    return this.state.images.reduce((n, x) => n + x.src.length, 0);
+  }
+
+  /** Přidá obrázky do knihovny ([{ name, src }]); stejný obrázek se nezdvojí. Vrací jejich id. */
+  addImages(list) {
+    const ids = [];
+    this.update((s) => {
+      for (const { name, src } of list) {
+        if (!isDataImage(src)) continue;
+        const id = imageId(src);
+        if (!s.images.some((x) => x.id === id)) s.images.push({ id, name: String(name || 'Obrázek').slice(0, 80), src });
+        ids.push(id);
+      }
+    }, { silent: true });
+    return ids;
+  }
+
+  renameImage(id, name) {
+    this.update((s) => { const im = s.images.find((x) => x.id === id); if (im) im.name = String(name || '').slice(0, 80); }, { silent: true });
+  }
+
+  /** Kde se obrázek používá: [„profil: logo 1 v záhlaví“, …]. */
+  imageUsage(id) {
+    const out = [];
+    for (const p of this.state.profiles) for (const { ref, label } of imageRefs(p)) if (ref.img === id) out.push(`${p.name}: ${label}`);
+    return out;
+  }
+
+  /** Smaže obrázek z knihovny i ze všech profilů, které ho používají. */
+  deleteImage(id) {
+    this.update((s) => {
+      s.images = s.images.filter((x) => x.id !== id);
+      for (const p of s.profiles) {
+        p.header.logos = p.header.logos.filter((l) => l.img !== id);
+        p.footer.sponsors = p.footer.sponsors.filter((l) => l.img !== id);
+        if (p.page.watermark.img === id) p.page.watermark.img = null;
+      }
+    }, { silent: true });
+  }
+
+  /** Nahradí obsah obrázku (např. zmenšený) – odkazy v profilech zůstanou. */
+  replaceImageSrc(id, src) {
+    this.update((s) => { const im = s.images.find((x) => x.id === id); if (im) im.src = src; }, { silent: true });
+  }
+
+  /** Aktivní profil s doplněnými obrázky z knihovny (pro sazbu). */
+  get resolvedProfile() {
+    return resolveImages(this.profile, this.state.images);
   }
 
   /** Změna stavu: fn dostane stav a upraví ho. Uloží s malým zpožděním. */
@@ -376,8 +490,11 @@ export class Store {
   /** JSON s vybranými profily (bez adresy proxy a posledních turnajů). ids = null → všechny. */
   exportProfiles(ids = null) {
     const profiles = this.state.profiles.filter((p) => !ids || ids.includes(p.id));
+    // Obrázky, které profily používají, jdou do souboru s nimi
+    const used = new Set(profiles.flatMap((p) => imageRefs(p).map((r) => r.ref.img)).filter(Boolean));
+    const images = this.state.images.filter((im) => used.has(im.id));
     return JSON.stringify({
-      app: 'chess-print', kind: 'profiles', stateVersion: STATE_VERSION, exportedAt: new Date().toISOString(), profiles,
+      app: 'chess-print', kind: 'profiles', stateVersion: STATE_VERSION, exportedAt: new Date().toISOString(), profiles, images,
     }, null, 2);
   }
 
@@ -386,6 +503,11 @@ export class Store {
    * podle id, jinak podle názvu) nebo „add“. Přijme soubor s profily i celou zálohu.
    */
   previewProfileImport(text) {
+    return this.parseProfileFile(text).plan;
+  }
+
+  /** Načte soubor s profily: plán importu a obrázky, které profily používají. */
+  parseProfileFile(text) {
     let raw;
     try {
       raw = JSON.parse(text);
@@ -396,21 +518,23 @@ export class Store {
     if (!Array.isArray(raw.profiles) || !raw.profiles.length) throw new Error('Soubor neobsahuje žádné profily.');
     // Projdou stejnými převody jako nastavení (starší verze souboru → aktuální)
     const version = raw.kind === 'profiles' ? raw.stateVersion : raw.version;
-    const { profiles } = normalizeState({ version: version || 1, profiles: JSON.parse(JSON.stringify(raw.profiles)) });
+    const { profiles, images } = normalizeState({ version: version || 1, profiles: JSON.parse(JSON.stringify(raw.profiles)), images: raw.images });
     const norm = (s) => String(s || '').trim().toLocaleLowerCase('cs');
-    return profiles.map((p) => {
+    const plan = profiles.map((p) => {
       const byId = this.state.profiles.find((x) => x.id === p.id);
       const byName = byId ? null : this.state.profiles.find((x) => norm(x.name) === norm(p.name));
       const target = byId || byName;
       return { profile: p, action: target ? 'replace' : 'add', targetId: target ? target.id : null };
     });
+    return { plan, images };
   }
 
-  /** Přidá / aktualizuje profily ze souboru. Ostatní profily a nastavení zůstanou. */
+  /** Přidá / aktualizuje profily ze souboru (i s jejich obrázky). Ostatní profily a nastavení zůstanou. */
   importProfiles(text) {
-    const plan = this.previewProfileImport(text);
+    const { plan, images } = this.parseProfileFile(text);
     const result = { added: [], replaced: [] };
     this.update((s) => {
+      for (const im of images) if (!s.images.some((x) => x.id === im.id)) s.images.push(im);
       for (const { profile, action, targetId } of plan) {
         const p = JSON.parse(JSON.stringify(profile));
         if (action === 'replace') {

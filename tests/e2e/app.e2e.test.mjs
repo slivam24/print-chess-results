@@ -243,55 +243,99 @@ test('nová verze se načte i u modulů načítaných podle potřeby (nastavení
   }
 });
 
-test('loga sponzorů: 10 najednou, rovnou černobíle, úsporně uložená; stará PNG loga se zmenší', async () => {
+test('knihovna obrázků: nahrání na jednom místě, výběr loga, 10 sponzorů, vodoznak; staré PNG se zmenší', async () => {
   const { page, errors, context } = await newApp();
   await open(page, SWISS);
   // Obrázky jako soubory (PNG s barevným přechodem – takové bývají velké)
   const pngs = await page.evaluate(async () => {
     const out = [];
-    for (let i = 0; i < 11; i++) {
+    for (let i = 0; i < 12; i++) {
       const c = document.createElement('canvas');
       c.width = 1200; c.height = 600;
       const x = c.getContext('2d');
       const g = x.createLinearGradient(0, 0, 1200, 600);
-      g.addColorStop(0, `hsl(${i * 33},80%,50%)`); g.addColorStop(1, '#fff');
+      g.addColorStop(0, `hsl(${i * 30},80%,50%)`); g.addColorStop(1, '#fff');
       x.fillStyle = g; x.fillRect(0, 0, 1200, 600);
-      x.fillStyle = '#000'; x.font = 'bold 200px sans-serif'; x.fillText(`Sponzor ${i}`, 40, 380);
+      x.fillStyle = '#000'; x.font = 'bold 200px sans-serif'; x.fillText(`Logo ${i}`, 40, 380);
       out.push(c.toDataURL('image/png'));
     }
     return out;
   });
-  // Starší verze appky uložila logo jako velké PNG
+  // Starší verze appky uložila velké PNG do knihovny (převod z profilu)
   await page.evaluate((png) => {
-    window.chessPrint.store.update((s) => { s.profiles.find((p) => p.id === s.activeProfileId).header.logos = [{ src: png, height: 16, position: 'left' }]; }, { silent: true });
-  }, pngs[10]);
-  const oldLen = pngs[10].length;
+    window.chessPrint.store.update((s) => { s.images.push({ id: 'stare-logo', name: 'Staré logo', src: png }); }, { silent: true });
+  }, pngs[11]);
+  const oldLen = pngs[11].length;
+  const panel = page.locator('#side-settings');
   await page.click('#btn-settings');
-  await page.locator('#side-settings').getByRole('tab', { name: /Záhlaví/ }).click();
-  await page.waitForFunction((n) => window.chessPrint.store.profile.header.logos[0].src.length < n * 0.5, oldLen, { timeout: 10000 });
+  await panel.getByRole('tab', { name: 'Obrázky' }).click();
+  await page.waitForFunction((n) => window.chessPrint.store.state.images[0].src.length < n * 0.5, oldLen, { timeout: 10000 });
 
-  page.on('dialog', (d) => d.dismiss()); // případné upozornění na plné úložiště by test odhalil níže
-  const input = page.locator('#side-settings .img-list').nth(1).locator('input[type=file]');
-  await input.setInputFiles(pngs.slice(0, 10).map((u, i) => ({ name: `s${i}.png`, mimeType: 'image/png', buffer: Buffer.from(u.split(',')[1], 'base64') })));
-  await page.waitForFunction(() => window.chessPrint.store.profile.footer.sponsors.length === 10, null, { timeout: 15000 });
-  const st = await page.evaluate(() => {
-    const p = window.chessPrint.store.profile;
-    window.chessPrint.store.flush();
+  // 1) Jedno místo pro nahrání: 11 obrázků najednou
+  await panel.locator('input[type=file]').first().setInputFiles(pngs.slice(0, 11).map((u, i) => ({ name: `logo-${i}.png`, mimeType: 'image/png', buffer: Buffer.from(u.split(',')[1], 'base64') })));
+  await page.waitForFunction(() => window.chessPrint.store.state.images.length === 12, null, { timeout: 15000 });
+  await page.waitForFunction(() => document.querySelectorAll('#side-settings .img-row').length === 12);
+  const lib = await page.evaluate(() => {
+    const st = window.chessPrint.store;
+    st.flush();
     return {
-      gray: p.footer.sponsors.every((x) => x.gray === true),
-      webp: p.footer.sponsors.every((x) => x.src.startsWith('data:image/webp')),
-      kb: Math.round(p.footer.sponsors.reduce((n, x) => n + x.src.length, 0) / 1024),
-      saveError: !!window.chessPrint.store.lastSaveError,
-      rows: document.querySelectorAll('#side-settings .img-list')[1].querySelectorAll('.img-row').length,
-      checked: [...document.querySelectorAll('#side-settings .img-list')[1].querySelectorAll('.img-row input[type=checkbox]')].every((c) => c.checked),
-      previewGray: [...document.querySelectorAll('#side-settings .img-list')[1].querySelectorAll('.logo-prev')].every((i) => i.style.filter === 'grayscale(1)'),
+      webp: st.state.images.slice(1).every((x) => x.src.startsWith('data:image/webp')),
+      names: st.state.images.slice(1, 3).map((x) => x.name),
+      kb: Math.round(st.imageBytes() / 1024),
+      saveError: !!st.lastSaveError,
     };
   });
-  assert.deepEqual({ ...st, kb: st.kb < 400 }, { gray: true, webp: true, kb: true, saveError: false, rows: 10, checked: true, previewGray: true }, `${st.kb} kB`);
-  assert.match(await page.locator('#side-settings').innerText(), /Obrázky tohoto profilu zabírají v prohlížeči \d+ kB/);
-  // Jedno logo přepnout na barevné
-  await page.locator('#side-settings .img-list').nth(1).locator('.img-row').first().getByLabel('černobíle').uncheck();
+  assert.deepEqual({ ...lib, kb: lib.kb < 600 }, { webp: true, names: ['logo-0', 'logo-1'], kb: true, saveError: false }, `${lib.kb} kB`);
+  assert.match(await panel.innerText(), /Zatím nepoužito/);
+
+  // 2) Logo do záhlaví výběrem z knihovny
+  await panel.getByRole('tab', { name: /Záhlaví/ }).click();
+  await panel.getByRole('button', { name: '+ Přidat logo z obrázků' }).click();
+  await panel.locator('.img-pick', { hasText: 'logo-0' }).click();
+  await panel.getByRole('button', { name: 'Hotovo' }).click();
+  // 3) 10 sponzorů výběrem
+  await panel.getByRole('button', { name: '+ Přidat loga sponzorů z obrázků' }).click();
+  for (let i = 1; i <= 10; i++) await panel.locator('.img-pick', { hasText: `logo-${i}` }).first().click();
+  // druhé kliknutí odebere, třetí zase přidá (na konec)
+  await panel.locator('.img-pick', { hasText: 'logo-1' }).first().click();
+  assert.equal(await page.evaluate(() => window.chessPrint.store.profile.footer.sponsors.length), 9);
+  await panel.locator('.img-pick', { hasText: 'logo-1' }).first().click();
+  await panel.getByRole('button', { name: 'Hotovo' }).click();
+  const prof = await page.evaluate(() => {
+    const p = window.chessPrint.store.profile;
+    return { logos: p.header.logos.length, sponsors: p.footer.sponsors.length, gray: [...p.header.logos, ...p.footer.sponsors].every((x) => x.gray === true && x.img && !x.src) };
+  });
+  assert.deepEqual(prof, { logos: 1, sponsors: 10, gray: true });
+  const rows = panel.locator('.img-list').nth(1).locator('.img-row');
+  assert.equal(await rows.count(), 10);
+  assert.ok(await rows.locator('.logo-prev').evaluateAll((im) => im.every((x) => x.style.filter === 'grayscale(1)' && x.src.startsWith('data:image/webp'))));
+  await rows.first().getByLabel('černobíle').uncheck();
   assert.equal(await page.evaluate(() => window.chessPrint.store.profile.footer.sponsors[0].gray), false);
+
+  // 4) Vodoznak výběrem z knihovny
+  await panel.getByRole('tab', { name: 'Stránka' }).click();
+  await panel.getByRole('button', { name: '+ Vybrat obrázek vodoznaku' }).click();
+  await panel.locator('.img-pick', { hasText: 'Staré logo' }).click();
+  assert.equal(await page.evaluate(() => window.chessPrint.store.profile.page.watermark.img), 'stare-logo');
+
+  // Náhled: logo, sponzoři i vodoznak se vysází z knihovny
+  await page.evaluate(() => window.chessPrint.store.update((s) => { s.profiles.find((p) => p.id === s.activeProfileId).footer.enabled = true; }, { silent: true }));
+  await rendered(page, () => page.evaluate(() => window.chessPrint.refreshPreview()));
+  const pv = await page.evaluate(() => ({
+    logo: document.querySelectorAll('#pages .page:first-child .hd-logo img').length,
+    sponsors: document.querySelectorAll('#pages .page:first-child .ft-logo').length,
+    wm: !!document.querySelector('#pages .page .pg-wm img'),
+  }));
+  assert.deepEqual(pv, { logo: 1, sponsors: 10, wm: true });
+
+  // Knihovna ukazuje, kde se obrázek používá; smazání ho odebere i z profilu
+  await panel.getByRole('tab', { name: 'Obrázky' }).click();
+  const idx = await panel.locator('.img-row .img-name').evaluateAll((els) => els.findIndex((e) => e.value === 'logo-0'));
+  const row = panel.locator('.img-row').nth(idx);
+  assert.match(await row.innerText(), /Použito: .*logo 1 v záhlaví/);
+  page.once('dialog', (d) => d.accept());
+  await row.getByRole('button', { name: 'Smazat' }).click();
+  assert.equal(await page.evaluate(() => window.chessPrint.store.profile.header.logos.length), 0);
   assert.deepEqual(errors, []);
   await context.close();
 });

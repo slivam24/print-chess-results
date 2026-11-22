@@ -339,7 +339,7 @@ export function renderOptions() {
         h('select', { onchange: (e) => setTpl('footer', e.target.value) },
           options([['inherit', `podle profilu (${profFooter})`], ['on', 'na každé stránce'], ['off', 'vypnuto']], ts.footer))),
       // Vodoznak jen když ho profil má (Nastavení → Stránka)
-      store.profile.page.watermark && store.profile.page.watermark.src
+      store.profile.page.watermark && store.profile.page.watermark.img
         ? h('label', { class: 'field' }, 'Vodoznak',
           h('select', { onchange: (e) => setTpl('watermark', e.target.value) },
             options([['inherit', 'podle profilu (zapnutý)'], ['off', 'vypnuto']], ts.watermark)))
