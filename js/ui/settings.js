@@ -2,7 +2,7 @@
 
 import { h, clear, options, downloadText, readFileText, imageToDataUrl } from './dom.js';
 import { resolveColumns, parseColWidth } from '../templates/common.js';
-import { templateSettings, DEFAULT_PROXY_URL } from '../store.js';
+import { templateSettings, DEFAULT_PROXY_URL, loadPresets } from '../store.js';
 import { TEMPLATES } from '../templates/index.js';
 import { renderPrintSetup } from './printSetup.js';
 
@@ -122,7 +122,8 @@ export class SettingsPanel {
         h('button', {
           class: 'btn', type: 'button',
           title: 'Přidá přednastavené profily (Švýcar jednotlivců, Každý s každým jednotlivci, Každý s každým – družstva školy), které ještě nemáte',
-          onclick: () => {
+          onclick: async () => {
+            await loadPresets();
             const added = this.store.addPresetProfiles();
             this.onChange();
             this.render();
@@ -261,6 +262,14 @@ export class SettingsPanel {
         field('Výška loga (mm)', h('input', { type: 'number', min: 5, max: 50, value: hd.logoHeight, oninput: (e) => this.edit((pp) => { pp.header.logoHeight = clampNum(e.target.value, 5, 50, 16); }) }), true),
         field('Umístění', h('select', { onchange: (e) => this.edit((pp) => { pp.header.logoPosition = e.target.value; }) }, options([['left', 'vlevo'], ['right', 'vpravo']], hd.logoPosition)), true)),
       check('Záhlaví na každé stránce (jinak jen na první)', 'everyPage', 'header'),
+      h('h3', {}, 'QR kód'),
+      field('QR kód s odkazem na turnaj', h('select', { onchange: (e) => this.edit((pp) => { pp.header.qr = e.target.value; }, { rerenderPanel: true }) },
+        options([['off', 'vypnuto'], ['on', 'v záhlaví vpravo']], hd.qr || 'off'))),
+      hd.qr === 'on' ? h('div', { class: 'row wrap' },
+        field('Odkaz vede na', h('select', { onchange: (e) => this.edit((pp) => { pp.header.qrTarget = e.target.value; }) },
+          options([['main', 'hlavní stránku turnaje'], ['output', 'stránku výstupu (los, pořadí…)']], hd.qrTarget || 'main')), true),
+        field('Velikost (mm)', h('input', { type: 'number', min: 12, max: 40, value: hd.qrSize || 18, oninput: (e) => this.edit((pp) => { pp.header.qrSize = clampNum(e.target.value, 12, 40, 18); }) }), true)) : null,
+      h('p', { class: 'help' }, 'Hráči a rodiče si QR kód načtou mobilem a uvidí aktuální výsledky na chess-results. Zobrazí se u výstupů se záhlavím (podle nastavení záhlaví i jen na první stránce). Hlavní stránka turnaje platí i po dalších kolech.'),
       h('p', { class: 'help', html: 'Proměnné: <code>{turnaj}</code> <code>{misto}</code> <code>{datum}</code> <code>{kolo}</code> <code>{rozhodci}</code> <code>{zastupce}</code> <code>{reditel}</code> <code>{poradatel}</code> <code>{tempo}</code> <code>{kol}</code> <code>{rating}</code> (průměrný rating) – doplní se z chess-results.' }),
       h('h2', { style: { marginTop: '16px' } }, 'Zápatí'),
       check('Zobrazit zápatí', 'enabled', 'footer'),

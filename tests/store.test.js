@@ -1,6 +1,9 @@
-import { test, describe } from 'node:test';
+import { test, describe, before } from 'node:test';
 import assert from 'node:assert/strict';
-import { Store, defaultProfile } from '../js/store.js';
+import { Store, defaultProfile, loadPresets, hasSavedState } from '../js/store.js';
+
+// Jako appka při prvním spuštění (main.js): přednastavené profily se načtou předem
+before(() => loadPresets());
 
 /** Úložiště v paměti – každý „počítač“ má své. */
 function computer() {
@@ -99,6 +102,15 @@ test('migrace v6: startovní listina zapne dřív vypnutý sloupec skupiny', asy
   const { normalizeState } = await import('../js/store.js');
   const s = normalizeState({ version: 5, profiles: [{ id: 'a', name: 'A', templates: { startlist: { columns: [{ key: 'name' }, { key: 'group', on: false }] } } }] });
   assert.equal(s.profiles[0].templates.startlist.columns[1].on, true);
+});
+
+test('hasSavedState: první spuštění pozná podle prázdného úložiště', () => {
+  const mem = new Map();
+  const st = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v) };
+  assert.equal(hasSavedState(st), false);
+  new Store(st).flush();
+  assert.equal(hasSavedState(st), true);
+  assert.equal(hasSavedState({ getItem: () => { throw new Error('zakázáno'); } }), false);
 });
 
 test('přednastavené profily: při prvním spuštění a doplnění chybějících podle názvu', () => {

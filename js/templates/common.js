@@ -57,6 +57,18 @@ export function fmtDate(iso) {
   return `${Number(m[3])}. ${Number(m[2])}. ${m[1]}`;
 }
 
+/** Krátké datum pro seznamy: „dnes 14:30“, „včera“, „12. 11. 2026“. */
+export function fmtWhen(iso, now = new Date()) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / 86400000);
+  if (diff === 0) return `dnes ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (diff === 1) return 'včera';
+  return `${d.getDate()}. ${d.getMonth() + 1}. ${d.getFullYear()}`;
+}
+
 export function fmtDateTime(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -268,7 +280,7 @@ function lines(s) {
  * Záhlaví stránky z profilu.
  * outputTitle: název výstupu („Los 7. kola“), outputSub: doplněk (datum a čas kola).
  */
-export function renderHeader(profile, info, { outputTitle, outputSub, vars = {}, compact = false } = {}) {
+export function renderHeader(profile, info, { outputTitle, outputSub, vars = {}, compact = false, qr = '' } = {}) {
   const h = profile.header || {};
   const v = infoVars(info, vars);
   const title = fillVars(h.title ?? '{turnaj}', v);
@@ -297,6 +309,10 @@ export function renderHeader(profile, info, { outputTitle, outputSub, vars = {},
   const out = outputTitle
     ? `<div class="hd-output"><span class="hd-output-title">${esc(outputTitle)}</span>${outputSub ? `<span class="hd-output-sub">${esc(outputSub)}</span>` : ''}</div>`
     : '';
+  // QR kód s odkazem na turnaj – vpravo vedle hlavičky (i když je zobrazený jen název výstupu)
+  if (qr && (bar || out)) {
+    return `<div class="hd-with-qr"><div class="hd-col">${bar}${out}</div><div class="hd-qr">${qr}<div class="hd-qr-cap">výsledky online</div></div></div>`;
+  }
   return bar + out;
 }
 

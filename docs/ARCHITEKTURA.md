@@ -8,8 +8,21 @@ css/
   app.css                  rozhraní (panel, náhled, dialogy)
   print.css                vzhled tiskových stránek – platí pro náhled i tisk, @media print
 js/
-  main.js                  ovladač: načtení turnaje, výběr výstupu, náhled, tisk, ruční vložení
+  main.js                  spuštění appky (propojí moduly z js/app/)
+  app/                     ovladač appky (v prohlížeči)
+    context.js             sdílený stav: nastavení, zdroj dat, relace, prvky stránky, upozornění
+    loader.js              načtení turnaje, „Aktualizovat data“, hlášení chyb
+    tabs.js                záložky turnajů v horní liště (každá s vlastním profilem)
+    panel.js               levý panel: naposledy otevřené, turnaj, výstupy, možnosti, rychlé volby
+    preview.js             náhled: data → dokument → stránky, kontrola výsledků, zvětšení
+    printing.js            značka „vytištěno“ / „změnilo se od tisku“, název PDF
+    settingsHost.js        panel nastavení – načte js/ui/settings.js až při otevření
+    controls.js            posuvník panelu, klávesové zkratky, ruční vložení HTML
   store.js                 nastavení: profily, šablony, proxy, poslední turnaje, export/import
+  presets.js               přednastavené profily (načítají se jen při prvním spuštění / tlačítkem)
+  checks.js                kontrola před tiskem: chybějící výsledky, nesoulad kol (bez DOM)
+  printLog.js              záznam o tisku (otisk dat), název PDF (bez DOM)
+  qr.js                    QR kód s odkazem na turnaj (knihovna vendor/qrcode.mjs, MIT – načítá se jen zapnutý)
   source.js                data: URL chess-results, stažení přes proxy, mezipaměť, ruční HTML
   render.js                šablona + data + profil → bloky a parametry sazby (bez DOM)
   layout.js                stránkovací engine: bloky → stránky A4 (měření v DOM)
@@ -29,6 +42,9 @@ js/
   ui/
     dom.js                 pomocník h(), stahování souborů, zmenšení loga
     settings.js            panel nastavení (profily, stránka, záhlaví, výstup, připojení, záloha)
+    categories.js          editor kategorií pro „Pořadí + kategorie“ (načítá se podle potřeby)
+    printSetup.js          průvodce tiskem jedním klikem
+    update.js              automatické načtení nové verze appky
 worker/
   worker.js                Cloudflare Worker – CORS proxy
   wrangler.toml            konfigurace pro nasazení přes wrangler
@@ -38,6 +54,10 @@ tests/
   parser.test.js           testy parseru
   templates.test.js        testy šablon, sloupců, stránkování
   worker.test.js           testy proxy
+  checks.test.js           kontrola výsledků, záznam o tisku, název PDF, QR kód
+  modules.test.js          modulepreload v index.html = statické importy; líně načítané moduly
+  e2e/layout.e2e.test.mjs  vzhled v prohlížeči: nic se neořezává ani nezkracuje
+  e2e/app.e2e.test.mjs     ovládání v prohlížeči: záložky, profily, vytištěno, export/import
 tools/
   dev-server.mjs           lokální server: appka + proxy (npm run dev)
   fetch-fixtures.sh        stažení vzorových stránek

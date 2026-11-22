@@ -1,8 +1,6 @@
 // Nastavení appky: profily, šablony, proxy, poslední turnaje.
 // Ukládá se do localStorage, export/import do JSON jako záloha.
 
-import { PRESET_PROFILES } from './presets.js';
-
 const KEY = 'chessPrint.v1';
 const SNAP_KEY = 'chessPrint.lastData.v1';
 export const STATE_VERSION = 6;
@@ -13,7 +11,7 @@ export const STATE_VERSION = 6;
  * Při nasazení vlastní kopie appky zde změňte adresu na svůj Worker.
  */
 export const DEFAULT_PROXY_URL = 'https://chess-print-proxy.slivam24.workers.dev';
-const MAX_RECENT = 12;
+const MAX_RECENT = 20;
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
@@ -45,6 +43,11 @@ export function defaultProfile(name = 'Výchozí') {
       logoHeight: 16,
       logoPosition: 'left',
       everyPage: false,
+      // QR kód s odkazem na turnaj (vpravo v záhlaví): 'off' | 'on'; odkaz na hlavní stránku
+      // turnaje ('main') nebo na stránku výstupu na chess-results ('output')
+      qr: 'off',
+      qrTarget: 'main',
+      qrSize: 18,
     },
     // Zápatí ve výchozím stavu vypnuté (tak ho pořadatelé používají); zapíná se v Nastavení
     footer: {
@@ -58,13 +61,35 @@ export function defaultProfile(name = 'Výchozí') {
   };
 }
 
-/** Přednastavené profily jako nové profily (s vlastním id). */
-export function presetProfiles() {
-  return PRESET_PROFILES.map((p) => normalizeProfile({ ...JSON.parse(JSON.stringify(p)), id: uid() }));
+// Přednastavené profily (js/presets.js, ~25 kB) se načítají až když jsou potřeba:
+// při prvním spuštění (bez uloženého nastavení) a tlačítkem „+ Přednastavené profily“.
+let presetSource = null;
+
+/** Načte přednastavené profily (jednou). */
+export async function loadPresets() {
+  if (!presetSource) presetSource = (await import('./presets.js')).PRESET_PROFILES;
+  return presetSource;
 }
 
+/** Přednastavené profily jako nové profily (s vlastním id); před loadPresets() prázdné. */
+export function presetProfiles() {
+  return (presetSource || []).map((p) => normalizeProfile({ ...JSON.parse(JSON.stringify(p)), id: uid() }));
+}
+
+/** Je v úložišti uložené nastavení? (jinak se při startu načtou přednastavené profily) */
+export function hasSavedState(storage = globalThis.localStorage) {
+  try {
+    return !!(storage && storage.getItem(KEY));
+  } catch {
+    return false;
+  }
+}
+
+const DEFAULT_UI = () => ({ previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings', tabs: [], activeTab: null });
+
 export function defaultState() {
-  const profiles = presetProfiles();
+  const presets = presetProfiles();
+  const profiles = presets.length ? presets : [defaultProfile()];
   return {
     version: STATE_VERSION,
     proxyUrl: '',
@@ -72,7 +97,7 @@ export function defaultState() {
     profiles,
     recent: [],
     // tabs: otevřené turnaje v horní liště – [{ tnr, title, profileId, templateId, round, group }]
-    ui: { previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings', tabs: [], activeTab: null },
+    ui: DEFAULT_UI(),
   };
 }
 
@@ -101,7 +126,6 @@ export function normalizeProfile(p) {
 /** Ověří a doplní stav (z localStorage nebo importu). */
 export function normalizeState(raw) {
   if (!isObj(raw)) throw new Error('Soubor neobsahuje nastavení appky.');
-  const d = defaultState();
   // Verze < 6: startovní listina nově ukazuje Typ a Skupinu – sloupec „Kat.“, který
   // dřív býval ve výchozím stavu vypnutý, zapneme (prázdný se stejně skryje)
   if (raw.version && raw.version < 6) {
@@ -137,11 +161,11 @@ export function normalizeState(raw) {
   const s = {
     version: STATE_VERSION,
     proxyUrl: typeof raw.proxyUrl === 'string' ? raw.proxyUrl : '',
-    profiles: Array.isArray(raw.profiles) && raw.profiles.length ? raw.profiles.map(normalizeProfile) : d.profiles,
+    profiles: Array.isArray(raw.profiles) && raw.profiles.length ? raw.profiles.map(normalizeProfile) : defaultState().profiles,
     recent: Array.isArray(raw.recent)
       ? raw.recent.filter((r) => r && Number.isFinite(Number(r.tnr))).map((r) => ({ tnr: Number(r.tnr), title: String(r.title || ''), at: r.at || null })).slice(0, MAX_RECENT)
       : [],
-    ui: deepFill(raw.ui, d.ui),
+    ui: deepFill(raw.ui, DEFAULT_UI()),
   };
   const ids = new Set();
   for (const p of s.profiles) {
@@ -214,7 +238,7 @@ export class Store {
     this.update((s) => { if (s.profiles.some((p) => p.id === id)) s.activeProfileId = id; });
   }
 
-  /** Přidá přednastavené profily, které ještě nemáte (podle názvu). Vrací názvy přidaných. */
+  /** Přidá přednastavené profily, které ještě nemáte (podle názvu). Vrací názvy přidaných. Předtím loadPresets(). */
   addPresetProfiles() {
     const norm = (x) => String(x || '').trim().toLocaleLowerCase('cs');
     const have = new Set(this.state.profiles.map((p) => norm(p.name)));

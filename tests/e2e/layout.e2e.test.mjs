@@ -48,6 +48,8 @@ async function openTournament(fixtures) {
   // žádná síť mimo appku (chess-results, proxy)
   await page.route('**/*', (route) => (route.request().url().startsWith(base) ? route.continue() : route.abort()));
   await page.goto(base);
+  // appka se spouští asynchronně (při prvním spuštění načítá přednastavené profily)
+  await page.waitForFunction(() => window.chessPrint);
   const tnr = await page.evaluate(async (htmls) => {
     const cp = window.chessPrint;
     let t = null;
