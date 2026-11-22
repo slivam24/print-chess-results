@@ -3,7 +3,7 @@
 
 import {
   parseInfo, parseStartList, parseRanking, parsePairings, parseTeamList,
-  parseTeamPairings, parseBoardPairings, detectPageKind, detectTnr,
+  parseTeamPairings, parseBoardPairings, parseBoardList, detectPageKind, detectTnr,
 } from './parser/index.js';
 import { roundFromText } from './parser/dom.js';
 
@@ -38,6 +38,8 @@ export const DATASETS = {
   pairings: { art: 2, label: 'Los kola', parse: parsePairings, round: true },
   teamPairings: { art: 2, label: 'Zápasy družstev', parse: parseTeamPairings, round: true },
   boards: { art: 3, label: 'Šachovnice družstev', parse: parseBoardPairings, round: true },
+  // Nejlepší hráči na šachovnicích – vždy aktuální stav (chess-results kolo nebere)
+  boardList: { art: 81, label: 'Nejlepší na šachovnicích', parse: parseBoardList },
 };
 
 export function buildUrl(tnr, dataset, round) {
@@ -219,6 +221,7 @@ export class Source {
         put('boards', parsed.rounds[0]?.round ?? rd, parsed);
         break;
       }
+      case 'boardList': put('boardList', null, parseBoardList(doc)); break;
       case 'startlist':
         if (isTeam) put('teamPlayers', null, parseStartList(doc));
         break;

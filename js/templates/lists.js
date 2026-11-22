@@ -4,6 +4,7 @@ import {
   esc, fmtName, fmtRating, fmtPoints, theadRow, colgroup, bodyRow, collator,
   sectionTitle, noteBlock, playerIndex, pruneEmpty,
 } from './common.js';
+import { parseNum } from '../parser/dom.js';
 
 // ---------------------------------------------------------------------------
 // Kategorie: sloupce „Typ“ (U16, S50, …) a „Gr“ (skupina) ze startovní listiny
@@ -454,6 +455,85 @@ export const teamRanking = {
       blocks,
       warnings: rk.rows.length ? [] : ['Tabulka družstev zatím není na chess-results k dispozici.'],
     };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Družstva: nejlepší hráči na šachovnicích (chess-results art=81 „Board list“)
+// ---------------------------------------------------------------------------
+
+/** Krátký český název a vysvětlivka pomocného hodnocení podle textu z chess-results. */
+export function boardTiebreak(label, i) {
+  const t = String(label || '').toLowerCase();
+  if (/point|bod|punkt/.test(t)) return { short: 'Body', long: 'body (z partií na šachovnici)', points: true };
+  if (/game|parti/.test(t)) return { short: 'Partie', long: /less|ascending|méně|weniger/.test(t) ? 'počet odehraných partií (méně je lépe)' : 'počet odehraných partií' };
+  if (/perform|výkon|leistung/.test(t)) return { short: 'Výkon', long: 'výkon (performance)' };
+  if (/percent|procent|prozent|%/.test(t)) return { short: '%', long: 'procento bodů' };
+  return { short: `PH${i}`, long: label || '' };
+}
+
+const BOARD_BEST_COLUMNS = [
+  { key: 'rank', label: 'Poř.', cls: 'c num strong', width: '2.8em', get: (r) => esc(r.rank ?? '') },
+  { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (r) => esc(r.title) },
+  { key: 'name', label: 'Jméno', cls: 'name', get: (r, ctx) => esc(fmtName(r.name, ctx.nameFormat)) },
+  { key: 'rating', hideEmpty: true, label: 'Elo', cls: 'c num', width: '3.2em', get: (r) => fmtRating(r.rating) },
+  { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', def: false, get: (r) => esc(r.fed) },
+  { key: 'team', label: 'Družstvo', cls: 'club', get: (r) => esc(r.team) },
+  ...[1, 2, 3, 4].map((i) => ({
+    key: `tb${i}`, label: `PH${i}`, cls: `c num${i === 1 ? ' strong' : ''}`, width: '3.4em', tb: i,
+    get: (r, ctx) => {
+      const v = r.tb?.[i - 1] ?? '';
+      return ctx.tbInfo?.[i - 1]?.points && parseNum(v) != null ? fmtPoints(parseNum(v)) : esc(v);
+    },
+  })),
+];
+
+export const teamBoardBest = {
+  id: 'team-board-best',
+  name: 'Nejlepší na šachovnicích',
+  description: 'Pořadí hráčů na jednotlivých šachovnicích (chess-results „Board list“) – k vyhlášení nejlepších hráčů na šachovnicích.',
+  group: 'Seznamy',
+  supports: (info) => info.isTeam,
+  roundMode: null,
+  options: [
+    { key: 'places', label: 'Počet míst na šachovnici', type: 'select', def: 'all', choices: [['all', 'všichni hráči'], ['1', '1 (jen nejlepší)'], ['3', '3'], ['5', '5']] },
+    { key: 'keepTogether', label: 'Nerozdělovat šachovnici na více stránek', type: 'bool', def: true },
+    { key: 'boardPerPage', label: 'Každá šachovnice na samostatné stránce', type: 'bool', def: false },
+    { key: 'legend', label: 'Vysvětlivky', type: 'bool', def: true },
+  ],
+  columns: BOARD_BEST_COLUMNS,
+  defaults: { orientation: 'portrait', columns: 1 },
+  needs: () => [{ dataset: 'boardList' }],
+  render({ data, opts, cols, nameFormat }) {
+    const bl = data.boardList || { boards: [], tiebreaks: [] };
+    const tbInfo = bl.tiebreaks.map((t, i) => boardTiebreak(t.label, i + 1));
+    const ctx = { nameFormat, tbInfo };
+    // Pořadí do N. místa včetně dělených míst
+    const n = opts.places === 'all' ? Infinity : Math.max(1, Number(opts.places) || 3);
+    const boards = bl.boards.map((b) => ({ ...b, rows: b.rows.filter((r) => r.rank == null || r.rank <= n) }));
+    const all = boards.flatMap((b) => b.rows);
+    const usable = pruneEmpty(cols.filter((c) => !c.tb || c.tb <= bl.tiebreaks.length), all, ctx)
+      .map((c) => (c.tb && !c.customLabel ? { ...c, label: tbInfo[c.tb - 1].short } : c));
+    const blocks = [];
+    boards.forEach((b, i) => {
+      const title = sectionTitle(`${b.board}. šachovnice`);
+      if (opts.boardPerPage && i > 0) title.breakBefore = true;
+      else if (i > 0) title.spaceBefore = 3;
+      blocks.push(title);
+      blocks.push(b.rows.length
+        ? { type: 'table', className: 'grid ranking', colgroup: colgroup(usable), thead: theadRow(usable), rows: b.rows.map((r) => bodyRow(usable, r, ctx)), keepTogether: opts.keepTogether !== false, widthGroup: 'boards' }
+        : noteBlock('Na této šachovnici zatím nikdo nehrál.'));
+    });
+    if (opts.legend !== false && boards.length) {
+      const items = usable.filter((c) => c.tb).map((c) => `<span><b>${esc(c.label)}</b>: ${esc(tbInfo[c.tb - 1].long)}</span>`);
+      if (/most played|nejčastěji|meisten/i.test(bl.determination)) {
+        items.push('<span>Hráč je zařazen na šachovnici, na které hrál nejčastěji (při rovnosti na vyšší). Kontumace se nezapočítávají.</span>');
+      }
+      if (items.length) blocks.push({ type: 'html', spaceBefore: 3, html: `<div class="legend">${items.join('')}</div>` });
+    }
+    const warnings = boards.length ? [] : ['Přehled nejlepších hráčů na šachovnicích (Board list) zatím není na chess-results k dispozici – zveřejňuje se, když ho pořadatel ve Swiss-Manageru zapne.'];
+    const title = bl.final ? 'Nejlepší hráči na šachovnicích – konečné pořadí' : bl.round ? `Nejlepší hráči na šachovnicích po ${bl.round}. kole` : 'Nejlepší hráči na šachovnicích';
+    return { title, sub: '', blocks, warnings };
   },
 };
 

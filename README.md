@@ -206,6 +206,7 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 | **Startovní pořadí družstev** | družstva | družstva podle startovních čísel, počet hráčů, Ø Elo |
 | **Soupisky družstev** | družstva | družstvo na stránku, jen seznam družstev |
 | **Pořadí družstev** | družstva | po kole, vysvětlivky |
+| **Nejlepší na šachovnicích** | družstva | pořadí hráčů na každé šachovnici (chess-results „Board list“) k vyhlášení: počet míst (i s dělenými), šachovnice nerozdělená nebo na samostatné stránce, stejné šířky sloupců u všech šachovnic, české vysvětlivky |
 
 Prázdné sloupce (např. tituly, když je nikdo nemá) se skrývají automaticky.
 U každého výstupu jde v „Možnostech“ (pod výběrem výstupu) nastavit **Záhlaví** (jen na první stránce / na každé stránce / jen název výstupu /

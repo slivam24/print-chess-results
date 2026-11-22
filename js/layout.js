@@ -6,7 +6,8 @@
 //
 // Bloky:
 //   { type: 'html',  html, keepWithNext?, breakBefore?, spaceBefore? (mm), blockClass? ('tight' = bez mezery pod blokem) }
-//   { type: 'table', className?, colgroup?, thead, rows: [ '<tr>…</tr>' ], keepTogether?, breakBefore? }
+//   { type: 'table', className?, colgroup?, thead, rows: [ '<tr>…</tr>' ], keepTogether?, breakBefore?,
+//     widthGroup? (tabulky se stejnou hodnotou mají stejné šířky sloupců – např. všechny šachovnice) }
 //   { type: 'break' }
 
 const PAGE_MM = { portrait: [210, 297], landscape: [297, 210] };
@@ -192,6 +193,29 @@ function measureBlocks(col, blocks) {
   out.gap = Math.max(0, g1.getBoundingClientRect().height - g2.getBoundingClientRect().height);
   col.removeChild(g1);
   col.removeChild(g2);
+  // Skupiny tabulek se stejnými šířkami sloupců: šířky z jedné tabulky se všemi jejich řádky
+  const groupPct = new Map();
+  const groups = new Map();
+  for (const b of blocks) {
+    if (b.type === 'table' && b.widthGroup) {
+      if (!groups.has(b.widthGroup)) groups.set(b.widthGroup, []);
+      groups.get(b.widthGroup).push(b);
+    }
+  }
+  for (const [key, list] of groups) {
+    if (list.length < 2) continue;
+    const wrap = el('div', 'blk');
+    wrap.innerHTML = tableHtml({ ...list[0], rows: list.flatMap((b) => b.rows) }, list.flatMap((b) => b.rows));
+    col.appendChild(wrap);
+    const needW = Math.max(wrap.scrollWidth, wrap.firstElementChild ? wrap.firstElementChild.getBoundingClientRect().width : 0);
+    if (needW > colW + 1) {
+      out.overflowX = true;
+      out.widthRatio = Math.max(out.widthRatio || 1, needW / colW);
+    }
+    const pct = columnPercents(wrap.querySelector('table'));
+    if (pct) groupPct.set(key, pct);
+    col.removeChild(wrap);
+  }
   for (const b of blocks) {
     if (b.type === 'break') { out.push({ b, h: 0 }); continue; }
     const wrap = el('div', `blk ${b.blockClass || ''}`.trim());
@@ -200,7 +224,8 @@ function measureBlocks(col, blocks) {
       col.appendChild(wrap);
       out.push({ b, h: wrap.getBoundingClientRect().height });
     } else if (b.type === 'table') {
-      wrap.innerHTML = tableHtml(b, b.rows);
+      const gp = b.widthGroup ? groupPct.get(b.widthGroup) : null;
+      wrap.innerHTML = tableHtml(b, b.rows, gp);
       col.appendChild(wrap);
       const total = wrap.getBoundingClientRect().height;
       const thead = wrap.querySelector('thead');
@@ -208,7 +233,7 @@ function measureBlocks(col, blocks) {
       const trs = wrap.querySelectorAll(':scope > table > tbody > tr');
       const rowH = [...trs].map((tr) => tr.getBoundingClientRect().height);
       const sum = theadH + rowH.reduce((a, c) => a + c, 0);
-      out.push({ b, h: total, theadH, rowH, extra: Math.max(0, total - sum), colPct: columnPercents(wrap.querySelector('table')) });
+      out.push({ b, h: total, theadH, rowH, extra: Math.max(0, total - sum), colPct: gp || columnPercents(wrap.querySelector('table')), grouped: !!gp });
     }
     const needW = Math.max(wrap.scrollWidth, wrap.firstElementChild ? wrap.firstElementChild.getBoundingClientRect().width : 0);
     if (needW > colW + 1) {
@@ -363,6 +388,7 @@ export function layoutDocument(target, blocks0, o) {
   host.innerHTML = '';
   // Tabulky rozdělené na více kusů (stránky, sloupce): všechny kusy se šířkami sloupců celé tabulky
   const pctOf = new Map(measured.filter((m) => m.colPct).map((m) => [m.b, m.colPct]));
+  const grouped = new Set(measured.filter((m) => m.grouped).map((m) => m.b));
   const pieces = new Map();
   for (const pg of pages) for (const col of pg) for (const it of col) if (it.kind === 'table') pieces.set(it.b, (pieces.get(it.b) || 0) + 1);
 
@@ -377,7 +403,7 @@ export function layoutDocument(target, blocks0, o) {
         const wrap = el('div', `blk ${it.b.blockClass || ''}`.trim());
         if (it.space) wrap.style.marginTop = `${it.b.spaceBefore}mm`;
         if (it.kind === 'html') wrap.innerHTML = it.b.html;
-        else wrap.innerHTML = tableHtml(it.b, it.b.rows.slice(it.from, it.to), pieces.get(it.b) > 1 ? pctOf.get(it.b) : null);
+        else wrap.innerHTML = tableHtml(it.b, it.b.rows.slice(it.from, it.to), pieces.get(it.b) > 1 || grouped.has(it.b) ? pctOf.get(it.b) : null);
         colEls[ci].appendChild(wrap);
       }
     });

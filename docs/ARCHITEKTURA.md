@@ -166,6 +166,7 @@ export const roundResults = {
 |---|---|
 | `{ type: 'table', thead, rows: ['<tr>…</tr>'], colgroup?, className? }` | dělí se po řádcích, hlavička se opakuje na každé stránce/sloupci |
 | `{ type: 'table', …, keepTogether: true }` | nerozdělí se (např. jeden zápas družstev) |
+| `{ type: 'table', …, widthGroup: 'x' }` | tabulky se stejnou skupinou mají stejné šířky sloupců (měřeno ze všech jejich řádků) |
 | `{ type: 'html', html, keepWithNext? }` | nedělitelný blok; `keepWithNext` drží nadpis s následujícím blokem |
 | `{ …, breakBefore: true }` | začne na nové stránce |
 | `{ type: 'break' }` | konec stránky |
