@@ -2,7 +2,7 @@
 // prvním otevření panelu – při běžném tisku ho appka nepotřebuje.
 
 import { store, els, session } from './context.js';
-import { currentTemplate, renderOptions, renderProfileSelect, renderRecent, renderTemplateList } from './panel.js';
+import { currentTemplate, renderOptions, renderProfileSelect, renderRecent, renderTemplateList, optionsContext } from './panel.js';
 import { syncTab, renderTabs } from './tabs.js';
 import { scheduleRender } from './preview.js';
 
@@ -17,6 +17,7 @@ async function ensurePanel() {
       settingsPanel = new SettingsPanel(els.sideSettings, {
         store,
         getTemplate: currentTemplate,
+        getOptionsContext: optionsContext,
         testProxy,
         onClose: closeSettings,
         onChange: (ev = {}) => {

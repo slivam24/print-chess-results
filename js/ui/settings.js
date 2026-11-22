@@ -4,6 +4,7 @@ import { h, clear, options, downloadText, readFileText, imageToDataUrl, compactD
 import { resolveColumns, parseColWidth } from '../templates/common.js';
 import { templateSettings, DEFAULT_PROXY_URL, loadPresets } from '../store.js';
 import { TEMPLATES } from '../templates/index.js';
+import { optionControls } from './options.js';
 import { renderPrintSetup } from './printSetup.js';
 
 const FONTS = [
@@ -39,10 +40,11 @@ const TABS = [
 ];
 
 export class SettingsPanel {
-  constructor(root, { store, getTemplate, onChange, onClose, testProxy }) {
+  constructor(root, { store, getTemplate, getOptionsContext, onChange, onClose, testProxy }) {
     this.root = root;
     this.store = store;
     this.getTemplate = getTemplate;
+    this.getOptionsContext = getOptionsContext || (() => ({}));
     this.onChange = onChange;
     this.onClose = onClose;
     this.testProxy = testProxy;
@@ -515,6 +517,12 @@ export class SettingsPanel {
         oninput: (e) => setT((t) => { t.rowHeight = e.target.value === '' ? null : clampNum(e.target.value, 3, 30, null); }),
       }), true),
     );
+    // Možnosti výstupu (mezery, co zobrazit…) – stejné jako vlevo v části „Možnosti“
+    const optEls = optionControls(tpl, ts.options, {
+      setOpt: (key, value) => setT((t) => { t.options = { ...(t.options || {}), [key]: value }; }),
+      ...this.getOptionsContext(),
+    });
+    if (optEls.length) add(card, h('h3', {}, 'Možnosti výstupu'), h('div', { class: 'tpl-options' }, optEls));
     if ((tpl.columns || []).length) {
       const cols = resolveColumns(tpl.columns, ts.columns);
       const savedOf = (key) => (ts.columns || []).find((x) => x.key === key) || {};
@@ -597,7 +605,7 @@ export class SettingsPanel {
         h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; delete t.columnsVersion; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
       );
     }
-    add(card, h('p', { class: 'help', style: { marginTop: '12px' } }, 'Volby výstupu (např. zobrazení výsledků) najdete vlevo pod výběrem výstupu v části „Možnosti“ – i ty se ukládají do profilu.'));
+    add(card, h('p', { class: 'help', style: { marginTop: '12px' } }, 'Možnosti výstupu jsou výše v části „Možnosti výstupu“ a také vlevo pod výběrem výstupu (když je nastavení zavřené) – ukládají se do profilu.'));
   }
 
   // --- Které výstupy se nabízejí ------------------------------------------

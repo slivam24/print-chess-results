@@ -5,9 +5,9 @@ import { store, source, session, els, updateTemplateSettings } from './context.j
 import { templateSettings } from '../store.js';
 import { getTemplate, templatesFor } from '../templates/index.js';
 import { autoRound, headerMode } from '../render.js';
-import { categoriesOf } from '../templates/lists.js';
 import { fmtDateTime, fmtWhen } from '../templates/common.js';
 import { h, clear, $, options } from '../ui/dom.js';
+import { optionControls } from '../ui/options.js';
 import { loadTournament, refreshData } from './loader.js';
 import { tabList, switchTab } from './tabs.js';
 import { refreshPreview, scheduleRender, targetTnrs } from './preview.js';
@@ -279,48 +279,7 @@ export function renderOptions() {
     updateTemplateSettings(tpl.id, (t) => { t.options = { ...(t.options || {}), [key]: value }; });
     scheduleRender();
   };
-  const allRounds = session.round === 'all' && tpl.allRounds && tpl.allRounds(info);
-  for (const o of tpl.options || []) {
-    if (o.onlyAllRounds && !allRounds) continue;
-    const v = ts.options[o.key];
-    if (o.type === 'bool') {
-      els.options.append(h('label', { class: 'check' },
-        h('input', { type: 'checkbox', checked: !!v, onchange: (e) => setOpt(o.key, e.target.checked) }), o.label));
-    } else if (o.type === 'select') {
-      els.options.append(h('label', { class: 'field' }, o.label,
-        h('select', { onchange: (e) => setOpt(o.key, e.target.value) }, options(o.choices, v))));
-    } else if (o.type === 'number') {
-      els.options.append(h('label', { class: 'field inline' }, o.label,
-        h('input', {
-          type: 'number', min: o.min, max: o.max, step: o.step, value: v,
-          oninput: (e) => {
-            const n = Number(e.target.value);
-            if (e.target.value === '' || !Number.isFinite(n)) return;
-            setOpt(o.key, Math.min(o.max ?? n, Math.max(o.min ?? n, n)));
-          },
-        })));
-    } else if (o.type === 'text') {
-      els.options.append(h('label', { class: 'field' }, o.label,
-        h('input', { type: 'text', value: v || '', oninput: (e) => setOpt(o.key, e.target.value) })));
-    } else if (o.type === 'categories') {
-      const tnr = targetTnrs()[0];
-      const players = source.peek(tnr, 'main')?.data?.players || [];
-      const box = h('div', { class: 'cat-editor' }, h('p', { class: 'small muted' }, 'Načítám editor kategorií…'));
-      els.options.append(box);
-      // Editor kategorií se načítá, až když je potřeba
-      import('../ui/categories.js').then(({ renderCategoryEditor }) => {
-        if (box.isConnected) renderCategoryEditor(box, { value: v, players, onChange: (cats) => setOpt(o.key, cats) });
-      });
-    } else if (o.type === 'category') {
-      const tnr = targetTnrs()[0];
-      const players = source.peek(tnr, 'main')?.data?.players || [];
-      const cats = categoriesOf(players);
-      if (!cats.length) continue;
-      els.options.append(h('label', { class: 'field' }, o.label,
-        h('select', { onchange: (e) => setOpt(o.key, e.target.value) },
-          options([['', 'všechny dohromady'], ...cats.map((c) => [c, c]), ['*split*', 'každá kategorie zvlášť']], v))));
-    }
-  }
+  els.options.append(...optionControls(tpl, ts.options, { setOpt, ...optionsContext() }));
   // Záhlaví a zápatí tohoto výstupu (přepíše nastavení profilu)
   if (tpl.pageChrome !== false) {
     const setTpl = (key, value) => {
@@ -349,6 +308,17 @@ export function renderOptions() {
     type: 'button', class: 'btn small', style: { marginTop: '6px' },
     onclick: () => { openSettings('template'); },
   }, 'Sloupce, písmo a orientace…'));
+}
+
+/** Souvislosti pro volby výstupu (i pro Nastavení → Výstup): tisk všech kol, hráči turnaje. */
+export function optionsContext() {
+  const tpl = currentTemplate();
+  const info = session.rootInfo;
+  const tnr = targetTnrs()[0];
+  return {
+    allRounds: !!(tpl && info && session.round === 'all' && tpl.allRounds && tpl.allRounds(info)),
+    players: (tnr && source.peek(tnr, 'main')?.data?.players) || [],
+  };
 }
 
 export function autoRoundFor(tpl) {
