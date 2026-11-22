@@ -339,3 +339,29 @@ test('knihovna obrázků: nahrání na jednom místě, výběr loga, 10 sponzor�
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('možnosti výstupu i v Nastavení → Výstup (mezera mezi zápasy rozpisu šachovnic)', async () => {
+  const { page, errors, context } = await newApp();
+  await open(page, ['team-main', 'team-boards-r3', 'team-pairings-r3', 'team-players', 'team-teams']);
+  await rendered(page, () => page.evaluate(() => { window.chessPrint.session.round = 3; window.chessPrint.selectTemplate('team-boards'); }));
+  const gapPx = () => page.evaluate(() => {
+    const heads = [...document.querySelectorAll('#pages .page:first-child .blk')].filter((b) => /Zápas 2/.test(b.textContent) && b.style.marginTop);
+    return heads.length ? parseFloat(getComputedStyle(heads[0]).marginTop) : null;
+  });
+  const before = await gapPx();
+  await page.click('#btn-settings');
+  const panel = page.locator('#side-settings');
+  await panel.getByRole('tab', { name: 'Výstup', exact: true }).click();
+  assert.match(await panel.innerText(), /Možnosti výstupu/);
+  const input = panel.locator('label', { hasText: 'Mezera mezi zápasy (mm)' }).locator('input');
+  assert.equal(await input.inputValue(), '12');
+  await rendered(page, () => input.fill('4'));
+  assert.equal(await page.evaluate(() => window.chessPrint.store.profile.templates['team-boards'].options.matchGap), 4);
+  const after = await gapPx();
+  assert.ok(before > 0 && after > 0 && after < before / 2, `mezera ${before} → ${after} px`);
+  // Po zavření nastavení je stejná hodnota i vlevo v Možnostech
+  await page.click('#btn-settings');
+  assert.equal(await page.locator('#options label', { hasText: 'Mezera mezi zápasy (mm)' }).locator('input').inputValue(), '4');
+  assert.deepEqual(errors, []);
+  await context.close();
+});
