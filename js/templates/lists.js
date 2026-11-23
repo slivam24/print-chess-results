@@ -180,6 +180,127 @@ export const alphaList = {
 };
 
 // ---------------------------------------------------------------------------
+// Soupisky škol / klubů ve švýcaru jednotlivců (hodnocení družstev)
+// chess-results soupisky zobrazuje jen u turnajů družstev. U jednotlivců hodnocených
+// i do družstev (např. přebory škol) se hráči seskupí podle klubu ze startovní listiny –
+// podobně jako „Sestava družstev“ ve Swiss-Manageru.
+// ---------------------------------------------------------------------------
+
+const NO_CLUB = 'Bez klubu';
+
+const CLUB_ROSTER_COLUMNS = [
+  { key: 'rowNo', label: 'Poř.', cls: 'c num', width: '2.8em', get: (p) => esc(p.rowNo ?? '') },
+  { key: 'startNo', label: 'St.č.', cls: 'c num muted', width: '3.2em', get: (p) => esc(p.startNo ?? '') },
+  { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (p) => esc(p.title) },
+  { key: 'name', label: 'Jméno', cls: 'name', get: (p, ctx) => esc(fmtName(p.name, ctx.nameFormat)) },
+  { key: 'fideId', hideEmpty: true, label: 'FIDE ID', cls: 'c num muted', def: false, get: (p) => esc(p.fideId ?? '') },
+  { key: 'ratingNat', hideEmpty: true, label: 'RtgN', cls: 'c num', width: '3.4em', get: (p) => fmtRating(p.ratingNat) },
+  { key: 'rating', hideEmpty: true, label: 'RtgF', cls: 'c num', width: '3.4em', get: (p) => fmtRating(p.rating) },
+  { key: 'fed', hideEmpty: true, label: 'FED', cls: 'c', width: '3em', def: false, get: (p) => esc(p.fed) },
+  { key: 'type', hideEmpty: true, label: 'Typ', cls: 'c', def: false, get: (p) => esc(p.type) },
+  { key: 'group', hideEmpty: true, label: 'Skup.', cls: 'c', def: false, get: (p) => esc(p.group) },
+];
+
+const CLUB_ROSTER_TITLES = { teams: 'Soupisky družstev', schools: 'Soupisky škol', clubs: 'Soupisky klubů' };
+
+/** Hráči seskupení podle družstva (sloupec družstva, jinak klub); hráči bez klubu na konci. */
+export function groupByClub(players, { teamOrder = 'alpha', sort = 'startNo' } = {}) {
+  const map = new Map();
+  for (const p of sortPlayers(players, 'startNo')) {
+    const name = String(p.team || p.club || '').trim() || NO_CLUB;
+    if (!map.has(name)) map.set(name, []);
+    map.get(name).push(p);
+  }
+  let groups = [...map.entries()].map(([name, list]) => ({ name, players: sortPlayers(list, sort) }));
+  if (teamOrder === 'alpha') groups.sort((a, b) => collator.compare(a.name, b.name));
+  else if (teamOrder === 'size') groups.sort((a, b) => b.players.length - a.players.length || collator.compare(a.name, b.name));
+  // 'startNo': pořadí podle nejnižšího startovního čísla hráče (= pořadí vzniku mapy)
+  groups = [...groups.filter((g) => g.name !== NO_CLUB), ...groups.filter((g) => g.name === NO_CLUB)];
+  return groups;
+}
+
+/** Český tvar podle počtu: 1 hráč, 2–4 hráči, 5+ hráčů. */
+function plural(n, one, few, many) {
+  return n === 1 ? one : n >= 2 && n <= 4 ? few : many;
+}
+
+function avgRating(list, key) {
+  const vals = list.map((p) => p[key]).filter((r) => typeof r === 'number' && r > 0);
+  return vals.length ? Math.round(vals.reduce((s, r) => s + r, 0) / vals.length) : null;
+}
+
+export const clubRoster = {
+  id: 'club-roster',
+  name: 'Soupisky škol (klubů)',
+  description: 'Švýcar jednotlivců hodnocený i do družstev: hráči seskupení podle klubu / školy ze startovní listiny – jako „Sestava družstev“ ve Swiss-Manageru.',
+  group: 'Seznamy',
+  supports: (info) => !info.isTeam,
+  roundMode: null,
+  options: [
+    { key: 'heading', label: 'Nadpis', type: 'select', def: 'teams', choices: Object.entries(CLUB_ROSTER_TITLES) },
+    { key: 'teamOrder', label: 'Pořadí družstev', type: 'select', def: 'alpha', choices: [['alpha', 'abecedně'], ['startNo', 'podle startovních čísel hráčů'], ['size', 'podle počtu hráčů']] },
+    { key: 'sort', label: 'Hráči v družstvu', type: 'select', def: 'startNo', choices: [['startNo', 'podle startovních čísel'], ['rating', 'podle ratingu'], ['alpha', 'abecedně']] },
+    { key: 'minPlayers', label: 'Jen družstva s alespoň', type: 'select', def: '1', choices: [['1', '1 hráčem (všechna)'], ['2', '2 hráči'], ['3', '3 hráči'], ['4', '4 hráči']] },
+    { key: 'avg', label: 'Průměrný rating družstva v nadpisu', type: 'bool', def: false },
+    { key: 'keepTogether', label: 'Nerozdělovat družstvo na více stránek', type: 'bool', def: true },
+    { key: 'teamPerPage', label: 'Každé družstvo na novou stránku', type: 'bool', def: false },
+    categoryOption,
+  ],
+  columns: CLUB_ROSTER_COLUMNS,
+  defaults: { orientation: 'portrait', columns: 1 },
+  needs: () => [{ dataset: 'main' }],
+  render({ data, opts, cols: allCols, nameFormat }) {
+    const all = data.main?.players || [];
+    const ctx = { nameFormat };
+    const min = Math.max(1, Number(opts.minPlayers) || 1);
+    const parts = byCategory(all, opts.category);
+    const players = parts.flatMap((part) => part.items);
+    const cols = pruneEmpty(allCols, players, ctx);
+    const blocks = [];
+    let teamCount = 0;
+    let playerCount = 0;
+    let hidden = 0;
+    parts.forEach((part, pi) => {
+      const groups = groupByClub(part.items, opts);
+      const shown = groups.filter((g) => g.players.length >= min);
+      hidden += groups.length - shown.length;
+      if (parts.length > 1) {
+        const head = { ...sectionTitle(part.name, `${shown.length} ${plural(shown.length, 'družstvo', 'družstva', 'družstev')}`), blockClass: 'award-title' };
+        if (pi > 0) head.breakBefore = true;
+        blocks.push(head);
+      }
+      shown.forEach((g, i) => {
+        const n = g.players.length;
+        const subs = [`${n} ${plural(n, 'hráč', 'hráči', 'hráčů')}`];
+        const avg = opts.avg ? avgRating(g.players, 'ratingNat') ?? avgRating(g.players, 'rating') : null;
+        if (avg) subs.push(`Ø ${avg}`);
+        const title = sectionTitle(`${i + 1}. ${g.name}`, subs.join(' · '));
+        if (opts.teamPerPage && i > 0) title.breakBefore = true;
+        else if (i > 0) title.spaceBefore = 4;
+        blocks.push(title);
+        const rows = g.players.map((p, j) => ({ ...p, rowNo: j + 1 }));
+        blocks.push({
+          type: 'table', className: 'grid roster', colgroup: colgroup(cols), thead: theadRow(cols),
+          rows: rows.map((p) => bodyRow(cols, p, ctx)), keepTogether: opts.keepTogether !== false, widthGroup: 'roster',
+        });
+        teamCount += 1;
+        playerCount += n;
+      });
+    });
+    if (!all.length) blocks.push(noteBlock('Startovní listina je prázdná.'));
+    else if (!players.length) blocks.push(noteBlock('V této kategorii nikdo není.'));
+    const warnings = [];
+    if (players.length && !players.some((p) => p.team || p.club)) {
+      warnings.push('Hráči nemají na chess-results vyplněný klub, takže nejde poznat, za koho hrají. Ve Swiss-Manageru zadejte hráčům školu jako klub a na chess-results zapněte sloupec „Klub“ (Pole (Hráč) → Klub).');
+    }
+    if (hidden > 0) warnings.push(`Nevytisknou se družstva s méně než ${min} ${plural(min, 'hráčem', 'hráči', 'hráči')}: ${hidden}.`);
+    const subParts = [`${teamCount} ${plural(teamCount, 'družstvo', 'družstva', 'družstev')}`, `${playerCount} ${plural(playerCount, 'hráč', 'hráči', 'hráčů')}`];
+    if (opts.category && opts.category !== '*split*') subParts.push(`kategorie ${opts.category}`);
+    return { title: CLUB_ROSTER_TITLES[opts.heading] || CLUB_ROSTER_TITLES.teams, sub: subParts.join(' · '), blocks, warnings };
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Pořadí jednotlivců
 // ---------------------------------------------------------------------------
 
