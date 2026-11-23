@@ -109,6 +109,66 @@ describe('vykreslení šablon jednotlivců', () => {
     assert.match(titles, /U1800 \(B\)/);
   });
 
+  describe('soupisky škol (klubů) u jednotlivců', () => {
+    const school = (name, club, startNo, rating = 0) => ({ startNo, title: '', name, fideId: null, fed: 'CZE', rating, ratingNat: null, club, type: '', group: '', sex: '' });
+    const players = [
+      school('Starec, Jan', 'ZŠ Chabařovice', 1),
+      school('Beran, Jan', 'ZŠ a MŠ Povrly', 2),
+      school('Paroubek, Jan', 'ZŠ Chabařovice', 3),
+      school('Kobrle, Ondřej', 'ZŠ E. Krásnohorské', 4),
+      school('Samotář, Petr', '', 5),
+      school('Pánek, Matěj', 'ZŠ a MŠ Povrly', 6),
+    ];
+    const render = (options = {}, list = players) => {
+      const p = defaultProfile();
+      p.templates['club-roster'] = { options };
+      return buildDocument({ tpl: getTemplate('club-roster'), info: swiss.info, data: { main: { players: list } }, profile: p });
+    };
+    const titles = (doc) => doc.blocks.filter((b) => b.type === 'html').map((b) => b.html.replace(/<[^>]*>/g, ''));
+
+    test('jen pro jednotlivce', () => {
+      assert.ok(templatesFor(swiss.info).some((t) => t.id === 'club-roster'));
+      assert.ok(!templatesFor(team.info).some((t) => t.id === 'club-roster'));
+    });
+    test('hráči seskupení podle klubu, abecedně, bez klubu na konci', () => {
+      const doc = render();
+      assert.equal(doc.title, 'Soupisky družstev');
+      assert.equal(doc.sub, '4 družstva · 6 hráčů');
+      // česká abeceda: CH až za H
+      assert.deepEqual(titles(doc), [
+        '1. ZŠ a MŠ Povrly 2 hráči', '2. ZŠ E. Krásnohorské 1 hráč', '3. ZŠ Chabařovice 2 hráči', '4. Bez klubu 1 hráč',
+      ]);
+      const first = doc.blocks.find((b) => b.type === 'table');
+      assert.equal(first.rows.length, 2);
+      assert.match(first.rows[0], /Beran/);
+      assert.match(first.rows[1], /Pánek/);
+      assert.ok(first.keepTogether);
+      assert.deepEqual(doc.warnings, []);
+      assert.doesNotMatch(html(doc), /undefined|NaN|\[object/);
+    });
+    test('pořadí podle startovních čísel, minimum hráčů, nadpis', () => {
+      const doc = render({ teamOrder: 'startNo', minPlayers: '2', heading: 'schools' });
+      assert.equal(doc.title, 'Soupisky škol');
+      assert.deepEqual(titles(doc), ['1. ZŠ Chabařovice 2 hráči', '2. ZŠ a MŠ Povrly 2 hráči']);
+      assert.match(doc.warnings.join(' '), /méně než 2 hráči: 2/);
+    });
+    test('každé družstvo na novou stránku', () => {
+      const doc = render({ teamPerPage: true });
+      const heads = doc.blocks.filter((b) => b.type === 'html');
+      assert.ok(!heads[0].breakBefore && heads.slice(1).every((b) => b.breakBefore));
+    });
+    test('bez klubů → upozornění', () => {
+      const doc = render({}, players.map((p) => ({ ...p, club: '' })));
+      assert.match(doc.warnings.join(' '), /nemají na chess-results vyplněný klub/);
+    });
+    test('skutečná startovní listina z chess-results', () => {
+      const doc = render({}, swiss.data.main.players);
+      assert.ok(doc.blocks.length > 2);
+      assert.match(html(doc), /Novák,? Jindřich/);
+      assert.match(titles(doc).join('\n'), /TJ Sokol Praha-Vršovice/);
+    });
+  });
+
   test('záhlaví s proměnnými a zápatí s čísly stran', () => {
     const pf = { ...profile, footer: { ...profile.footer, enabled: true } };
     const doc = buildDocument({ tpl: getTemplate('pairings'), info: swiss.info, data: swiss.data, profile: pf, round: 7 });

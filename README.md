@@ -6,7 +6,7 @@ Jednou si nastavíte, jak mají výstupy vypadat, a pak už jen: **stáhnout →
 - Před turnajem: **startovní listina** a **abecední seznam hráčů**
 - Los kola: běžná tabulka, **velká varianta na nástěnku** (automaticky na jednu stránku) a **abecední přehled „kdo kde hraje“**
 - **Rozhodcovský list kola** a **výsledkové lístky** k rozstříhání (4–12 na stránku)
-- Startovní listina a pořadí (i po kategoriích)
+- Startovní listina a pořadí (i po kategoriích), **soupisky škol / klubů** i u švýcaru jednotlivců hodnoceného do družstev
 - Družstva: **los zápasů**, **rozpis hráčů na šachovnicích** (s podpisy kapitánů), soupisky, tabulka
 - Švýcar, každý s každým, družstva i turnaje s **více skupinami** (tisk jedné nebo všech)
 - **Profily** (přednastavené: „Švýcar jednotlivců“, „Každý s každým jednotlivci“, „Každý s každým – družstva školy“) s vlastním písmem, okraji, orientací, sloupci, záhlavím (nadpis na více řádků, loga turnaje / pořadatele / svazu), zápatím (i s logy sponzorů) a vodoznakem
@@ -201,6 +201,7 @@ Kategorie se ukládají do profilu, takže je příště nemusíte zadávat znov
 | **Výsledkové lístky** | jednotlivci | 4–12 lístků na stránku, body, podpisy, vlastní krátký název |
 | **Startovní listina** | jednotlivci | řazení (st. čísla / rating), kategorie; Typ a Skupina hráče, pokud je chess-results uvádí |
 | **Abecední seznam hráčů** | jednotlivci | jako ve Swiss-Manageru: Č., St.č., titul, Jméno, RtgN, RtgF, FED, Klub; česká abeceda (CH za H), kategorie |
+| **Soupisky škol (klubů)** | jednotlivci | pro švýcar jednotlivců hodnocený i do družstev (např. přebory škol), kde chess-results soupisky nezobrazuje: hráči ze startovní listiny seskupení podle klubu (= školy) jako „Sestava družstev“ ve Swiss-Manageru; nadpis „Soupisky družstev / škol / klubů“, pořadí družstev (abecedně, podle st. čísel, podle počtu hráčů), řazení hráčů, jen družstva s alespoň N hráči, Ø rating, družstvo nerozdělené nebo na samostatné stránce, kategorie; hráči bez klubu na konci. Na chess-results musí být zapnutý sloupec **Klub** |
 | **Pořadí** | jednotlivci | po zvoleném kole, kategorie (vč. přepočtu pořadí v kategorii), vysvětlivky pomocných hodnocení |
 | **Pořadí + kategorie** | jednotlivci | pořadí s Typem a Skupinou; vlastní kategorie složené z typů / skupin / pohlaví, každá s vlastním pořadím; za sebou, nebo každá na samostatné stránce; kategorie se nerozdělí na dvě stránky (lze vypnout); volitelně i celkové pořadí |
 | **Křížová tabulka** | jednotlivci, každý s každým | výsledky všech proti všem, řazení podle pořadí nebo startovních čísel, prázdná k ručnímu vyplňování (i před turnajem ze startovní listiny) |

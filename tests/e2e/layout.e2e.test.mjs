@@ -128,6 +128,7 @@ test('jednotlivci – švýcarský systém', async (t) => {
   const { page, errors } = await openTournament(['swiss-main', 'swiss-pairings-r7', 'swiss-ranking-r6']);
   await checkAll(t, page, [
     ['startlist', {}], ['alphalist', {}],
+    ['club-roster', {}], ['club-roster', { options: { teamOrder: 'size', teamPerPage: true, avg: true } }],
     ['ranking', { round: 6 }],
     ['ranking-cat', { round: 6, options: { categories: [{ name: 'Výběr', types: [], groups: [], sex: [] }] } }],
     ['pairings', { round: 7 }], ['pairings-board', { round: 7 }], ['pairings-alpha', { round: 7 }],
