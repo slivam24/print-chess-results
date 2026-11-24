@@ -27,7 +27,7 @@ export function publicUrl(tnr, art = null, round = null) {
 const OUTPUT_ART = {
   startlist: 0, alphalist: 0, 'club-roster': 0, ranking: 1, 'ranking-cat': 1, awards: 1, crosstable: 4,
   pairings: 2, 'pairings-board': 2, 'pairings-alpha': 2, 'arbiter-sheet': 2, scoresheets: 2,
-  'team-matches': 2, 'team-boards': 3, 'team-ranking': 46, 'team-roster': 16, 'team-startlist': 32, 'team-board-best': 81,
+  'team-matches': 2, 'team-boards': 3, 'team-ranking': 46, 'team-roster': 16, 'team-startlist': 32, 'team-board-best': 81, 'club-ranking': 72, 'team-composition': 71,
 };
 
 /**

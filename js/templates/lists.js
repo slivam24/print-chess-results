@@ -719,3 +719,135 @@ export const teamRoster = {
     };
   },
 };
+
+// ---------------------------------------------------------------------------
+// Švýcar jednotlivců hodnocený i do družstev (přebory škol) – stránky chess-results:
+//  art=72 „Team-Ranking“ (pořadí družstev a započítaní hráči), art=71 soupisky s výsledky kol
+// ---------------------------------------------------------------------------
+
+const CLUB_RANK_TITLES = { teams: 'Pořadí družstev', schools: 'Pořadí škol', clubs: 'Pořadí klubů' };
+const CLUB_UNIT = { teams: 'Družstvo', schools: 'Škola', clubs: 'Klub' };
+
+const CLUB_RANK_COLUMNS = [
+  { key: 'rank', label: 'Poř.', cls: 'c num strong', width: '2.8em', get: (r) => (r.member ? `<span class="muted">${esc(r.no ?? '')}</span>` : esc(r.rank ?? '')) },
+  { key: 'name', label: 'Družstvo / hráč', cls: 'name', get: (r, ctx) => (r.member ? esc(fmtName(r.name, ctx.nameFormat)) : esc(r.name)) },
+  { key: 'points', label: 'Body', cls: 'c num strong', width: '3em', get: (r) => fmtPoints(r.points) },
+  ...[1, 2, 3, 4].map((i) => ({ key: `tb${i}`, label: `PH${i}`, cls: 'c num', width: '3.2em', tb: i, get: (r) => esc(r.tb?.[i - 1] ?? '') })),
+];
+
+export const clubRanking = {
+  id: 'club-ranking',
+  name: 'Pořadí škol (družstev)',
+  description: 'Švýcar jednotlivců hodnocený i do družstev: pořadí škol / klubů a hráči, kteří se do něj započítávají (chess-results „Team-Ranking“).',
+  group: 'Seznamy',
+  supports: (info) => !info.isTeam && (info.availableArts || []).includes(72),
+  roundMode: null,
+  options: [
+    { key: 'heading', label: 'Nadpis', type: 'select', def: 'schools', choices: Object.entries(CLUB_RANK_TITLES) },
+    { key: 'players', label: 'Hráči, kteří se započítávají', type: 'bool', def: true },
+    { key: 'places', label: 'Počet míst', type: 'select', def: 'all', choices: [['all', 'všechna družstva'], ['3', '3'], ['5', '5'], ['10', '10']] },
+    { key: 'keepTogether', label: 'Nerozdělovat družstvo s hráči na dvě stránky', type: 'bool', def: true },
+    { key: 'legend', label: 'Vysvětlivky pomocných hodnocení', type: 'bool', def: true },
+  ],
+  columns: CLUB_RANK_COLUMNS,
+  defaults: { orientation: 'portrait', columns: 1 },
+  needs: () => [{ dataset: 'clubRanking' }],
+  render({ data, opts, cols, nameFormat }) {
+    const cr = data.clubRanking || { teams: [], tiebreaks: [] };
+    const ctx = { nameFormat };
+    const n = opts.places === 'all' ? Infinity : Math.max(1, Number(opts.places) || 3);
+    const teams = cr.teams.filter((t) => t.rank == null || t.rank <= n);
+    const unit = CLUB_UNIT[opts.heading] || 'Družstvo';
+    const usable = cols.filter((c) => !c.tb || c.tb <= cr.tiebreaks.length)
+      .map((c) => (c.key === 'name' && !c.customLabel ? { ...c, label: opts.players !== false ? `${unit} / hráč` : unit } : c));
+    const rows = [];
+    const splitAt = [];
+    for (const t of teams) {
+      splitAt.push(rows.length);
+      rows.push(bodyRow(usable, t, ctx, 'club-team'));
+      if (opts.players !== false) for (const p of t.players) rows.push(bodyRow(usable, { ...p, member: true }, ctx, 'club-member'));
+    }
+    const blocks = rows.length
+      ? [{ type: 'table', className: 'grid ranking club-ranking', colgroup: colgroup(usable), thead: theadRow(usable), rows, splitAt: opts.keepTogether !== false ? splitAt : undefined }]
+      : [noteBlock('Pořadí družstev zatím není na chess-results k dispozici.')];
+    if (opts.legend !== false && rows.length) {
+      const lg = tbLegend(cr.tiebreaks);
+      if (lg) blocks.push(lg);
+    }
+    return {
+      title: CLUB_RANK_TITLES[opts.heading] || CLUB_RANK_TITLES.teams,
+      sub: '',
+      blocks,
+      warnings: cr.teams.length ? [] : ['Pořadí družstev (Team-Ranking) zatím není na chess-results zveřejněné.'],
+    };
+  },
+};
+
+/** Výsledek v soupisce: „½“, „1“, „0“, „+“, „−“; nehráno = prázdné. */
+function roundCell(v) {
+  const t = String(v ?? '').trim();
+  if (!t || t === '*') return '';
+  return t === '-' ? '−' : t;
+}
+
+const COMPOSITION_COLUMNS = [
+  { key: 'board', label: 'Š.', cls: 'c num', width: '2.4em', get: (p) => esc(p.board ?? '') },
+  { key: 'title', hideEmpty: true, label: 'Tit.', cls: 'c title', width: '2.8em', get: (p) => esc(p.title) },
+  { key: 'name', label: 'Jméno', cls: 'name', get: (p, ctx) => esc(fmtName(p.name, ctx.nameFormat)) },
+  { key: 'rating', hideEmpty: true, label: 'RtgF', cls: 'c num', width: '3.2em', get: (p) => fmtRating(p.rating) },
+  { key: 'ratingNat', hideEmpty: true, label: 'RtgN', cls: 'c num', width: '3.6em', get: (p) => fmtRating(p.ratingNat) },
+  { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', def: false, get: (p) => esc(p.fed) },
+  // Zástupný sloupec: při sazbě se rozvine na sloupce 1…N s výsledky jednotlivých kol
+  { key: 'rounds', label: 'Kola 1…N', cls: 'c xt', width: '2.2em', get: () => '' },
+  { key: 'points', label: 'Body', cls: 'c num strong', width: '3em', get: (p) => fmtPoints(p.points) },
+  { key: 'games', label: 'Partie', cls: 'c num', width: '3.2em', get: (p) => esc(p.games ?? '') },
+  { key: 'ratingAvg', hideEmpty: true, label: 'Ø soup.', cls: 'c num', width: '3.6em', def: false, get: (p) => fmtRating(p.ratingAvg) },
+];
+
+export const teamComposition = {
+  id: 'team-composition',
+  name: 'Soupisky s výsledky kol',
+  description: 'Švýcar jednotlivců hodnocený i do družstev: hráči každé školy / klubu s výsledky jednotlivých kol (chess-results „Team-Composition with round-results“).',
+  group: 'Seznamy',
+  supports: (info) => !info.isTeam && (info.availableArts || []).includes(71),
+  roundMode: null,
+  options: [
+    { key: 'heading', label: 'Nadpis', type: 'select', def: 'schools', choices: Object.entries(CLUB_ROSTER_TITLES).map(([k, v]) => [k, `${v} s výsledky`]) },
+    { key: 'teamOrder', label: 'Pořadí družstev', type: 'select', def: 'start', choices: [['start', 'jako na chess-results'], ['alpha', 'abecedně']] },
+    { key: 'keepTogether', label: 'Nerozdělovat družstvo na více stránek', type: 'bool', def: true },
+    { key: 'teamPerPage', label: 'Každé družstvo na novou stránku', type: 'bool', def: false },
+  ],
+  columns: COMPOSITION_COLUMNS,
+  defaults: { orientation: 'portrait', columns: 1 },
+  needs: () => [{ dataset: 'teamComposition' }],
+  render({ data, opts, cols: allCols, nameFormat }) {
+    const tc = data.teamComposition || { teams: [], rounds: 0 };
+    const ctx = { nameFormat };
+    let teams = [...tc.teams];
+    if (opts.teamOrder === 'alpha') teams.sort((a, b) => collator.compare(a.name, b.name));
+    const pruned = pruneEmpty(allCols, teams.flatMap((t) => t.players), ctx);
+    // Rozvinutí zástupného sloupce na sloupce kol 1…N
+    const cols = pruned.flatMap((c) => (c.key !== 'rounds' ? [c] : Array.from({ length: tc.rounds }, (_, j) => ({
+      ...c, key: `r${j + 1}`, label: String(j + 1), get: (p) => esc(roundCell(p.results?.[j])),
+    }))));
+    const blocks = [];
+    teams.forEach((t, i) => {
+      const title = sectionTitle(t.no != null && opts.teamOrder !== 'alpha' ? `${t.no}. ${t.name}` : t.name, `${t.players.length} ${t.players.length === 1 ? 'hráč' : t.players.length < 5 ? 'hráči' : 'hráčů'}`);
+      if (opts.teamPerPage && i > 0) title.breakBefore = true;
+      else if (i > 0) title.spaceBefore = 2;
+      blocks.push(title);
+      blocks.push({
+        type: 'table', className: 'grid roster', colgroup: colgroup(cols), thead: theadRow(cols),
+        rows: t.players.map((p) => bodyRow(cols, p, ctx)), keepTogether: opts.keepTogether !== false, widthGroup: 'teams',
+      });
+    });
+    if (!blocks.length) blocks.push(noteBlock('Soupisky zatím nejsou na chess-results k dispozici.'));
+    const title = (CLUB_ROSTER_TITLES[opts.heading] || CLUB_ROSTER_TITLES.teams) + ' s výsledky kol';
+    return {
+      title,
+      sub: '',
+      blocks,
+      warnings: tc.teams.length ? [] : ['Soupisky s výsledky kol (Team-Composition) zatím nejsou na chess-results zveřejněné.'],
+    };
+  },
+};
