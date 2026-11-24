@@ -963,6 +963,31 @@ describe('švýcar jednotlivců hodnocený do družstev: pořadí škol (art=72)
     assert.match(d2.blocks[0].thead, />Klub</);
   });
 
+  test('pořadí škol: všichni hráči družstva – nezapočítaní ze soupisek, šedě a podle bodů', () => {
+    const tpl = getTemplate('club-ranking');
+    const p = defaultProfile();
+    p.templates['club-ranking'] = { options: { players: 'all' } };
+    assert.deepEqual(datasetsFor(tpl, info, null, { players: 'all' }).map((x) => x.dataset), ['clubRanking', 'teamComposition']);
+    assert.deepEqual(datasetsFor(tpl, info, null, { players: 'counted' }).map((x) => x.dataset), ['clubRanking']);
+    const doc = buildDocument({ tpl, info, data: { clubRanking: ranking, teamComposition: composition }, profile: p, round: null });
+    const rows = doc.blocks[0].rows;
+    const total = ranking.teams.reduce((n, t) => n + Math.max(t.players.length, composition.teams.find((c) => c.name === t.name)?.players.length || 0), 0);
+    assert.equal(rows.length, 15 + total);
+    // 1. škola má v soupisce 6 hráčů: 4 započítaní + 2 šedě
+    const first = rows.slice(1, rows.findIndex((r, i) => i > 0 && /club-team/.test(r)));
+    assert.equal(first.length, composition.teams.find((c) => c.name === ranking.teams[0].name).players.length);
+    assert.equal(first.filter((r) => /club-extra/.test(r)).length, first.length - 4);
+    assert.ok(first.slice(0, 4).every((r) => !/club-extra/.test(r)));
+    assert.match(doc.blocks.at(-1).html, /Šedě: hráči, kteří se do pořadí družstva nezapočítávají/);
+    // bez soupisek: jen započítaní + upozornění
+    const d2 = buildDocument({ tpl, info, data: { clubRanking: ranking }, profile: p, round: null });
+    assert.equal(d2.blocks[0].rows.filter((r) => /club-extra/.test(r)).length, 0);
+    assert.match(d2.warnings.join(' '), /jen hráči, kteří se započítávají/);
+    // dřívější uložená volba (zaškrtávátko) dál funguje
+    p.templates['club-ranking'] = { options: { players: true } };
+    assert.equal(buildDocument({ tpl, info, data: { clubRanking: ranking }, profile: p, round: null }).blocks[0].rows.length, 15 + ranking.teams.reduce((n, t) => n + t.players.length, 0));
+  });
+
   test('soupisky s výsledky: sloupce kol 1–7, každé družstvo zvlášť se stejnými šířkami', () => {
     const tpl = getTemplate('team-composition');
     const doc = buildDocument({ tpl, info, data: { teamComposition: composition }, profile: defaultProfile(), round: null });

@@ -735,50 +735,92 @@ const CLUB_RANK_COLUMNS = [
   ...[1, 2, 3, 4].map((i) => ({ key: `tb${i}`, label: `PH${i}`, cls: 'c num', width: '3.2em', tb: i, get: (r) => esc(r.tb?.[i - 1] ?? '') })),
 ];
 
+/** Volba hráčů v pořadí družstev: 'counted' | 'all' | 'none' (dřívější true / false). */
+function clubPlayersMode(v) {
+  if (v === false || v === 'none') return 'none';
+  return v === 'all' ? 'all' : 'counted';
+}
+
+const normName = (s) => String(s || '').normalize('NFC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('cs');
+
+/**
+ * Hráči družstva pro pořadí: započítaní (z Team-Ranking) a při mode 'all' i ostatní ze soupisky
+ * (Team-Composition) – ti jsou označení extra a seřazení podle bodů.
+ */
+export function clubTeamPlayers(team, composition, mode) {
+  if (mode === 'none') return [];
+  const counted = team.players.map((p) => ({ ...p, member: true }));
+  if (mode !== 'all' || !composition) return counted;
+  const comp = (composition.teams || []).find((t) => normName(t.name) === normName(team.name));
+  if (!comp) return counted;
+  const have = new Set(team.players.map((p) => normName(p.name)));
+  const extra = comp.players
+    .filter((p) => !have.has(normName(p.name)))
+    .sort((a, b) => (b.points ?? -1) - (a.points ?? -1) || (a.board ?? 99) - (b.board ?? 99))
+    .map((p) => ({ name: p.name, points: p.points, no: null, tb: [], member: true, extra: true }));
+  return [...counted, ...extra];
+}
+
 export const clubRanking = {
   id: 'club-ranking',
   name: 'Pořadí škol (družstev)',
-  description: 'Švýcar jednotlivců hodnocený i do družstev: pořadí škol / klubů a hráči, kteří se do něj započítávají (chess-results „Team-Ranking“).',
+  description: 'Švýcar jednotlivců hodnocený i do družstev: pořadí škol / klubů a hráči, kteří se do něj započítávají, nebo všichni hráči družstva (chess-results „Team-Ranking“).',
   group: 'Seznamy',
   supports: (info) => !info.isTeam && (info.availableArts || []).includes(72),
   roundMode: null,
   options: [
     { key: 'heading', label: 'Nadpis', type: 'select', def: 'schools', choices: Object.entries(CLUB_RANK_TITLES) },
-    { key: 'players', label: 'Hráči, kteří se započítávají', type: 'bool', def: true },
+    {
+      key: 'players', label: 'Hráči', type: 'select', def: 'counted',
+      choices: [['counted', 'jen ti, kteří se započítávají'], ['all', 'všichni hráči družstva (nezapočítaní šedě)'], ['none', 'bez hráčů – jen pořadí']],
+    },
     { key: 'places', label: 'Počet míst', type: 'select', def: 'all', choices: [['all', 'všechna družstva'], ['3', '3'], ['5', '5'], ['10', '10']] },
     { key: 'keepTogether', label: 'Nerozdělovat družstvo s hráči na dvě stránky', type: 'bool', def: true },
     { key: 'legend', label: 'Vysvětlivky pomocných hodnocení', type: 'bool', def: true },
   ],
   columns: CLUB_RANK_COLUMNS,
   defaults: { orientation: 'portrait', columns: 1 },
-  needs: () => [{ dataset: 'clubRanking' }],
+  // Všichni hráči družstva: ostatní hráče (mimo započítané) bere ze soupisek s výsledky (art=71)
+  needs: ({ opts } = {}) => (clubPlayersMode(opts && opts.players) === 'all'
+    ? [{ dataset: 'clubRanking' }, { dataset: 'teamComposition', optional: true }]
+    : [{ dataset: 'clubRanking' }]),
   render({ data, opts, cols, nameFormat }) {
     const cr = data.clubRanking || { teams: [], tiebreaks: [] };
     const ctx = { nameFormat };
+    const mode = clubPlayersMode(opts.players);
     const n = opts.places === 'all' ? Infinity : Math.max(1, Number(opts.places) || 3);
     const teams = cr.teams.filter((t) => t.rank == null || t.rank <= n);
     const unit = CLUB_UNIT[opts.heading] || 'Družstvo';
     const usable = cols.filter((c) => !c.tb || c.tb <= cr.tiebreaks.length)
-      .map((c) => (c.key === 'name' && !c.customLabel ? { ...c, label: opts.players !== false ? `${unit} / hráč` : unit } : c));
+      .map((c) => (c.key === 'name' && !c.customLabel ? { ...c, label: mode !== 'none' ? `${unit} / hráč` : unit } : c));
     const rows = [];
     const splitAt = [];
+    let anyExtra = false;
     for (const t of teams) {
       splitAt.push(rows.length);
       rows.push(bodyRow(usable, t, ctx, 'club-team'));
-      if (opts.players !== false) for (const p of t.players) rows.push(bodyRow(usable, { ...p, member: true }, ctx, 'club-member'));
+      for (const p of clubTeamPlayers(t, data.teamComposition, mode)) {
+        anyExtra = anyExtra || !!p.extra;
+        rows.push(bodyRow(usable, p, ctx, p.extra ? 'club-member club-extra' : 'club-member'));
+      }
     }
     const blocks = rows.length
       ? [{ type: 'table', className: 'grid ranking club-ranking', colgroup: colgroup(usable), thead: theadRow(usable), rows, splitAt: opts.keepTogether !== false ? splitAt : undefined }]
       : [noteBlock('Pořadí družstev zatím není na chess-results k dispozici.')];
-    if (opts.legend !== false && rows.length) {
-      const lg = tbLegend(cr.tiebreaks);
-      if (lg) blocks.push(lg);
+    if (rows.length && (anyExtra || opts.legend !== false)) {
+      const lg = opts.legend !== false ? tbLegend(cr.tiebreaks) : null;
+      const note = anyExtra ? '<span>Šedě: hráči, kteří se do pořadí družstva nezapočítávají.</span>' : '';
+      if (lg || note) blocks.push({ type: 'html', html: `<div class="legend">${note}${lg ? lg.html.replace(/^<div class="legend">|<\/div>$/g, '') : ''}</div>` });
+    }
+    const warnings = cr.teams.length ? [] : ['Pořadí družstev (Team-Ranking) zatím není na chess-results zveřejněné.'];
+    if (mode === 'all' && cr.teams.length && !(data.teamComposition && data.teamComposition.teams && data.teamComposition.teams.length)) {
+      warnings.push('Soupisky s výsledky kol (Team-Composition) nejsou na chess-results zveřejněné – zobrazují se jen hráči, kteří se započítávají.');
     }
     return {
       title: CLUB_RANK_TITLES[opts.heading] || CLUB_RANK_TITLES.teams,
       sub: '',
       blocks,
-      warnings: cr.teams.length ? [] : ['Pořadí družstev (Team-Ranking) zatím není na chess-results zveřejněné.'],
+      warnings,
     };
   },
 };
