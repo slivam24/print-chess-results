@@ -7,7 +7,8 @@
 // Bloky:
 //   { type: 'html',  html, keepWithNext?, breakBefore?, spaceBefore? (mm), blockClass? ('tight' = bez mezery pod blokem) }
 //   { type: 'table', className?, colgroup?, thead, rows: [ '<tr>…</tr>' ], keepTogether?, breakBefore?,
-//     widthGroup? (tabulky se stejnou hodnotou mají stejné šířky sloupců – např. všechny šachovnice) }
+//     widthGroup? (tabulky se stejnou hodnotou mají stejné šířky sloupců – např. všechny šachovnice),
+//     splitAt? ([indexy řádků] – tabulka se smí rozdělit jen před těmito řádky, např. škola + její hráči) }
 //   { type: 'break' }
 
 const PAGE_MM = { portrait: [210, 297], landscape: [297, 210] };
@@ -272,6 +273,13 @@ function measureBlocks(col, blocks) {
  * Rozloží změřené bloky do stránek a sloupců (čistý výpočet bez DOM).
  * gap = mezera pod každým blokem kromě posledního ve sloupci.
  */
+/** Konec skupiny řádků, která začíná řádkem start (podle splitAt), nebo konec tabulky. */
+function groupEnd(b, start) {
+  if (!b.splitAt) return Math.min(start + 1, b.rows.length);
+  const next = b.splitAt.filter((x) => x > start);
+  return next.length ? Math.min(...next) : b.rows.length;
+}
+
 export function pack(measured, { capFirst, capOther, columns, gap = 0 }) {
   const pages = [[]];
   let colIdx = 0;
@@ -295,7 +303,8 @@ export function pack(measured, { capFirst, capOther, columns, gap = 0 }) {
     if (!m) return 0;
     if (m.b.type === 'table') {
       if (m.b.keepTogether) return m.h;
-      return m.extra + m.theadH + (m.rowH[0] || 0);
+      const firstEnd = groupEnd(m.b, 0);
+      return m.extra + m.theadH + m.rowH.slice(0, firstEnd).reduce((a, c) => a + c, 0);
     }
     return m.h;
   };
@@ -340,6 +349,18 @@ export function pack(measured, { capFirst, capOther, columns, gap = 0 }) {
       while (end < b.rows.length && fits(sp + h + m.rowH[end])) {
         h += m.rowH[end];
         end += 1;
+      }
+      // Dělení jen na hranicích skupin řádků (splitAt); skupina vyšší než sloupec se rozdělí
+      if (b.splitAt && end < b.rows.length) {
+        const allowed = b.splitAt.filter((x) => x > start && x <= end);
+        const at = allowed.length ? Math.max(...allowed) : null;
+        if (at != null && at < end) {
+          for (let k = at; k < end; k++) h -= m.rowH[k];
+          end = at;
+        } else if (at == null && used > 0) {
+          // Skupina se sem nevejde celá – začne v dalším sloupci
+          newCol(); sp = 0; continue;
+        }
       }
       if (end === start) { h += m.rowH[start]; end = start + 1; } // řádek vyšší než sloupec
       curCol().push({ kind: 'table', b, from: start, to: end, space: sp > 0 });

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fixture } from './helpers.js';
 import {
   parseInfo, parseStartList, parseRanking, parsePairings, parseTeamList, parseBoardPairings, parseTeamPairings,
-  parseBoardList, detectPageKind,
+  parseBoardList, parseClubRanking, parseTeamComposition, detectPageKind,
 } from '../js/parser/index.js';
 import { TEMPLATES, getTemplate, templatesFor } from '../js/templates/index.js';
 import { buildDocument, autoRound, datasetsFor } from '../js/render.js';
@@ -911,5 +911,83 @@ describe('záhlaví a zápatí: nadpis na více řádků, loga, sponzoři, vodoz
     assert.equal(buildDocument({ tpl, info, data, profile: p, round: null }).layout.watermark, null);
     const slips = getTemplate('scoresheets');
     assert.equal(buildDocument({ tpl: slips, info, data: { ...data, pairings: { rounds: [] } }, profile: p, round: 1 }).layout.watermark, null);
+  });
+});
+
+describe('švýcar jednotlivců hodnocený do družstev: pořadí škol (art=72) a soupisky s výsledky (art=71)', () => {
+  const info = parseInfo(fixture('club-main'));
+  const ranking = parseClubRanking(fixture('club-ranking'));
+  const composition = parseTeamComposition(fixture('club-composition'));
+
+  test('parser: družstva se započítanými hráči, pomocná hodnocení; soupisky s 7 koly', () => {
+    assert.equal(detectPageKind(fixture('club-ranking')), 'clubRanking');
+    assert.equal(detectPageKind(fixture('club-composition')), 'teamComposition');
+    assert.equal(ranking.teams.length, 15);
+    const t = ranking.teams[0];
+    assert.deepEqual([t.rank, t.points, t.tb, t.players.length], [1, 21, ['1', '104', '113'], 4]);
+    assert.deepEqual(t.players.map((p) => p.no), [1, 2, 3, 4]);
+    assert.equal(t.players[1].points, 5.5);
+    assert.equal(ranking.tiebreaks.length, 3);
+    assert.match(ranking.tiebreaks[1].label, /Buchholz/);
+    assert.equal(composition.teams.length, 15);
+    assert.equal(composition.rounds, 7);
+    const p = composition.teams[1].players[0];
+    assert.deepEqual([p.board, p.rating, p.ratingNat, p.results, p.points, p.games], [1, 1635, 1355, ['1', '1', '1', '0', '1', '0', '1'], 5, 7]);
+    assert.equal(composition.teams[0].no, 1);
+    assert.doesNotMatch(composition.teams[0].name, /RtgAvg|\(/);
+  });
+
+  test('výstupy se nabízejí jen u švýcaru jednotlivců, který stránky má', () => {
+    assert.ok(getTemplate('club-ranking').supports(info));
+    assert.ok(getTemplate('team-composition').supports(info));
+    assert.ok(!getTemplate('club-ranking').supports(swiss.info));
+    assert.ok(!getTemplate('team-composition').supports(team.info));
+  });
+
+  test('pořadí škol: řádek školy + hráči, dělení jen na hranicích škol, počet míst, bez hráčů', () => {
+    const tpl = getTemplate('club-ranking');
+    const doc = buildDocument({ tpl, info, data: { clubRanking: ranking }, profile: defaultProfile(), round: null });
+    assert.equal(doc.title, 'Pořadí škol');
+    const tb = doc.blocks[0];
+    assert.match(tb.thead, />Škola \/ hráč</);
+    assert.match(tb.thead, />PH1<.*>PH2<.*>PH3</);
+    assert.equal(tb.rows.length, 15 + ranking.teams.reduce((n, t) => n + t.players.length, 0));
+    assert.ok(tb.splitAt.every((i) => /class="club-team"/.test(tb.rows[i])));
+    assert.match(tb.rows[1], /class="club-member"/);
+    assert.match(tb.rows[2], />5½</);
+    const p = defaultProfile();
+    p.templates['club-ranking'] = { options: { places: '3', players: false, heading: 'clubs' } };
+    const d2 = buildDocument({ tpl, info, data: { clubRanking: ranking }, profile: p, round: null });
+    assert.equal(d2.title, 'Pořadí klubů');
+    assert.equal(d2.blocks[0].rows.length, 3);
+    assert.match(d2.blocks[0].thead, />Klub</);
+  });
+
+  test('soupisky s výsledky: sloupce kol 1–7, každé družstvo zvlášť se stejnými šířkami', () => {
+    const tpl = getTemplate('team-composition');
+    const doc = buildDocument({ tpl, info, data: { teamComposition: composition }, profile: defaultProfile(), round: null });
+    assert.equal(doc.title, 'Soupisky škol s výsledky kol');
+    const tables = doc.blocks.filter((b) => b.type === 'table');
+    assert.equal(tables.length, 15);
+    assert.ok(tables.every((t) => t.widthGroup === 'teams' && t.keepTogether));
+    assert.match(tables[0].thead, />1<\/th><th[^>]*>2<.*>7<\/th><th[^>]*>Body</);
+    assert.match(tables[1].rows[0], />½<|>1</);
+    const titles = doc.blocks.filter((b) => /sec-title/.test(b.html || '')).map((b) => b.html.replace(/<small>.*<\/small>/, '').replace(/<[^>]+>/g, '').trim());
+    assert.equal(titles[0], `1. ${composition.teams[0].name}`);
+    const p = defaultProfile();
+    p.templates['team-composition'] = { options: { teamOrder: 'alpha', teamPerPage: true } };
+    const d2 = buildDocument({ tpl, info, data: { teamComposition: composition }, profile: p, round: null });
+    const t2 = d2.blocks.filter((b) => /sec-title/.test(b.html || '')).map((b) => b.html.replace(/<small>.*<\/small>/, '').replace(/<[^>]+>/g, '').trim());
+    assert.deepEqual(t2, [...t2].sort((a, b) => a.localeCompare(b, 'cs')));
+    assert.equal(d2.blocks.filter((b) => b.breakBefore).length, 14);
+  });
+
+  test('sazba: tabulka se splitAt se dělí jen před skupinou řádků', () => {
+    const rows = Array.from({ length: 10 }, (_, i) => `<tr><td>${i}</td></tr>`);
+    const m = [{ b: { type: 'table', rows, splitAt: [0, 4, 8] }, h: 110, theadH: 10, rowH: rows.map(() => 10), extra: 0 }];
+    // stránka pojme hlavičku + 5 řádků: bez splitAt by se dělilo po 5 řádcích (0–5, 5–10)
+    const pages = pack(m, { capFirst: 65, capOther: 65, columns: 1 });
+    const pieces = pages.flatMap((pg) => pg.flatMap((c) => c.map((it) => [it.from, it.to])));
+    assert.deepEqual(pieces, [[0, 4], [4, 8], [8, 10]]);
   });
 });

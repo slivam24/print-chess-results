@@ -289,6 +289,102 @@ export function parseBoardList(doc) {
 }
 
 // ---------------------------------------------------------------------------
+// Švýcar jednotlivců hodnocený i do družstev (přebory škol):
+//  art=72 „Team-Ranking“ – pořadí družstev (škol) a hráči, kteří se započítávají
+//  art=71 „Team-Composition with round-results“ – soupisky družstev s výsledky kol
+// ---------------------------------------------------------------------------
+
+const isTh = (c) => (c.tagName || '').toUpperCase() === 'TH';
+
+/** Řádek družstva v art=72: tučný řádek (CRng1b) s buňkami td a pořadím v první buňce. */
+function isClubTeamRow(tr) {
+  const cells = cellsOf(tr);
+  return isHeaderRow(tr) && cells.length >= 3 && !cells.some(isTh) && /^\d*$/.test(text(cells[0])) && !!text(cells[1]);
+}
+
+function isClubRankingTable(table) {
+  const rows = rowsOf(table);
+  return rows.some(isClubTeamRow) && rows.some((tr) => isDataRow(tr)) && !rows.some((tr) => cellsOf(tr).some(isTh));
+}
+
+export function parseClubRanking(doc) {
+  const table = dataTables(doc).find(isClubRankingTable);
+  const empty = { teams: [], tiebreaks: [], heading: null };
+  if (!table) return empty;
+  const teams = [];
+  let team = null;
+  let lastRank = null;
+  let tbCount = 0;
+  for (const tr of rowsOf(table)) {
+    const cells = cellsOf(tr);
+    const vals = cells.map(text);
+    if (isClubTeamRow(tr)) {
+      const rank = parseIntSafe(vals[0]);
+      if (rank != null) lastRank = rank;
+      team = { rank: rank ?? lastRank, tie: rank == null, name: vals[1], points: parseNum(vals[2]), tb: vals.slice(3), players: [] };
+      tbCount = Math.max(tbCount, team.tb.length);
+      teams.push(team);
+    } else if (team && isDataRow(tr) && cells.length >= 3) {
+      const n = nameCell(cells[1]);
+      team.players.push({ no: parseIntSafe(vals[0]), name: n.name || vals[1], startNo: n.snr ?? null, points: parseNum(vals[2]), tb: vals.slice(3) });
+    }
+  }
+  const legend = parseTiebreakLegend(doc);
+  return {
+    teams,
+    tiebreaks: Array.from({ length: tbCount }, (_, i) => ({ key: `TB${i + 1}`, label: legend[i] || '' })),
+    heading: 'Team-Ranking',
+  };
+}
+
+/** Sekce soupisky art=71: „1. ZŠ Palachova (RtgAvg:0, TB1: 0 / TB2: 0)“ → číslo a název družstva. */
+function compositionHeading(s) {
+  const t = String(s || '').replace(/ /g, ' ').trim();
+  const m = t.match(/^(\d+)\s*\.\s*(.+?)\s*(?:\((?:RtgAvg|Ø|Rtg)[^)]*\))?\s*$/i);
+  return m ? { no: Number(m[1]), name: m[2].trim() } : { no: null, name: t };
+}
+
+function isCompositionTable(table) {
+  const secs = splitTable(table).filter((sec) => sec.header && sec.heading);
+  if (!secs.length) return false;
+  const keys = mapHeader(secs[0].header).map((c) => c.key);
+  return keys.includes('board') && keys.includes('name') && keys.includes('xt') && /^\s*\d+\s*\./.test(secs[0].heading.replace(/ /g, ' '));
+}
+
+export function parseTeamComposition(doc) {
+  const table = dataTables(doc).find(isCompositionTable);
+  if (!table) return { teams: [], rounds: 0 };
+  const teams = [];
+  let rounds = 0;
+  for (const sec of splitTable(table)) {
+    if (!sec.header) continue;
+    const cols = mapHeader(sec.header);
+    rounds = Math.max(rounds, cols.filter((c) => c.key === 'xt').length);
+    const head = compositionHeading(sec.heading);
+    const players = [];
+    for (const tr of sec.rows) {
+      const r = readRow(tr, cols);
+      if (!r.name) continue;
+      players.push({
+        board: typeof r.board === 'number' ? r.board : parseIntSafe(r.board),
+        title: r.title || '',
+        name: r.name,
+        startNo: r.startNo ?? null,
+        rating: typeof r.rating === 'number' && r.rating > 0 ? r.rating : null,
+        ratingNat: typeof r.ratingNat === 'number' && r.ratingNat > 0 ? r.ratingNat : null,
+        fed: r.fed || '',
+        results: r.xt.map((x) => x ?? ''),
+        points: r.points ?? null,
+        games: typeof r.games === 'number' ? r.games : null,
+        ratingAvg: typeof r.ratingAvg === 'number' && r.ratingAvg > 0 ? r.ratingAvg : null,
+      });
+    }
+    teams.push({ no: head.no, name: head.name, players });
+  }
+  return { teams, rounds };
+}
+
+// ---------------------------------------------------------------------------
 // Los kola jednotlivců (art=2&rd=N). Kruhový systém vrací všechna kola najednou.
 // ---------------------------------------------------------------------------
 
@@ -559,6 +655,8 @@ export function parseBoardPairings(doc) {
 export function detectPageKind(doc) {
   const tables = dataTables(doc);
   if (tables.some(isBoardListTable)) return 'boardList';
+  if (tables.some(isClubRankingTable)) return 'clubRanking';
+  if (tables.some(isCompositionTable)) return 'teamComposition';
   for (const t of tables) {
     for (const sec of splitTable(t)) {
       if (!sec.header) continue;
