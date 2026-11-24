@@ -261,3 +261,5 @@ table.grid.club-ranking tbody tr.club-team td { font-weight: 700; background: #e
 table.grid.club-ranking tbody tr.club-member td { background: transparent; }
 table.club-ranking tr.club-member td.name { padding-left: 1.6em; }
 table.club-ranking tr.club-member td { font-size: .92em; }
+/* Hráči, kteří se do pořadí družstva nezapočítávají („všichni hráči družstva“) */
+table.club-ranking tr.club-extra td { color: var(--grey); font-weight: 400; }

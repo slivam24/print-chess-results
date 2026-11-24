@@ -206,10 +206,10 @@ test('záhlaví na 2 řádky s logy, sponzoři v zápatí a vodoznak', async (t)
 
 test('švýcar do družstev: pořadí škol a soupisky s výsledky kol', async (t) => {
   const { page, errors } = await openTournament(['club-main', 'club-ranking', 'club-composition']);
-  await checkAll(t, page, [['club-ranking', {}], ['club-ranking', { options: { players: false } }], ['team-composition', {}]]);
+  await checkAll(t, page, [['club-ranking', {}], ['club-ranking', { options: { players: 'none' } }], ['club-ranking', { options: { players: 'all' } }], ['team-composition', {}]]);
   // Pořadí škol: stránka (sloupec) vždy začíná řádkem školy – škola se neoddělí od svých hráčů
   for (const fontMode of ['fixed', 'max', 'page']) {
-    await render(page, 'club-ranking', { fontMode, options: { players: true, keepTogether: true } });
+    await render(page, 'club-ranking', { fontMode, options: { players: 'all', keepTogether: true } });
     const firsts = await page.evaluate(() => [...document.querySelectorAll('#pages .pg-col table.club-ranking')]
       .map((tb) => tb.tBodies[0].rows[0].className));
     assert.ok(firsts.length >= 1);
