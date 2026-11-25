@@ -263,3 +263,6 @@ table.club-ranking tr.club-member td.name { padding-left: 1.6em; }
 table.club-ranking tr.club-member td { font-size: .92em; }
 /* Hráči, kteří se do pořadí družstva nezapočítávají („všichni hráči družstva“) */
 table.club-ranking tr.club-extra td { color: var(--grey); font-weight: 400; }
+
+/* Sloupec „min.“ (jen tak široký, jak potřebuje obsah) se nezalamuje */
+table td.col-shrink, table th.col-shrink { white-space: nowrap; }

@@ -223,3 +223,39 @@ test('švýcar do družstev: pořadí škol a soupisky s výsledky kol', async (
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+test('šířky sloupců: zaškrtávátka min. a max.', async (t) => {
+  const { page, errors } = await openTournament(['swiss-main', 'swiss-pairings-r7', 'swiss-ranking-r6']);
+  /** Šířky sloupců (th) první tabulky podle klíče sloupce a zda se v nich něco zalomilo. */
+  const measure = (cols) => page.evaluate(async ({ cols }) => {
+    const cp = window.chessPrint;
+    cp.store.update((s) => { const p = s.profiles.find((x) => x.id === s.activeProfileId); p.templates.startlist = { orientation: 'portrait', fontMode: 'fixed', columns: cols }; }, { silent: true });
+    const before = cp.renders;
+    cp.selectTemplate('startlist');
+    while (cp.renders === before) await new Promise((r) => setTimeout(r, 20));
+    const table = document.querySelector('#pages table.grid');
+    const heads = [...table.tHead.rows[0].cells].map((c) => c.textContent.trim());
+    const w = (label) => table.tHead.rows[0].cells[heads.indexOf(label)].getBoundingClientRect().width;
+    const lineH = parseFloat(getComputedStyle(table.tBodies[0].rows[0].cells[0]).fontSize) * 1.6;
+    const wrapped = (label) => [...table.tBodies[0].rows].some((r) => r.cells[heads.indexOf(label)].getBoundingClientRect().height > lineH * 1.4);
+    const textW = (label) => Math.max(...[...table.rows].map((r) => { const rg = document.createRange(); rg.selectNodeContents(r.cells[heads.indexOf(label)]); return rg.getBoundingClientRect().width; }));
+    return { name: w('Jméno'), club: w('Klub'), clubWrapped: wrapped('Klub'), nameText: textW('Jméno'), clubText: textW('Klub') };
+  }, { cols });
+  const auto = await measure(null);
+  // max. u klubu: klub dostane přebytek, jméno se zúží na svůj nejdelší text a klub se nezalomí
+  const maxClub = await measure([{ key: 'club', on: true, fit: 'max' }]);
+  assert.ok(maxClub.club > auto.club, `klub ${auto.club} → ${maxClub.club}`);
+  assert.ok(maxClub.name < auto.name, `jméno ${auto.name} → ${maxClub.name}`);
+  assert.ok(maxClub.name < maxClub.nameText + 20, `jméno ${maxClub.name} px, text ${maxClub.nameText} px`);
+  assert.equal(maxClub.clubWrapped, false);
+  // min. u jména: jméno jen na šířku textu, přebytek dostane klub
+  const minName = await measure([{ key: 'name', on: true, fit: 'min' }]);
+  assert.ok(minName.name < minName.nameText + 20 && minName.club > auto.club);
+  // ruční šířka má přednost před min./max.
+  const fixed = await measure([{ key: 'name', on: true, fit: 'min', width: 80 }]);
+  assert.ok(fixed.name > minName.name * 1.5, `jméno s pevnou šířkou 80 mm: ${fixed.name} px (min. ${minName.name} px)`);
+  // nic se neořezává ani v ostatních režimech písma
+  await checkAll(t, page, [['startlist', { options: {} }]]);
+  assert.deepEqual(errors, []);
+  await page.close();
+});

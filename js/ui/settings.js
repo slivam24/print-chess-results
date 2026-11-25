@@ -529,7 +529,7 @@ export class SettingsPanel {
       const savedOf = (key) => (ts.columns || []).find((x) => x.key === key) || {};
       const current = () => cols.map((c) => {
         const sv = savedOf(c.key);
-        return { key: c.key, on: c.on, label: sv.label || '', width: sv.width ?? null, fontSize: sv.fontSize ?? null };
+        return { key: c.key, on: c.on, label: sv.label || '', width: sv.width ?? null, fontSize: sv.fontSize ?? null, fit: sv.fit || null };
       });
       const save = (list) => setT((t) => {
         t.columnsVersion = tpl.columnsVersion || 1;
@@ -539,6 +539,7 @@ export class SettingsPanel {
           ...(c.label ? { label: c.label } : {}),
           ...(parseColWidth(c.width) ? { width: parseColWidth(c.width).value } : {}),
           ...(Number(c.fontSize) > 0 ? { fontSize: Number(c.fontSize) } : {}),
+          ...(c.fit === 'min' || c.fit === 'max' ? { fit: c.fit } : {}),
         }));
       }, { rerenderPanel: true });
       const numInput = (i, prop, title, ph, min, max, step) => h('input', {
@@ -556,6 +557,8 @@ export class SettingsPanel {
       let dragFrom = null;
       ul.append(h('li', { class: 'col-head' },
         h('span', { style: { width: '18px' } }), h('span', { style: { width: '18px' } }), h('span', { class: 'c-label' }, 'Sloupec'),
+        h('span', { class: 'c-h-fit', title: 'Sloupec jen tak široký, jak potřebuje nejdelší text' }, 'min.'),
+        h('span', { class: 'c-h-fit', title: 'Sloupec dostane všechnu přebytečnou šířku' }, 'max.'),
         h('span', { class: 'c-h-label' }, 'Vlastní nadpis'), h('span', { class: 'c-h-num' }, 'Šířka mm/%'),
         h('span', { class: 'c-h-num' }, 'Písmo pt')));
       cols.forEach((c, i) => {
@@ -583,6 +586,15 @@ export class SettingsPanel {
           }, '⋮⋮'),
           h('input', { type: 'checkbox', checked: c.on, title: 'Zobrazit sloupec', onchange: (e) => { const l = current(); l[i].on = e.target.checked; save(l); } }),
           h('span', { class: 'c-label' }, describeColumn(tpl.columns.find((d) => d.key === c.key))),
+          ...['min', 'max'].map((fit) => h('input', {
+            type: 'checkbox', class: 'c-fit', checked: current()[i].fit === fit, disabled: !!current()[i].width,
+            'aria-label': `${fit === 'min' ? 'Minimální' : 'Maximální'} šířka sloupce ${describeColumn(tpl.columns.find((d) => d.key === c.key))}`,
+            title: current()[i].width
+              ? 'Sloupec má zadanou pevnou šířku'
+              : fit === 'min' ? 'Minimální šířka: sloupec jen tak široký, jak potřebuje nejdelší text (nezalomí se)'
+                : 'Maximální šířka: sloupec dostane všechnu přebytečnou šířku, ostatní sloupce se zúží na obsah',
+            onchange: (e) => { const l = current(); l[i].fit = e.target.checked ? fit : null; save(l); },
+          })),
           h('input', {
             type: 'text', class: 'c-in-label', value: savedOf(c.key).label || '', placeholder: c.label || '(bez nadpisu)', title: 'Vlastní nadpis sloupce',
             onchange: (e) => { const l = current(); l[i].label = e.target.value.trim(); save(l); },
@@ -601,7 +613,7 @@ export class SettingsPanel {
       });
       add(card,
         h('h3', {}, 'Sloupce'),
-        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, pořadí změníte přetažením za úchyt ⋮⋮. Vlastní nadpis, šířka a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Úzké sloupce (čísla, body, rating…) se samy přizpůsobí nejdelšímu textu včetně nadpisu, protějškové sloupce (bílý/černý, domácí/hosté) mají stejnou šířku. Šířku můžete zadat v mm (např. 12) nebo v procentech šířky tabulky (např. 10 %); zbylé místo dostanou sloupce se jmény.'),
+        h('p', { class: 'small muted' }, 'Zaškrtnutím sloupec zobrazíte, pořadí změníte přetažením za úchyt ⋮⋮. Vlastní nadpis, šířka a velikost písma (pt) jsou nepovinné – prázdné pole = automaticky. Úzké sloupce (čísla, body, rating…) se samy přizpůsobí nejdelšímu textu včetně nadpisu, protějškové sloupce (bílý/černý, domácí/hosté) mají stejnou šířku. Šířku můžete zadat v mm (např. 12) nebo v procentech šířky tabulky (např. 10 %); zbylé místo dostanou sloupce se jmény. Zaškrtávátko „min.“ zúží sloupec na jeho nejdelší text, „max.“ mu dá všechnu přebytečnou šířku (ostatní se zúží na obsah).'),
         ul,
         h('button', { class: 'btn small', type: 'button', style: { marginTop: '8px' }, onclick: () => setT((t) => { delete t.columns; delete t.columnsVersion; }, { rerenderPanel: true }) }, 'Obnovit výchozí sloupce'),
       );

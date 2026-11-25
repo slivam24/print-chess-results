@@ -112,6 +112,7 @@ export function resolveColumns(defs, saved) {
       customLabel: !!s.label,
       ...(w ? { width: w.css, userWidth: w.value } : {}),
       ...(fs ? { fontSize: fs } : {}),
+      ...(s.fit === 'min' || s.fit === 'max' ? { fit: s.fit } : {}),
     });
   }
   // Sloupce, které uložené nastavení nezná (přibyly v nové verzi), vložíme na jejich
@@ -126,7 +127,24 @@ export function resolveColumns(defs, saved) {
     out.splice(at, 0, { ...d, on: d.def !== false });
     seen.add(d.key);
   });
-  return out;
+  return applyColumnFit(out);
+}
+
+/**
+ * Šířka sloupce podle zaškrtávátek „min.“ / „max.“ (Nastavení → Výstup → Sloupce):
+ *  min. – sloupec jen tak široký, jak potřebuje nejdelší text (nezalomí se),
+ *  max. – sloupec dostane všechnu přebytečnou šířku; ostatní sloupce bez pevné šířky se pak
+ *         zúží na obsah (jinak by si přebytek rozdělily).
+ * Ručně zadaná šířka (mm / %) má přednost.
+ */
+export function applyColumnFit(cols) {
+  const anyMax = cols.some((c) => c.on !== false && c.fit === 'max' && !c.userWidth);
+  return cols.map((c) => {
+    if (c.userWidth) return c;
+    if (c.fit === 'max') return { ...c, width: null, grow: true };
+    if (c.fit === 'min' || (anyMax && !c.width)) return { ...c, width: null, shrink: true, cls: `${c.cls || ''} col-shrink`.trim() };
+    return c;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -213,11 +231,16 @@ function cellStyle(c) {
  * (výsledek) si nechají výchozí šířku jako nejmenší (data-min). Šířka zadaná uživatelem platí vždy.
  */
 export function colgroup(cols) {
-  if (!cols.some((c) => c.width)) return '';
+  if (!cols.some((c) => c.width || c.shrink)) return '';
   return `<colgroup>${cols.map((c) => {
     const attrs = [];
     if (c.width) attrs.push(`style="width:${c.width}"`);
     attrs.push(`data-key="${esc(c.key || '')}"`);
+    // „min.“: 1 % = co nejužší (podle obsahu); u tabulek s pevným rozložením šířku spočítá sazba
+    if (c.shrink) {
+      attrs.push('style="width:1%"', 'data-fit="1"');
+      return `<col ${attrs.join(' ')}>`;
+    }
     if (c.width && !c.userWidth && /em$/.test(c.width)) {
       attrs.push('data-fit="1"');
       if (/\b(write|res)\b/.test(c.cls || '')) attrs.push(`data-min="${parseFloat(c.width)}"`);
