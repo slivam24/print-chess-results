@@ -127,6 +127,9 @@ proměnnou nastavenou ve webovém rozhraní Cloudflare – měňte ji proto v re
    i vpravo a poděkování sponzorům s logy – obojí se vybírá z Obrázků, každé logo jde tisknout černobíle (výchozí)
    nebo barevně. **Stránka → Vodoznak**: obrázek z Obrázků světle přes celou stránku – viditelnost v %, černobíle
    nebo barevně, velikost; u jednotlivého výstupu ho jde vypnout.
+   **Nadpis jen pro jeden turnaj**: když profil sdílí více turnajů (např. tři kategorie najednou), nadpis a
+   podnadpis konkrétního turnaje nastavíte vlevo v kartě „1. Turnaj“ → „Nadpis pro tisk – jen tento turnaj“
+   (tlačítko rozdělí název z chess-results za čárkou na 2 řádky); ostatní turnaje se nezmění.
 4. **⚙ Nastavení → Stránka**: písmo, velikost, okraje (výchozí 5 mm), orientace, vzhled tabulek (mřížka jako Swiss-Manager / pruhy),
    formát jmen (výchozí `Novák Jindřich` jako ve Swiss-Manageru, dále `Novák, Jindřich`, `NOVÁK Jindřich`, …).
 5. Pro každý výstup zvlášť (**⚙ Nastavení → Výstup**, nebo tlačítko „Sloupce, písmo a orientace…“): které sloupce a v jakém pořadí (pořadí změníte přetažením za úchyt ⋮⋮),

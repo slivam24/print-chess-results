@@ -365,3 +365,42 @@ test('možnosti výstupu i v Nastavení → Výstup (mezera mezi zápasy rozpisu
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('chybová hláška bez textu „null“', async () => {
+  const { page, context } = await newApp();
+  // turnaj bez stránky losu: náhled losu skončí chybou stahování (síť je v testu zakázaná)
+  await page.evaluate(async (html) => { const cp = window.chessPrint; const t = cp.source.addManualHtml(html).tnr; await cp.loadTournament({ tnr: t }); cp.selectTemplate('pairings'); }, fixture('swiss-main'));
+  await page.waitForSelector('#warnings.error');
+  assert.doesNotMatch(await page.locator('#warnings').innerText(), /null/);
+  await context.close();
+});
+
+test('nadpis jen pro jeden turnaj: ostatní turnaje se stejným profilem se nezmění', async () => {
+  const { page, errors, context } = await newApp();
+  const swiss = await open(page, SWISS);
+  await open(page, RR);
+  const rrTitle = await page.evaluate(() => window.chessPrint.session.rootInfo.title);
+  // zpět na švýcar a napsat dvouřádkový nadpis (náhled se mezitím překresluje – psaní se nesmí přerušit)
+  await rendered(page, () => page.locator('#tabs .tab-main').nth(0).click());
+  assert.equal(await page.evaluate(() => window.chessPrint.session.tnr), swiss);
+  await page.locator('#tournament-heading summary').click();
+  const ta = page.locator('#tournament-heading textarea').first();
+  await ta.click();
+  await page.keyboard.type('Šachový festival 2026');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Vršovický open', { delay: 60 });
+  assert.equal(await ta.inputValue(), 'Šachový festival 2026\nVršovický open');
+  await page.waitForFunction(() => document.querySelectorAll('#pages .page:first-child .hd-title-line').length === 2, null, { timeout: 10000 });
+  assert.deepEqual(await page.locator('#pages .page:first-child .hd-title-line').allInnerTexts(), ['Šachový festival 2026', 'Vršovický open']);
+  assert.match(await page.locator('#tournament-heading summary').innerText(), /vlastní/);
+  // druhý turnaj (stejný profil): nadpis z profilu = název z chess-results
+  await rendered(page, () => page.locator('#tabs .tab-main').nth(1).click());
+  assert.equal(await page.locator('#pages .page:first-child .hd-title').innerText(), rrTitle);
+  assert.equal(await page.locator('#tournament-heading textarea').first().inputValue(), '');
+  // zpět: vlastní nadpis zůstal
+  await rendered(page, () => page.locator('#tabs .tab-main').nth(0).click());
+  assert.equal(await page.locator('#tournament-heading textarea').first().inputValue(), 'Šachový festival 2026\nVršovický open');
+  assert.equal(await page.locator('#pages .page:first-child .hd-title-line').count(), 2);
+  assert.deepEqual(errors, []);
+  await context.close();
+});

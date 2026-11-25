@@ -29,6 +29,7 @@ export const els = {
   btnLoad: $('#btn-load'),
   recent: $('#recent'),
   tinfo: $('#tournament-info'),
+  theading: $('#tournament-heading'),
   tplList: $('#template-list'),
   options: $('#options'),
   btnPrint: $('#btn-print'),
@@ -63,7 +64,8 @@ export function showWarnings(list, kind = '') {
     if (toggle) toggle.textContent = warningsOpen ? '▴ sbalit' : `▾ ${list.length > 1 ? `zobrazit vše (${list.length})` : 'zobrazit celé'}`;
   };
   const toggle = collapsible ? h('button', { type: 'button', class: 'linklike warn-toggle', onclick: () => { warningsOpen = !warningsOpen; update(); } }) : null;
-  els.warnings.append(h('div', { class: 'warn-list' }, items), toggle);
+  els.warnings.append(h('div', { class: 'warn-list' }, items));
+  if (toggle) els.warnings.append(toggle); // append(null) by vypsal text „null“
   update();
   els.warnings.hidden = false;
   // Jediné krátké upozornění se vejde celé – tlačítko „zobrazit“ není potřeba

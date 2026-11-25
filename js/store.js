@@ -108,6 +108,9 @@ export function defaultState() {
     // Knihovna obrázků (loga, sponzoři, vodoznak) – společná pro všechny profily:
     // [{ id, name, src (data URL) }]; profily na obrázky odkazují přes id
     images: [],
+    // Nastavení jednotlivých turnajů (podle čísla turnaje), přepíše profil jen pro ten turnaj:
+    // { [tnr]: { title, subtitle } } – např. dvouřádkový nadpis jednoho turnaje
+    tournaments: {},
     // tabs: otevřené turnaje v horní liště – [{ tnr, title, profileId, templateId, round, group }]
     ui: DEFAULT_UI(),
   };
@@ -216,6 +219,31 @@ export function resolveImages(profile, images) {
   };
 }
 
+/** Nastavení turnajů: jen čísla turnajů a textové hodnoty (nadpis, podnadpis). */
+function normalizeTournaments(raw) {
+  const out = {};
+  if (!isObj(raw)) return out;
+  for (const [k, v] of Object.entries(raw)) {
+    if (!/^\d+$/.test(k) || !isObj(v)) continue;
+    const t = {};
+    for (const f of ['title', 'subtitle']) if (typeof v[f] === 'string' && v[f].trim()) t[f] = v[f].slice(0, 500);
+    if (Object.keys(t).length) out[k] = t;
+  }
+  return out;
+}
+
+/**
+ * Profil s nadpisem / podnadpisem konkrétního turnaje (když je u turnaje vyplněný),
+ * jinak profil beze změny.
+ */
+export function withTournamentHeader(profile, t) {
+  if (!t || (!t.title && !t.subtitle)) return profile;
+  return {
+    ...profile,
+    header: { ...profile.header, ...(t.title ? { title: t.title } : {}), ...(t.subtitle ? { subtitle: t.subtitle } : {}) },
+  };
+}
+
 /** Ověří a doplní stav (z localStorage nebo importu). */
 export function normalizeState(raw) {
   if (!isObj(raw)) throw new Error('Soubor neobsahuje nastavení appky.');
@@ -259,6 +287,7 @@ export function normalizeState(raw) {
       ? raw.recent.filter((r) => r && Number.isFinite(Number(r.tnr))).map((r) => ({ tnr: Number(r.tnr), title: String(r.title || ''), at: r.at || null })).slice(0, MAX_RECENT)
       : [],
     ui: deepFill(raw.ui, DEFAULT_UI()),
+    tournaments: normalizeTournaments(raw.tournaments),
   };
   s.images = libraryFor(s.profiles, raw.images);
   const ids = new Set();
@@ -307,6 +336,25 @@ export class Store {
         console.warn('Nastavení se nepodařilo uložit', e2);
       }
     }
+  }
+
+  // --- Nastavení jednotlivých turnajů --------------------------------------
+
+  /** Nadpis a podnadpis jen pro daný turnaj ({ title?, subtitle? }), nebo null. */
+  tournamentHeader(tnr) {
+    return (tnr != null && this.state.tournaments && this.state.tournaments[String(tnr)]) || null;
+  }
+
+  /** Uloží nadpis / podnadpis turnaje; prázdná hodnota = podle profilu. */
+  setTournamentHeader(tnr, patch) {
+    if (tnr == null) return;
+    this.update((s) => {
+      s.tournaments = s.tournaments || {};
+      const cur = { ...(s.tournaments[String(tnr)] || {}), ...patch };
+      for (const k of Object.keys(cur)) if (typeof cur[k] !== 'string' || !cur[k].trim()) delete cur[k];
+      if (Object.keys(cur).length) s.tournaments[String(tnr)] = cur;
+      else delete s.tournaments[String(tnr)];
+    }, { silent: true });
   }
 
   // --- Knihovna obrázků --------------------------------------------------

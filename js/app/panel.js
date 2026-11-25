@@ -5,7 +5,7 @@ import { store, source, session, els, updateTemplateSettings } from './context.j
 import { templateSettings } from '../store.js';
 import { getTemplate, templatesFor } from '../templates/index.js';
 import { autoRound, headerMode } from '../render.js';
-import { fmtDateTime, fmtWhen } from '../templates/common.js';
+import { fmtDateTime, fmtWhen, fillVars, infoVars, splitTitle } from '../templates/common.js';
 import { h, clear, $, options } from '../ui/dom.js';
 import { optionControls } from '../ui/options.js';
 import { loadTournament, refreshData } from './loader.js';
@@ -111,6 +111,7 @@ export function renderTournamentInfo() {
       onchange: (e) => {
         session.group = e.target.value === 'all' ? 'all' : Number(e.target.value);
         renderOptions();
+        renderTournamentHeading();
         refreshPreview();
       },
     }, options([...info.groups.map((g) => [g.tnr, g.name + (g.tnr === session.tnr ? ' (zadaný)' : '')]), ['all', `Všechny skupiny (${info.groups.length})`]], session.group));
@@ -125,6 +126,65 @@ export function renderTournamentInfo() {
       onclick: () => refreshData(),
     }, '⟳ Aktualizovat data'),
     h('a', { class: 'small', href: `https://chess-results.com/tnr${session.tnr}.aspx?lan=5`, target: '_blank', rel: 'noopener' }, 'otevřít na chess-results ↗')));
+}
+
+// ---------------------------------------------------------------------------
+// Nadpis jen pro tento turnaj (přepíše nadpis z profilu – profil sdílí více turnajů)
+// ---------------------------------------------------------------------------
+
+/** Turnaj (tnr), jehož nadpis se upravuje: zvolená skupina, nebo zadaný turnaj. */
+function headingTnr() {
+  if (!session.rootInfo || session.group === 'all') return null;
+  return session.group || session.tnr;
+}
+
+
+/**
+ * Karta „Nadpis pro tisk – jen tento turnaj“ pod informacemi o turnaji. Samostatný prvek (ne součást
+ * renderTournamentInfo), aby se při psaní nepřekresloval po každém náhledu.
+ */
+export function renderTournamentHeading() {
+  const box = els.theading;
+  if (!box) return;
+  clear(box);
+  const info = session.rootInfo;
+  if (!info) { box.hidden = true; return; }
+  box.hidden = false;
+  const tnr = headingTnr();
+  if (tnr == null) {
+    box.append(h('p', { class: 'small muted' }, 'Nadpis pro tisk jen pro jeden turnaj nastavíte, když výše vyberete konkrétní skupinu.'));
+    return;
+  }
+  const tInfo = source.peek(tnr, 'main')?.info || info;
+  const own = store.tournamentHeader(tnr) || {};
+  const hd = store.profile.header || {};
+  const vars = infoVars(tInfo);
+  const fromProfile = (v) => fillVars(v || '', vars);
+  const set = (patch) => { store.setTournamentHeader(tnr, patch); mark(); scheduleRender(); };
+  const titleEl = h('textarea', {
+    rows: 2, value: own.title || '', placeholder: fromProfile(hd.title ?? '{turnaj}') || '{turnaj}', 'aria-label': 'Nadpis jen pro tento turnaj',
+    oninput: (e) => set({ title: e.target.value }),
+  });
+  const subEl = h('textarea', {
+    rows: 1, value: own.subtitle || '', placeholder: fromProfile(hd.subtitle) || '(bez podnadpisu)', 'aria-label': 'Podnadpis jen pro tento turnaj',
+    oninput: (e) => set({ subtitle: e.target.value }),
+  });
+  const split = splitTitle(tInfo.title);
+  const details = h('details', { class: 'theading-box', open: !!(own.title || own.subtitle) },
+    h('summary', {}, 'Nadpis pro tisk – jen tento turnaj', h('span', { class: 'theading-mark' })),
+    h('label', { class: 'field' }, 'Nadpis (Enter = další řádek)', titleEl),
+    split !== String(tInfo.title || '').trim() ? h('button', {
+      type: 'button', class: 'btn small', title: `Vyplní: ${split.replace('\n', ' ⏎ ')}`,
+      onclick: () => { titleEl.value = split; set({ title: split }); titleEl.focus(); },
+    }, 'Rozdělit název z chess-results na 2 řádky') : null,
+    h('label', { class: 'field' }, 'Podnadpis', subEl),
+    h('p', { class: 'small muted' }, `Prázdné = podle profilu „${store.profile.name}“ (šedě). Platí jen pro tento turnaj ve všech výstupech a pamatuje si ho i po zavření záložky. Ostatní turnaje se stejným profilem to nezmění.`));
+  const mark = () => {
+    const t = store.tournamentHeader(tnr);
+    details.querySelector('.theading-mark').textContent = t ? ' • vlastní' : '';
+  };
+  box.append(details);
+  mark();
 }
 
 // ---------------------------------------------------------------------------

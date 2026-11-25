@@ -1,7 +1,7 @@
 // Náhled: stažení dat pro výstup, sestavení dokumentu, sazba stránek a zvětšení náhledu.
 
 import { store, source, session, els, setStatus, showWarnings } from './context.js';
-import { templateSettings } from '../store.js';
+import { templateSettings, withTournamentHeader } from '../store.js';
 import { DATASETS } from '../source.js';
 import { buildDocument, autoRound, datasetsFor } from '../render.js';
 import { layoutDocument, pageRule } from '../layout.js';
@@ -142,7 +142,8 @@ export async function refreshPreview({ fresh = false } = {}) {
       const data = await loadDatasets(tnr, info, tpl, round, ts.options, { fresh });
       const checkData = await loadCheckData(tnr, info, tpl, round, data, { fresh });
       if (seq !== session.renderSeq) return null;
-      const doc = buildDocument({ tpl, info, data, profile, round, qr });
+      // Nadpis / podnadpis jen pro tento turnaj (karta „1. Turnaj“) přepíše profil
+      const doc = buildDocument({ tpl, info, data, profile: withTournamentHeader(profile, store.tournamentHeader(tnr)), round, qr });
       doc.groupName = tnrs.length > 1 ? groupName(tnr) : null;
       doc.round = round;
       doc.tnr = tnr;

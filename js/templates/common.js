@@ -239,6 +239,13 @@ export function bodyRow(cols, item, ctx, trClass = '') {
   return `<tr${trClass ? ` class="${trClass}"` : ''}>${cols.map((c) => `<td class="${c.cls || ''}"${cellStyle(c)}>${c.get(item, ctx) ?? ''}</td>`).join('')}</tr>`;
 }
 
+/** Rozdělí název z chess-results za poslední čárkou: „Přebor škol 2026, 2. stupeň“ → 2 řádky. */
+export function splitTitle(title) {
+  const t = String(title || '').trim();
+  const i = t.lastIndexOf(',');
+  return i > 0 && i < t.length - 1 ? `${t.slice(0, i).trim()}\n${t.slice(i + 1).trim()}` : t;
+}
+
 /** Nahrazení proměnných v textech záhlaví/zápatí. */
 export function fillVars(text, vars) {
   return String(text ?? '')
