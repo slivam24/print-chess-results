@@ -5,7 +5,7 @@ import { parseTournamentInput, buildUrl, DATASETS, FetchError } from '../source.
 import { getTemplate } from '../templates/index.js';
 import { h, $ } from '../ui/dom.js';
 import { tabList, syncTab, applyTab, addTab, renderTabs, saveSnapshot } from './tabs.js';
-import { visibleTemplates, renderRecent, renderTournamentInfo, renderTemplateList, renderOptions } from './panel.js';
+import { visibleTemplates, renderRecent, renderTournamentInfo, renderTournamentHeading, renderTemplateList, renderOptions } from './panel.js';
 import { refreshPreview, targetTnrs } from './preview.js';
 
 export async function loadTournament(input, { fresh = false, fromSnapshot = false } = {}) {
@@ -59,6 +59,7 @@ export async function loadTournament(input, { fresh = false, fromSnapshot = fals
     if (!fromSnapshot) store.addRecent(parsed.tnr, info.title);
     els.input.value = String(parsed.tnr);
     renderTournamentInfo();
+    renderTournamentHeading();
     renderTemplateList();
     syncTab();
     renderTabs();

@@ -5,7 +5,7 @@ import { getTemplate } from '../templates/index.js';
 import { fmtDateTime } from '../templates/common.js';
 import { h, clear, $ } from '../ui/dom.js';
 import { loadTournament } from './loader.js';
-import { renderProfileSelect, renderTournamentInfo, renderTemplateList, renderOptions, renderRecent } from './panel.js';
+import { renderProfileSelect, renderTournamentInfo, renderTournamentHeading, renderTemplateList, renderOptions, renderRecent } from './panel.js';
 import { refreshSettings } from './settingsHost.js';
 import { renderPrintMark } from './printing.js';
 
@@ -105,6 +105,7 @@ export function showEmpty() {
   setStatus('');
   showWarnings([]);
   renderTournamentInfo();
+  renderTournamentHeading();
   renderTemplateList();
   renderOptions();
   renderTabs();

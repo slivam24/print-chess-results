@@ -14,7 +14,7 @@ import { checkForUpdate } from './ui/update.js';
 import { debounce } from './ui/dom.js';
 import { loadTournament } from './app/loader.js';
 import { tabList, syncTab, renderTabs, switchTab } from './app/tabs.js';
-import { renderProfileSelect, renderRecent, renderTemplateList, selectTemplate } from './app/panel.js';
+import { renderProfileSelect, renderRecent, renderTemplateList, renderTournamentHeading, selectTemplate } from './app/panel.js';
 import { refreshPreview, scheduleRender, applyZoom } from './app/preview.js';
 import { openSettings, toggleSettings, refreshSettings } from './app/settingsHost.js';
 import { setupSplitter, setupShortcuts, setupManualDialog } from './app/controls.js';
@@ -33,6 +33,7 @@ function init() {
     syncTab();
     renderTabs();
     renderTemplateList();
+    renderTournamentHeading(); // šedá nápověda „podle profilu“
     refreshSettings();
     scheduleRender();
   });

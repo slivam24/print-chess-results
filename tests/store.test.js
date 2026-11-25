@@ -168,3 +168,27 @@ test('přednastavené profily: při prvním spuštění a doplnění chybějíc�
   assert.equal(a.state.profiles.length, 3);
 });
 
+
+test('nadpis jen pro jeden turnaj: přepíše profil jen u toho turnaje, prázdné = podle profilu', async () => {
+  const { withTournamentHeader, normalizeState } = await import('../js/store.js');
+  const { splitTitle } = await import('../js/templates/common.js');
+  const a = computer();
+  a.setTournamentHeader(111, { title: 'Okresní kolo přeboru škol\n2. stupeň ZŠ' });
+  assert.deepEqual(a.tournamentHeader(111), { title: 'Okresní kolo přeboru škol\n2. stupeň ZŠ' });
+  assert.equal(a.tournamentHeader(222), null);
+  const p = a.profile;
+  assert.equal(withTournamentHeader(p, a.tournamentHeader(111)).header.title, 'Okresní kolo přeboru škol\n2. stupeň ZŠ');
+  assert.equal(withTournamentHeader(p, a.tournamentHeader(111)).header.subtitle, p.header.subtitle); // podnadpis z profilu
+  assert.equal(withTournamentHeader(p, a.tournamentHeader(222)), p);
+  a.setTournamentHeader(111, { subtitle: 'Vzorov' });
+  assert.deepEqual(a.tournamentHeader(111), { title: 'Okresní kolo přeboru škol\n2. stupeň ZŠ', subtitle: 'Vzorov' });
+  a.setTournamentHeader(111, { title: '  ', subtitle: '' });
+  assert.equal(a.tournamentHeader(111), null); // vše prázdné → podle profilu
+  // pamatuje se a projde zálohou; nesmysly se zahodí
+  a.setTournamentHeader(333, { title: 'X' });
+  a.flush();
+  const s = normalizeState({ ...JSON.parse(a.exportJson()), tournaments: { ...a.state.tournaments, abc: { title: 'x' }, 444: { title: 5 } } });
+  assert.deepEqual(s.tournaments, { 333: { title: 'X' } });
+  assert.equal(splitTitle('Okresní kolo přeboru škol v ŠACHU 2026 Chlumec, 2. stupeň ZŠ'), 'Okresní kolo přeboru škol v ŠACHU 2026 Chlumec\n2. stupeň ZŠ');
+  assert.equal(splitTitle('Bez čárky'), 'Bez čárky');
+});
