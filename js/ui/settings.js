@@ -433,6 +433,11 @@ export class SettingsPanel {
       text('Nadpis (Enter = další řádek)', 'title', 'header', { area: true, rows: 2, ph: '{turnaj}' }),
       h('p', { class: 'help' }, 'Nadpis může mít více řádků – např. 1. řádek název festivalu a 2. řádek „{turnaj}“, nebo „Okresní kolo přeboru škol“ a pod tím „kategorie A“ (případně „{skupina}“ = název skupiny z chess-results). Každý profil si nadpis upraví podle sebe.'),
       h('p', { class: 'help' }, h('b', {}, 'Jen pro jeden turnaj: '), 'nadpis a podnadpis platné jen pro konkrétní turnaj (ostatní turnaje se stejným profilem se nezmění) nastavíte vlevo v kartě „1. Turnaj“ → „Nadpis pro tisk – jen tento turnaj“.'),
+      field('Velikost nadpisu turnaje (pt) – prázdné = podle písma výstupu', h('input', {
+        type: 'number', min: 6, max: 60, step: 0.5, value: hd.fontSize ?? '', placeholder: 'podle výstupu',
+        oninput: (e) => this.edit((pp) => { pp.header.fontSize = e.target.value === '' ? null : clampNum(e.target.value, 6, 60, null); }),
+      }), true),
+      h('p', { class: 'help' }, 'Pevná velikost: záhlaví (nadpis, podnadpis i název listiny) bude stejně velké ve všech výstupech, nezávisle na písmu tabulky („co největší“, „1 strana A4“). Např. 16 pt.'),
       field('Velikost řádků nadpisu', h('select', { onchange: (e) => this.edit((pp) => { pp.header.titleLines = e.target.value; }) },
         options([['same', 'všechny řádky stejně velké'], ['second-smaller', '2. řádek menší'], ['first-smaller', '1. řádek menší']], hd.titleLines || 'same'))),
       text('Podnadpis', 'subtitle', 'header', { area: true, ph: '{misto}, {datum}' }),

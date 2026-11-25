@@ -42,6 +42,18 @@ function qrFor(qr, profile, tpl, info, round) {
   return qr(publicUrl(info.tnr, art, rd), hd.qrSize);
 }
 
+/**
+ * Pevná velikost záhlaví (Nastavení → Záhlaví a zápatí → Velikost nadpisu): záhlaví dostane vlastní
+ * velikost písma, takže nadpis turnaje, podnadpis i název výstupu zůstanou stejné ve všech listinách
+ * bez ohledu na písmo tabulky („co největší“, „1 strana A4“). Velikost je velikost nadpisu turnaje.
+ */
+export function fixedHeaderSize(html, hd = {}) {
+  const pt = Number(hd.fontSize);
+  if (!html || !(pt > 0)) return html;
+  const ratio = hd.align === 'left' ? 1.55 : 1.7; // .hd-title / .hd-bar.center .hd-title v print.css
+  return `<div class="hd-fixed" style="font-size:${(pt / ratio).toFixed(2)}pt">${html}</div>`;
+}
+
 /** Které kolo použít, když uživatel zvolí „automaticky“. */
 export function autoRound(tpl, info, data = {}) {
   if (!tpl.roundMode) return null;
@@ -89,6 +101,7 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     : renderHeader(hMode === 'title' ? { ...profile, header: { ...profile.header, enabled: false } } : profile, info, {
       outputTitle: out.title, outputSub: out.sub, vars, qr: qrFor(qr, profile, tpl, info, round),
     });
+  const header = fixedHeaderSize(headerHtml, profile.header);
   const footerFn = ('footer' in extra && extra.footer === null) || ts.footer === 'off'
     ? null
     : renderFooter(ts.footer === 'on' ? { ...profile, footer: { ...profile.footer, enabled: true } } : profile, info, { vars });
@@ -99,7 +112,7 @@ export function buildDocument({ tpl, info, data, profile, round, optionsOverride
     fontSize: ts.fontSize || profile.page.fontSize,
     columns: ts.pageColumns || 1,
     rowHeight: ts.rowHeight,
-    header: headerHtml,
+    header,
     headerEveryPage: hMode === 'every',
     footer: footerFn,
     // Vodoznak z profilu (Nastavení → Stránka); výstup ho může vypnout, lístky k rozstříhání ho nemají

@@ -46,6 +46,9 @@ export function defaultProfile(name = 'Výchozí') {
       text: '',
       // Velikost řádků víceřádkového nadpisu: 'same' | 'second-smaller' | 'first-smaller'
       titleLines: 'same',
+      // Pevná velikost nadpisu turnaje v pt (null = podle písma výstupu – záhlaví se pak mění
+      // s velikostí písma každé listiny); podnadpis i název výstupu se zvětší / zmenší s ním
+      fontSize: null,
       // Loga v záhlaví (turnaj, pořadatel, svaz): [{ img (id obrázku z knihovny), position: 'left' | 'right', height (mm), gray (černobíle) }]
       logos: [],
       everyPage: false,
@@ -154,6 +157,7 @@ export function normalizeProfile(p) {
   delete hd.logoHeight;
   delete hd.logoPosition;
   // gray: tisknout černobíle (výchozí – většina turnajů se tiskne na černobílé tiskárně)
+  hd.fontSize = Number(hd.fontSize) >= 6 && Number(hd.fontSize) <= 60 ? Number(hd.fontSize) : null;
   hd.logos = logos.filter(validRef).map((l) => ({ ...refOf(l), height: mm(l.height, 5, 60, 16), position: l.position === 'right' ? 'right' : 'left', gray: l.gray !== false }));
   const ft = out.footer;
   ft.sponsors = (Array.isArray(ft.sponsors) ? ft.sponsors : []).filter(validRef).map((l) => ({ ...refOf(l), height: mm(l.height, 4, 40, 10), gray: l.gray !== false }));
