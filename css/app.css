@@ -227,13 +227,15 @@ kbd { font: 11px monospace; padding: 1px 4px; border: 1px solid var(--line); bor
 .col-editor li.off .c-label { color: var(--muted); text-decoration: line-through; }
 .col-editor .c-label { flex: 1; }
 .col-editor input[type="text"] { padding: 2px 6px; font-size: 13px; }
-.col-editor .c-in-label { width: 9em; }
+.col-editor input.c-in-label { width: 9em; }
 .col-editor input.c-in-width { width: 4.6em; padding: 2px 4px; }
 .col-editor input[type="number"] { width: 4.6em; padding: 2px 4px; font-size: 13px; }
 .col-editor li.col-head { font-size: 11px; color: var(--muted); background: #f7f8fa; }
-.col-editor .c-h-label { width: 9em; }
-.col-editor .c-h-num { width: 4.6em; }
+.col-editor .c-h-label { width: 117px; flex: none; } /* = 9em při písmu 13 px (pole pro nadpis) */
+.col-editor .c-h-num { width: 60px; flex: none; }   /* = 4,6em při písmu 13 px */
 .col-editor .c-h-btn { width: 52px; }
+.col-editor .c-h-fit { width: 26px; text-align: center; flex: none; }
+.col-editor input.c-fit { width: 26px; flex: none; margin: 0; }
 .margins { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
 .margins label { font-size: 12px; display: flex; flex-direction: column; }
 .margins input { width: 100%; }

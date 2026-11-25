@@ -1016,3 +1016,26 @@ describe('švýcar jednotlivců hodnocený do družstev: pořadí škol (art=72)
     assert.deepEqual(pieces, [[0, 4], [4, 8], [8, 10]]);
   });
 });
+
+test('šířky sloupců min. / max.: zúžení na obsah, přebytek sloupci „max.“, ruční šířka má přednost', async () => {
+  const { colgroup } = await import('../js/templates/common.js');
+  const defs = [
+    { key: 'no', label: 'č.', cls: 'c num', width: '2.6em', get: () => '' },
+    { key: 'name', label: 'Jméno', cls: 'name', get: () => '' },
+    { key: 'club', label: 'Klub', cls: 'club', get: () => '' },
+  ];
+  const by = (cols) => Object.fromEntries(cols.map((c) => [c.key, c]));
+  let c = by(resolveColumns(defs, [{ key: 'club', fit: 'max' }]));
+  assert.equal(c.club.grow, true);
+  assert.equal(c.name.shrink, true); // bez pevné šířky → zúží se na obsah
+  assert.match(c.name.cls, /col-shrink/);
+  assert.equal(c.no.width, '2.6em'); // úzký sloupec s výchozí šířkou zůstává
+  assert.match(colgroup(Object.values(c)), /data-key="name" style="width:1%" data-fit="1"/);
+  c = by(resolveColumns(defs, [{ key: 'name', fit: 'min' }]));
+  assert.equal(c.name.shrink, true);
+  assert.equal(c.club.shrink, undefined); // bez „max.“ si přebytek rozdělí ostatní
+  c = by(resolveColumns(defs, [{ key: 'name', fit: 'min', width: 50 }, { key: 'club', fit: 'max' }]));
+  assert.equal(c.name.shrink, undefined);
+  assert.equal(c.name.userWidth, 50);
+  assert.equal(by(resolveColumns(defs, [{ key: 'name', fit: 'nesmysl' }])).name.fit, undefined);
+});
