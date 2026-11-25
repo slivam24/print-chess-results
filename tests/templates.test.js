@@ -1039,3 +1039,18 @@ test('šířky sloupců min. / max.: zúžení na obsah, přebytek sloupci „ma
   assert.equal(c.name.userWidth, 50);
   assert.equal(by(resolveColumns(defs, [{ key: 'name', fit: 'nesmysl' }])).name.fit, undefined);
 });
+
+test('pevná velikost záhlaví: nadpis turnaje v zadaných pt, nezávisle na písmu výstupu', async () => {
+  const { fixedHeaderSize } = await import('../js/render.js');
+  const p = defaultProfile();
+  const tpl = getTemplate('startlist');
+  const plain = buildDocument({ tpl, info: swiss.info, data: swiss.data, profile: p, round: null }).layout.header;
+  assert.doesNotMatch(plain, /hd-fixed/);
+  p.header.fontSize = 15.5;
+  p.header.align = 'left';
+  const hd = buildDocument({ tpl, info: swiss.info, data: swiss.data, profile: p, round: null }).layout.header;
+  assert.match(hd, /^<div class="hd-fixed" style="font-size:10\.00pt">/); // nadpis = 1,55 × 10 pt = 15,5 pt
+  assert.match(fixedHeaderSize('<b>x</b>', { fontSize: 17, align: 'center' }), /font-size:10\.00pt/);
+  assert.equal(fixedHeaderSize(null, { fontSize: 17 }), null);
+  assert.equal(fixedHeaderSize('<b>x</b>', {}), '<b>x</b>');
+});

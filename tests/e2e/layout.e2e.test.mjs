@@ -259,3 +259,26 @@ test('šířky sloupců: zaškrtávátka min. a max.', async (t) => {
   assert.deepEqual(errors, []);
   await page.close();
 });
+
+test('pevná velikost záhlaví: stejný nadpis ve všech režimech písma', async () => {
+  const { page, errors } = await openTournament(['swiss-main', 'swiss-pairings-r7', 'swiss-ranking-r6']);
+  const sizes = async (fontSize) => {
+    await page.evaluate((fs) => window.chessPrint.store.update((s) => { s.profiles.find((p) => p.id === s.activeProfileId).header.fontSize = fs; }, { silent: true }), fontSize);
+    const out = [];
+    for (const [tplId, fontMode] of [['startlist', 'fixed'], ['startlist', 'max'], ['ranking', 'page'], ['pairings', 'max']]) {
+      await render(page, tplId, { fontMode, round: tplId === 'pairings' ? 7 : 'auto' });
+      out.push(await page.evaluate(() => {
+        const pg = document.querySelector('#pages .page');
+        const z = pg.getBoundingClientRect().width / pg.offsetWidth; // zmenšení náhledu
+        return Math.round(document.querySelector('#pages .hd-title').getBoundingClientRect().height / z);
+      }));
+    }
+    return out;
+  };
+  const free = await sizes(null);
+  assert.ok(new Set(free).size > 1, `bez pevné velikosti se záhlaví mění: ${free}`);
+  const fixed = await sizes(16);
+  assert.equal(new Set(fixed).size, 1, `pevná velikost: ${fixed}`);
+  assert.deepEqual(errors, []);
+  await page.close();
+});
