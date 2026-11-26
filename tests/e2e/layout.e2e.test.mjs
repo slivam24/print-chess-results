@@ -215,6 +215,12 @@ test('švýcar do družstev: pořadí škol a soupisky s výsledky kol', async (
     assert.ok(firsts.length >= 1);
     assert.deepEqual(firsts.filter((c) => c !== 'club-team'), [], `${fontMode}: kus tabulky začíná hráčem`);
   }
+  // Podbarvení řádků škol: výchozí šedé, po vypnutí bez pozadí
+  const bg = () => page.evaluate(() => getComputedStyle(document.querySelector('#pages tr.club-team td')).backgroundColor);
+  await render(page, 'club-ranking', { fontMode: 'fixed', options: { players: 'none', shade: true } });
+  assert.equal(await bg(), 'rgb(236, 236, 236)');
+  await render(page, 'club-ranking', { fontMode: 'fixed', options: { players: 'none', shade: false } });
+  assert.match(await bg(), /rgba\(0, 0, 0, 0\)|transparent/);
   // Soupisky: všechna družstva mají stejné šířky sloupců
   await render(page, 'team-composition', { fontMode: 'fixed' });
   const widths = await page.evaluate(() => [...document.querySelectorAll('#pages table.roster')]
