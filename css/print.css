@@ -150,7 +150,7 @@ table.grid tr.bye-row td { background: #fff; }
 .tbl-grid table.grid th, .tbl-grid table.grid td { border: .5pt solid #000; padding: .26em .3em .2em; }
 .tbl-grid table.grid thead th { background: #e6e6e6; border-bottom: .8pt solid #000; }
 .tbl-grid table.grid tbody tr:nth-child(even) td { background: transparent; }
-.tbl-grid table.grid.club-ranking tbody tr.club-team td { background: #ececec; }
+.tbl-grid table.grid.club-ranking tbody tr.club-team:not(.club-plain) td { background: #ececec; }
 .tbl-grid table.grid tbody .name { font-weight: 400; }
 .tbl-grid table.grid tbody .club { color: #000; }
 .tbl-grid table.grid tbody .muted, .tbl-grid table.grid tbody .title { color: #000; }
@@ -257,7 +257,8 @@ table.grid.crosstable td.xt { font-weight: 700; }
 .award-title .sec-title { font-size: 1.35em; }
 
 /* Pořadí družstev (škol) ve švýcaru jednotlivců: řádek družstva a pod ním započítaní hráči */
-table.grid.club-ranking tbody tr.club-team td { font-weight: 700; background: #ececec; }
+table.grid.club-ranking tbody tr.club-team td { font-weight: 700; }
+table.grid.club-ranking tbody tr.club-team:not(.club-plain) td { background: #ececec; }
 table.grid.club-ranking tbody tr.club-member td { background: transparent; }
 table.club-ranking tr.club-member td.name { padding-left: 1.6em; }
 table.club-ranking tr.club-member td { font-size: .92em; }

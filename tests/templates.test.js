@@ -988,6 +988,17 @@ describe('švýcar jednotlivců hodnocený do družstev: pořadí škol (art=72)
     assert.equal(buildDocument({ tpl, info, data: { clubRanking: ranking }, profile: p, round: null }).blocks[0].rows.length, 15 + ranking.teams.reduce((n, t) => n + t.players.length, 0));
   });
 
+  test('pořadí škol: podbarvení řádků škol jde vypnout', () => {
+    const tpl = getTemplate('club-ranking');
+    const p = defaultProfile();
+    const rows = () => buildDocument({ tpl, info, data: { clubRanking: ranking }, profile: p, round: null }).blocks[0].rows;
+    assert.ok(rows().filter((r) => /club-team/.test(r)).every((r) => !/club-plain/.test(r)));
+    p.templates['club-ranking'] = { options: { shade: false, players: 'none' } };
+    const r = rows();
+    assert.equal(r.length, 15);
+    assert.ok(r.every((x) => /class="club-team club-plain"/.test(x)));
+  });
+
   test('soupisky s výsledky: sloupce kol 1–7, každé družstvo zvlášť se stejnými šířkami', () => {
     const tpl = getTemplate('team-composition');
     const doc = buildDocument({ tpl, info, data: { teamComposition: composition }, profile: defaultProfile(), round: null });

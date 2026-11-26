@@ -776,6 +776,7 @@ export const clubRanking = {
     },
     { key: 'places', label: 'Počet míst', type: 'select', def: 'all', choices: [['all', 'všechna družstva'], ['3', '3'], ['5', '5'], ['10', '10']] },
     { key: 'keepTogether', label: 'Nerozdělovat družstvo s hráči na dvě stránky', type: 'bool', def: true },
+    { key: 'shade', label: 'Podbarvit řádky družstev (škol)', type: 'bool', def: true },
     { key: 'legend', label: 'Vysvětlivky pomocných hodnocení', type: 'bool', def: true },
   ],
   columns: CLUB_RANK_COLUMNS,
@@ -798,7 +799,7 @@ export const clubRanking = {
     let anyExtra = false;
     for (const t of teams) {
       splitAt.push(rows.length);
-      rows.push(bodyRow(usable, t, ctx, 'club-team'));
+      rows.push(bodyRow(usable, t, ctx, opts.shade === false ? 'club-team club-plain' : 'club-team'));
       for (const p of clubTeamPlayers(t, data.teamComposition, mode)) {
         anyExtra = anyExtra || !!p.extra;
         rows.push(bodyRow(usable, p, ctx, p.extra ? 'club-member club-extra' : 'club-member'));
