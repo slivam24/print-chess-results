@@ -19,6 +19,7 @@ import { refreshPreview, scheduleRender, applyZoom } from './app/preview.js';
 import { openSettings, toggleSettings, refreshSettings } from './app/settingsHost.js';
 import { setupSplitter, setupShortcuts, setupManualDialog } from './app/controls.js';
 import { setupPrinting } from './app/printing.js';
+import { setupAbout } from './app/aboutHost.js';
 
 function init() {
   els.form.addEventListener('submit', (e) => {
@@ -46,6 +47,7 @@ function init() {
   setupManualDialog();
   setupShortcuts();
   setupPrinting();
+  setupAbout();
   renderProfileSelect();
 
   // Starší verze appky si pamatovala jen jeden turnaj – udělá se z něj záložka

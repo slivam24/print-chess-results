@@ -97,7 +97,7 @@ export function hasSavedState(storage = globalThis.localStorage) {
   }
 }
 
-const DEFAULT_UI = () => ({ previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings', tabs: [], activeTab: null });
+const DEFAULT_UI = () => ({ previewZoom: 'page', sideWidth: null, lastTemplate: 'pairings', tabs: [], activeTab: null, seenChangelog: null });
 
 export function defaultState() {
   const presets = presetProfiles();

@@ -404,3 +404,33 @@ test('nadpis jen pro jeden turnaj: ostatní turnaje se stejným profilem se nezm
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('O aplikaci: návod, novinky s tečkou „nové“, klávesa ?', async () => {
+  const { page, errors, context } = await newApp();
+  // první spuštění: tečka u tlačítka, okno otevře návod
+  assert.equal(await page.locator('#btn-about .about-dot').isVisible(), true);
+  await page.click('#btn-about');
+  const dlg = page.locator('#dlg-about');
+  await dlg.locator('.about-guide').waitFor();
+  assert.match(await dlg.innerText(), /1\. Otevření turnaje/);
+  assert.equal(await page.locator('#btn-about .about-dot').isVisible(), false);
+  await dlg.getByRole('tab', { name: 'Novinky' }).click();
+  assert.match(await dlg.innerText(), /O aplikaci/);
+  assert.equal(await dlg.locator('.about-new').count(), 0); // vše už viděno
+  await dlg.getByRole('button', { name: 'Zavřít' }).click();
+  assert.equal(await dlg.evaluate((d) => d.open), false);
+  // starší přečtená verze → tečka a okno rovnou na Novinkách s označením nových
+  await page.evaluate(() => { window.chessPrint.store.update((s) => { s.ui.seenChangelog = '2026-11-22'; }); window.chessPrint.store.flush(); });
+  await page.reload();
+  await page.waitForFunction(() => window.chessPrint);
+  assert.equal(await page.locator('#btn-about .about-dot').isVisible(), true);
+  await page.click('#btn-about');
+  await dlg.locator('.about-news').waitFor();
+  assert.ok(await dlg.locator('.about-sec.is-new').count() >= 3);
+  await dlg.getByRole('button', { name: 'Zavřít' }).click();
+  // klávesa ? otevře návod
+  await page.keyboard.press('?');
+  await dlg.locator('.about-guide').waitFor();
+  assert.deepEqual(errors, []);
+  await context.close();
+});
