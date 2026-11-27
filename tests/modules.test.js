@@ -2,6 +2,7 @@
 // které main.js načítá staticky, a moduly načítané až podle potřeby mezi nimi nejsou.
 
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -52,4 +53,26 @@ test('kontrola nové verze hlídá všechny moduly načítané až podle potřeb
   for (const d of dynamic) for (const m of staticGraph(d)) all.add(m);
   const lazy = [...all].filter((m) => !graph.has(m)).sort();
   assert.deepEqual(lazy, [...LAZY_MODULES].sort());
+});
+
+test('novinky: seznam změn od nejnovější, LATEST_CHANGE odpovídá nejnovější položce', async () => {
+  const { CHANGELOG } = await import('../js/changelog.js');
+  assert.ok(CHANGELOG.length > 5);
+  for (const e of CHANGELOG) {
+    assert.match(e.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(e.items.length > 0 && e.items.every((x) => typeof x === 'string' && x.length > 10));
+  }
+  const dates = CHANGELOG.map((e) => e.date);
+  assert.deepEqual(dates, [...dates].sort().reverse(), 'nejnovější nahoře, bez duplicit');
+  assert.equal(new Set(dates).size, dates.length);
+  const host = readFileSync(join(root, 'js/app/aboutHost.js'), 'utf8');
+  assert.equal(host.match(/LATEST_CHANGE = '([^']+)'/)[1], dates[0], 'aktualizujte LATEST_CHANGE v js/app/aboutHost.js');
+});
+
+test('všechny soubory appky jdou přeložit (i ty načítané až podle potřeby)', () => {
+  const walkDir = (d) => readdirSync(join(root, d)).flatMap((f) => (statSync(join(root, d, f)).isDirectory() ? walkDir(`${d}/${f}`) : [`${d}/${f}`]));
+  for (const f of walkDir('js').filter((x) => /\.m?js$/.test(x))) {
+    const r = spawnSync(process.execPath, ['--check', join(root, f)], { encoding: 'utf8' });
+    assert.equal(r.status, 0, `${f}: ${r.stderr.split('\n').slice(0, 4).join(' ')}`);
+  }
 });

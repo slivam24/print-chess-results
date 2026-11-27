@@ -18,7 +18,10 @@ js/
     printing.js            značka „vytištěno“ / „změnilo se od tisku“, název PDF
     settingsHost.js        panel nastavení – načte js/ui/settings.js až při otevření
     controls.js            posuvník panelu, klávesové zkratky, ruční vložení HTML
+    aboutHost.js           tlačítko „? O aplikaci“, tečka „nové“ (LATEST_CHANGE = nejnovější datum v changelog.js)
   store.js                 nastavení: profily, šablony, proxy, poslední turnaje, export/import
+  changelog.js             seznam změn pro „O aplikaci → Novinky“ – při každé změně viditelné uživateli
+                           přidejte položku a aktualizujte LATEST_CHANGE v app/aboutHost.js (hlídá test)
   presets.js               přednastavené profily (načítají se jen při prvním spuštění / tlačítkem)
   checks.js                kontrola před tiskem: chybějící výsledky, nesoulad kol (bez DOM)
   printLog.js              záznam o tisku (otisk dat), název PDF (bez DOM)
@@ -45,6 +48,7 @@ js/
     categories.js          editor kategorií pro „Pořadí + kategorie“ (načítá se podle potřeby)
     printSetup.js          průvodce tiskem jedním klikem
     update.js              automatické načtení nové verze appky
+    about.js               okno „O aplikaci“: návod, novinky, informace (načítá se při otevření)
 worker/
   worker.js                Cloudflare Worker – CORS proxy
   wrangler.toml            konfigurace pro nasazení přes wrangler

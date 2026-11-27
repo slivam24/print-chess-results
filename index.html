@@ -19,6 +19,7 @@
   <link rel="modulepreload" href="js/app/printing.js">
   <link rel="modulepreload" href="js/app/settingsHost.js">
   <link rel="modulepreload" href="js/app/controls.js">
+  <link rel="modulepreload" href="js/app/aboutHost.js">
   <link rel="modulepreload" href="js/store.js">
   <link rel="modulepreload" href="js/source.js">
   <link rel="modulepreload" href="js/printLog.js">
@@ -51,6 +52,7 @@
         <select id="profile-select" title="Profil nastavení aktuálního turnaje"></select>
       </label>
       <button type="button" class="btn ghost" id="btn-manual" title="Vložit uložené HTML stránky chess-results (když proxy nefunguje)">Vložit HTML ručně</button>
+      <button type="button" class="btn ghost" id="btn-about" title="Návod, novinky a informace o appce (klávesa ?)">? O aplikaci<span class="about-dot" hidden title="Novinky"></span></button>
       <button type="button" class="btn ghost" id="btn-settings" aria-pressed="false">⚙ Nastavení</button>
     </header>
 
@@ -78,7 +80,7 @@
       </section>
 
       <p class="muted small side-hints">
-        Klávesy: <kbd>←</kbd> <kbd>→</kbd> kolo, <kbd>1</kbd>–<kbd>9</kbd> výstup, <kbd>Ctrl</kbd>+<kbd>P</kbd> tisk.
+        Klávesy: <kbd>←</kbd> <kbd>→</kbd> kolo, <kbd>1</kbd>–<kbd>9</kbd> výstup, <kbd>Ctrl</kbd>+<kbd>P</kbd> tisk, <kbd>?</kbd> návod.
         V dialogu tisku nechte měřítko 100&nbsp;% a okraje „Výchozí“.
         <button type="button" class="linklike" id="btn-print-setup">Tisk jedním klikem bez dialogu…</button>
       </p>
@@ -121,6 +123,8 @@
       </div>
     </main>
   </div>
+
+  <dialog id="dlg-about" class="dialog about-dialog" aria-label="O aplikaci"></dialog>
 
   <dialog id="dlg-manual" class="dialog">
     <form method="dialog" id="form-manual">

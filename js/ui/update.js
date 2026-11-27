@@ -12,6 +12,7 @@ const GUARD_KEY = 'chessPrint.updateReload';
  */
 export const LAZY_MODULES = [
   'js/ui/settings.js', 'js/ui/printSetup.js', 'js/ui/categories.js', 'js/presets.js', 'js/qr.js', 'js/vendor/qrcode.mjs',
+  'js/ui/about.js', 'js/changelog.js',
 ];
 
 function stamp(res) {
