@@ -39,6 +39,9 @@ function cachedRounds(tnr, tpl) {
 
 async function loadDatasets(tnr, info, tpl, round, opts, { fresh }) {
   const data = {};
+  // Kdy byla data stažena (pro upozornění šablon) – neviditelné pro otisk dat (značka „vytištěno“)
+  const fetched = {};
+  Object.defineProperty(data, 'fetchedAt', { value: fetched, enumerable: false });
   const needs = datasetsFor(tpl, info, round, opts);
   // Podklady výstupu se stahují souběžně (např. los + startovní listina + soupisky)
   await Promise.all(needs.map(async (n) => {
@@ -47,8 +50,21 @@ async function loadDatasets(tnr, info, tpl, round, opts, { fresh }) {
       return;
     }
     try {
-      const entry = await source.get(tnr, n.dataset, DATASETS[n.dataset].round ? n.round : null, { fresh });
+      const rd = DATASETS[n.dataset].round ? n.round : null;
+      // Data, která musí být čerstvá (např. soupisky pro doplnění sestav): starší než maxAgeMin
+      // se stáhnou znovu, i když jsou v mezipaměti nebo z uložených dat
+      const cached = source.peek(tnr, n.dataset, rd);
+      const stale = !!(n.maxAgeMin && cached && !cached.manual
+        && Date.now() - new Date(cached.fetchedAt).getTime() > n.maxAgeMin * 60000);
+      let entry;
+      try {
+        entry = await source.get(tnr, n.dataset, rd, { fresh: fresh || stale });
+      } catch (e) {
+        if (!stale) throw e;
+        entry = cached; // bez sítě aspoň starší data (upozornění ukáže jejich stáří)
+      }
       data[n.dataset] = entry.data;
+      fetched[n.dataset] = entry.fetchedAt;
     } catch (e) {
       if (n.optional) return;
       e.dataset = n.dataset;

@@ -1,7 +1,7 @@
 // Výstupy pro soutěže družstev: los zápasů a rozpis hráčů na šachovnicích.
 
 import {
-  esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, colorLabel, theadRow, colgroup, bodyRow, noteBlock, sectionTitle, pruneEmpty, SYM_W,
+  esc, fmtName, fmtRating, fmtResult, fmtPoints, fmtDate, fmtDateTime, colorLabel, theadRow, colgroup, bodyRow, noteBlock, sectionTitle, pruneEmpty, SYM_W,
 } from './common.js';
 
 function roundSub(round) {
@@ -266,7 +266,8 @@ export const teamBoards = {
   // Rozpis se stříhá na jednotlivé zápasy – ve výchozím stavu bez záhlaví a zápatí stránky
   defaults: { orientation: 'portrait', columns: 1, header: 'off', footer: 'off' },
   // Soupisky: pořadí na soupisce, Elo a doplnění sestav
-  needs: ({ round }) => [...needs({ round }), { dataset: 'teamPlayers', optional: true }],
+  // Soupisky pro doplnění sestav musí být aktuální (hráč mohl přibýt ráno u prezence)
+  needs: ({ round }) => [...needs({ round }), { dataset: 'teamPlayers', optional: true, maxAgeMin: 10 }],
   render({ data, round: rq, opts, cols, nameFormat }) {
     const ctx = { opts, nameFormat };
     const rounds = rq === 'all' ? teamRoundNumbers(data).map((n) => teamRound(data, n)).filter(Boolean) : [teamRound(data, rq)].filter(Boolean);
@@ -288,8 +289,9 @@ export const teamBoards = {
     });
     const warnings = [];
     if (notPublished) {
+      const at = data.fetchedAt && data.fetchedAt.teamPlayers ? ` podle soupisek z chess-results (staženo ${fmtDateTime(data.fetchedAt.teamPlayers)})` : '';
       warnings.push(filled.size
-        ? `Sestavy zatím nejsou zveřejněné – doplněny ze soupisky u družstev, která mají přesně tolik hráčů jako šachovnic (${[...filled].join(', ')}); ostatní šachovnice zůstanou prázdné k vyplnění.`
+        ? `Sestavy zatím nejsou zveřejněné – doplněny${at} u družstev, která mají přesně tolik hráčů jako šachovnic: ${[...filled].join(', ')}. Ostatní šachovnice zůstanou prázdné k vyplnění. Pokud některé družstvo má hráčů víc, než je na chess-results, doplněnou sestavu nepoužívejte (volba „Doplnit sestavu ze soupisky“).`
         : 'Sestavy družstev zatím nejsou zveřejněné – šachovnice zůstanou prázdné k ručnímu vyplnění.');
     }
     return {

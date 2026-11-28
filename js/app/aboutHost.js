@@ -5,7 +5,7 @@ import { store } from './context.js';
 import { $ } from '../ui/dom.js';
 
 /** Datum nejnovější položky v js/changelog.js (hlídá test) – podle něj se ukáže tečka „nové“. */
-export const LATEST_CHANGE = '2026-11-27';
+export const LATEST_CHANGE = '2026-11-28';
 
 function hasNews() {
   const seen = store.state.ui.seenChangelog;
