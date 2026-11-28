@@ -127,7 +127,33 @@ export function resolveColumns(defs, saved) {
     out.splice(at, 0, { ...d, on: d.def !== false });
     seen.add(d.key);
   });
-  return applyColumnFit(out);
+  return applyColumnFit(mirrorPartners(out));
+}
+
+/** Protějškový sloupec (bílý ↔ černý, domácí ↔ hosté) – má mít stejnou šířku. */
+export function partnerKey(key) {
+  if (/^w[A-Z]/.test(key)) return `b${key.slice(1)}`;
+  if (/^b[A-Z]/.test(key)) return `w${key.slice(1)}`;
+  if (/^home/.test(key)) return `away${key.slice(4)}`;
+  if (/^away/.test(key)) return `home${key.slice(4)}`;
+  return null;
+}
+
+/**
+ * Souměrné tabulky (domácí – hosté, bílý – černý): „min.“ / „max.“ nebo vlastní šířka
+ * zadaná jen u jednoho sloupce z dvojice platí i pro protějšek – jinak by se jeden
+ * zúžil a druhý roztáhl. Když má nastavení každý zvlášť, zůstane, jak je.
+ */
+function mirrorPartners(cols) {
+  const byKey = new Map(cols.map((c) => [c.key, c]));
+  return cols.map((c) => {
+    const p = byKey.get(partnerKey(c.key));
+    if (!p) return c;
+    const out = { ...c };
+    if (!c.fit && p.fit) out.fit = p.fit;
+    if (!c.userWidth && p.userWidth) Object.assign(out, { width: p.width, userWidth: p.userWidth });
+    return out;
+  });
 }
 
 /**
