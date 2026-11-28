@@ -484,3 +484,33 @@ test('rozpis šachovnic: sestava ze soupisky jen podle aktuální soupisky (star
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('los zápasů družstev: volba „body před kolem“ doplní body z pořadí po předchozím kole', async () => {
+  const { page, errors, context } = await newApp();
+  const pages = { '': fixture('team-main'), 2: fixture('team-pairings-r3'), 3: fixture('team-boards-r3'), 32: fixture('team-teams'), 46: fixture('team-table') };
+  const asked = [];
+  await page.route('**/proxy?**', (route) => {
+    const target = new URL(new URL(route.request().url()).searchParams.get('url'));
+    const art = target.searchParams.get('art') || '';
+    asked.push(`${art}/${target.searchParams.get('rd') || ''}`);
+    const body = pages[art];
+    route.fulfill(body ? { status: 200, contentType: 'text/html; charset=utf-8', body } : { status: 404, body: 'nenalezeno' });
+  });
+  await page.evaluate((p) => window.chessPrint.store.update((s) => { s.proxyUrl = p; }, { silent: true }), `${base}proxy`);
+  await page.evaluate(async () => {
+    const cp = window.chessPrint;
+    await cp.loadTournament({ tnr: 1464724 });
+    cp.session.round = 3;
+  });
+  await rendered(page, () => page.evaluate(() => window.chessPrint.selectTemplate('team-matches')));
+  assert.equal(await page.locator('#pages .page:first-child thead th', { hasText: /^Body$/ }).count(), 0);
+  assert.ok(!asked.includes('46/2'));
+  await rendered(page, () => page.getByLabel(/Zobrazit body družstev před kolem/).check());
+  assert.equal(await page.locator('#pages .page:first-child thead th', { hasText: /^Body$/ }).count(), 2);
+  assert.ok(asked.includes('46/2'), asked.join(' '));
+  const cells = await page.locator('#pages .page:first-child tbody tr:first-child td').allInnerTexts();
+  assert.ok(cells.filter((c) => /^\d+(½)?$/.test(c.trim())).length >= 4, cells.join(' | '));
+  if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT });
+  assert.deepEqual(errors, []);
+  await context.close();
+});

@@ -56,11 +56,42 @@ const needs = ({ round }) => [{ dataset: 'boards', round }, { dataset: 'teamPair
 // Los zápasů
 // ---------------------------------------------------------------------------
 
+/**
+ * Body družstev před kolem (jako „Pts“ v losu Swiss-Manageru): z pořadí družstev
+ * po předchozím kole – hlavní hodnocení (sloupec bodů, jinak první pomocné hodnocení,
+ * které je u družstev hlavním kritériem). Před 1. kolem mají všichni 0.
+ * Vrací Map(klíč družstva → body) nebo null, když pořadí není k dispozici.
+ */
+function pointsBefore(data, round) {
+  if (round === 1) return 'zero';
+  const rows = data.teamRanking && data.teamRanking.rows;
+  if (!rows || !rows.length) return null;
+  const map = new Map();
+  for (const r of rows) {
+    const raw = r.points != null ? r.points : (r.tb && r.tb[0]);
+    const v = typeof raw === 'number' ? raw : Number(String(raw ?? '').replace(',', '.').replace('½', '.5'));
+    if (!Number.isFinite(v)) continue;
+    if (r.startNo != null) map.set(`no:${r.startNo}`, v);
+    if (r.name) map.set(`name:${r.name}`, v);
+  }
+  return map;
+}
+
+function teamPts(ctx, team) {
+  if (!ctx.opts.showPoints || !ctx.pts || !team) return '';
+  if (ctx.pts === 'zero') return '0';
+  const byNo = team.no != null ? ctx.pts.get(`no:${team.no}`) : undefined;
+  const v = byNo ?? ctx.pts.get(`name:${team.name}`);
+  return v == null ? '' : esc(fmtPoints(v));
+}
+
 const MATCH_COLUMNS = [
   { key: 'no', label: 'Zápas', cls: 'c num', width: '4.4em', get: (m) => esc(m.no ?? '') },
   { key: 'homeNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (m) => esc(m.home?.no ?? '') },
   { key: 'home', label: 'Domácí', cls: 'name strong', get: (m) => esc(m.home?.name || '') },
+  { key: 'homePts', label: 'Body', cls: 'c num', width: '3.4em', hideEmpty: true, get: (m, ctx) => teamPts(ctx, m.home) },
   { key: 'score', label: 'Výsledek', cls: 'c res', width: '6em', get: (m, ctx) => (ctx.opts.showResults && matchPlayed(m) ? esc(scoreText(m)) : '–') },
+  { key: 'awayPts', label: 'Body', cls: 'c num', width: '3.4em', hideEmpty: true, get: (m, ctx) => teamPts(ctx, m.away) },
   { key: 'away', label: 'Hosté', cls: 'name strong', get: (m) => (m.away ? esc(m.away.name) : '<span class="bye">volno</span>') },
   { key: 'awayNo', label: 'č.', cls: 'c num muted', width: SYM_W.no, get: (m) => esc(m.away?.no ?? '') },
 ];
@@ -75,19 +106,25 @@ export const teamMatches = {
   allRounds: allRoundsTeam,
   options: [
     { key: 'showResults', label: 'Zobrazit výsledky (pokud jsou známy)', type: 'bool', def: false },
+    { key: 'showPoints', label: 'Zobrazit body družstev před kolem (jako Swiss-Manager)', type: 'bool', def: false, onlySingleRound: true },
     { key: 'bigOnePage', label: 'Velké písmo na jednu stránku (nástěnka)', type: 'bool', def: false },
     { key: 'roundPerPage', label: 'Každé kolo na samostatné stránce', type: 'bool', def: false, onlyAllRounds: true },
     { key: 'roundGap', label: 'Mezera mezi koly (mm)', type: 'number', def: 6, min: 0, max: 60, step: 1, onlyAllRounds: true },
   ],
   columns: MATCH_COLUMNS,
   defaults: { orientation: 'portrait', columns: 1 },
-  needs,
+  // Body před kolem: pořadí družstev po předchozím kole
+  needs: ({ round, opts }) => [
+    ...needs({ round }),
+    ...(opts && opts.showPoints && typeof round === 'number' && round > 1 ? [{ dataset: 'teamRanking', round: round - 1, optional: true }] : []),
+  ],
   layout: (opts) => (opts.bigOnePage ? { fit: { enabled: true, minPt: 8, maxPt: 32, autoColumns: false }, docClass: 'board-doc' } : {}),
   render({ data, round: rq, opts, cols }) {
     const ctx = { opts };
     if (rq === 'all') {
       const nums = teamRoundNumbers(data);
       const blocks = [];
+      cols = cols.filter((c) => c.key !== 'homePts' && c.key !== 'awayPts'); // body jen u jednoho kola
       nums.forEach((n, i) => {
         const r = teamRound(data, n);
         const title = { ...sectionTitle(`${n}. kolo`, roundSub(r)), blockClass: 'sec-tight' };
@@ -104,10 +141,16 @@ export const teamMatches = {
       };
     }
     const round = teamRound(data, rq);
+    const warnings = round ? [] : teamWarnings(round, rq);
+    if (opts.showPoints) {
+      ctx.pts = pointsBefore(data, rq);
+      if (!ctx.pts && round) warnings.push(`Body družstev nejsou k dispozici – pořadí po ${rq - 1}. kole zatím není na chess-results zveřejněno.`);
+    }
+    const used = round ? pruneEmpty(cols, round.matches, ctx) : cols;
     const blocks = round
-      ? [{ type: 'table', className: 'grid matches sym', colgroup: colgroup(cols), thead: theadRow(cols), rows: round.matches.map((m) => bodyRow(cols, m, ctx)) }]
+      ? [{ type: 'table', className: 'grid matches sym', colgroup: colgroup(used), thead: theadRow(used), rows: round.matches.map((m) => bodyRow(used, m, ctx)) }]
       : [noteBlock('Pro toto kolo nejsou k dispozici žádné zápasy.')];
-    return { title: `Los ${rq}. kola`, sub: roundSub(round), blocks, warnings: round ? [] : teamWarnings(round, rq) };
+    return { title: `Los ${rq}. kola`, sub: roundSub(round), blocks, warnings };
   },
 };
 
