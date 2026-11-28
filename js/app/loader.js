@@ -75,7 +75,7 @@ export async function loadTournament(input, { fresh = false, fromSnapshot = fals
 
 function templateFromArt(art, info) {
   if (art == null) return null;
-  if (info.isTeam) return { 2: 'team-matches', 3: 'team-boards', 46: 'team-ranking', 32: 'team-roster', 16: 'team-roster', 81: 'team-board-best' }[art] || null;
+  if (info.isTeam) return { 0: 'team-ranking', 2: 'team-matches', 3: 'team-boards', 46: 'team-ranking', 32: 'team-roster', 16: 'team-roster', 81: 'team-board-best' }[art] || null;
   return { 0: 'startlist', 1: 'ranking', 2: 'pairings', 3: 'startlist', 4: 'ranking', 71: 'team-composition', 72: 'club-ranking' }[art] || null;
 }
 

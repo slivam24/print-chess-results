@@ -33,7 +33,9 @@ export const DATASETS = {
   teamPlayers: { art: 16, label: 'Hráči družstev', parse: parseStartList },
   teams: { art: 32, label: 'Družstva', parse: parseTeamList },
   ranking: { art: 1, label: 'Pořadí', parse: parseRanking, round: true },
-  teamRanking: { art: 46, label: 'Tabulka družstev', parse: parseRanking, round: true },
+  // Ligy (každý s každým) mají tabulku družstev na art=46; švýcar družstev ji tam nemá
+  // (prázdná stránka) a pořadí družstev po kole je na art=0 – proto záložní art.
+  teamRanking: { art: 46, altArt: 0, label: 'Tabulka družstev', parse: parseRanking, round: true },
   crosstable: { art: 4, label: 'Křížová tabulka', parse: parseRanking, round: true },
   pairings: { art: 2, label: 'Los kola', parse: parsePairings, round: true },
   teamPairings: { art: 2, label: 'Zápasy družstev', parse: parseTeamPairings, round: true },
@@ -45,10 +47,10 @@ export const DATASETS = {
   teamComposition: { art: 71, label: 'Soupisky s výsledky kol', parse: parseTeamComposition },
 };
 
-export function buildUrl(tnr, dataset, round) {
+export function buildUrl(tnr, dataset, round, art = DATASETS[dataset]?.art) {
   const d = DATASETS[dataset];
   const p = new URLSearchParams({ lan: '1', turdet: 'YES', zeilen: '99999' });
-  if (d && d.art != null) p.set('art', String(d.art));
+  if (art != null) p.set('art', String(art));
   if (d && d.round && round) p.set('rd', String(round));
   return `https://chess-results.com/tnr${tnr}.aspx?${p.toString()}`;
 }
@@ -138,7 +140,15 @@ export class Source {
     const p = (async () => {
       const url = buildUrl(tnr, dataset, round);
       const { html, fetchedAt } = await this.fetchHtml(url, { fresh });
-      const entry = this.parseInto(html, dataset, { fetchedAt, url });
+      let entry = this.parseInto(html, dataset, { fetchedAt, url });
+      const alt = DATASETS[dataset]?.altArt;
+      if (alt != null && entry.data && Array.isArray(entry.data.rows) && !entry.data.rows.length) {
+        // Prázdná tabulka → zkusit záložní stránku (švýcar družstev: pořadí na art=0)
+        const url2 = buildUrl(tnr, dataset, round, alt);
+        const r2 = await this.fetchHtml(url2, { fresh });
+        const e2 = this.parseInto(r2.html, dataset, { fetchedAt: r2.fetchedAt, url: url2 });
+        if (e2.data && e2.data.rows && e2.data.rows.length) entry = e2;
+      }
       if (entry.info && entry.info.tnr && entry.info.tnr !== tnr && dataset === 'main') {
         // Přesměrování na jiný turnaj by bylo podezřelé – ale číslo z odkazů může chybět.
         entry.info.tnr = tnr;

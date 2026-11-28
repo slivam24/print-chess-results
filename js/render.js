@@ -37,8 +37,10 @@ const OUTPUT_ART = {
 function qrFor(qr, profile, tpl, info, round) {
   const hd = profile.header || {};
   if (!qr || hd.qr !== 'on' || !info || !info.tnr) return '';
-  const art = hd.qrTarget === 'output' ? OUTPUT_ART[tpl.id] ?? null : null;
-  const rd = typeof round === 'number' && [1, 2, 3, 46].includes(art) ? round : null;
+  let art = hd.qrTarget === 'output' ? OUTPUT_ART[tpl.id] ?? null : null;
+  // Švýcar družstev má pořadí družstev na art=0 (art=46 je jen u lig)
+  if (art === 46 && info.system === 'swiss') art = 0;
+  const rd = typeof round === 'number' && ([1, 2, 3, 46].includes(art) || (art === 0 && tpl.id === 'team-ranking')) ? round : null;
   return qr(publicUrl(info.tnr, art, rd), hd.qrSize);
 }
 
