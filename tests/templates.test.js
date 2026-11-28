@@ -671,6 +671,40 @@ describe('družstva: startovní pořadí, všechna kola, rozpis k rozstříhán�
     assert.equal(doc.title, 'Los všech kol');
     assert.ok(doc.blocks.some((b) => b.type === 'table' && b.keepTogether));
   });
+  test('los zápasů: body družstev před kolem (volitelně, jako Swiss-Manager)', () => {
+    const tpl = getTemplate('team-matches');
+    // bez volby žádné body a žádné stahování pořadí
+    const plain = buildDocument({ tpl, info: team.info, data: team.data, profile: defaultProfile(), round: 3 });
+    assert.doesNotMatch(plain.blocks[0].thead, />Body</);
+    assert.deepEqual(datasetsFor(tpl, team.info, 4, {}).map((n) => n.dataset), ['boards', 'teamPairings']);
+    // s volbou: pořadí po předchozím kole
+    const n4 = datasetsFor(tpl, team.info, 4, { showPoints: true }).find((n) => n.dataset === 'teamRanking');
+    assert.deepEqual([n4.round, n4.optional], [3, true]);
+    assert.equal(datasetsFor(tpl, team.info, 1, { showPoints: true }).some((n) => n.dataset === 'teamRanking'), false);
+    const p = defaultProfile();
+    p.templates['team-matches'] = { options: { showPoints: true } };
+    const ranking = { rows: [
+      { rank: 1, startNo: 1, name: 'Alfa A', points: null, tb: ['10,5', '7'] },
+      { rank: 2, startNo: 2, name: 'Beta A', points: null, tb: ['9', '6'] },
+      { rank: 3, startNo: 3, name: 'Gama A', points: 4, tb: ['8'] },
+    ], tiebreaks: [] };
+    const match = (no, h, a) => ({ no, home: { no: h[0], name: h[1] }, away: { no: a[0], name: a[1] }, boards: [] });
+    const teamPairings = { rounds: [{ round: 4, matches: [match(1, [1, 'Alfa A'], [2, 'Beta A']), match(2, [null, 'Gama A'], [9, 'Nové'])] }] };
+    const doc = buildDocument({ tpl, info: team.info, data: { teamPairings, teamRanking: ranking }, profile: p, round: 4 });
+    const t = doc.blocks[0];
+    assert.equal((t.thead.match(/>Body</g) || []).length, 2);
+    assert.match(t.rows[0], />Alfa A<.*>10½<.*>9<.*>Beta A</s);
+    assert.match(t.rows[1], />Gama A<.*>4<.*/s); // sloupec bodů má přednost, bez čísla podle názvu
+    assert.deepEqual(doc.warnings, []);
+    // 1. kolo: všichni 0
+    const r1 = { rounds: [{ round: 1, matches: [match(1, [1, 'Alfa A'], [2, 'Beta A'])] }] };
+    const d1 = buildDocument({ tpl, info: team.info, data: { teamPairings: r1 }, profile: p, round: 1 });
+    assert.match(d1.blocks[0].rows[0], />Alfa A<.*>0<.*>0<.*>Beta A</s);
+    // pořadí ještě není → bez bodů, s upozorněním
+    const d2 = buildDocument({ tpl, info: team.info, data: { teamPairings }, profile: p, round: 4 });
+    assert.doesNotMatch(d2.blocks[0].thead, />Body</);
+    assert.match(d2.warnings.join(' '), /Body družstev nejsou k dispozici – pořadí po 3\. kole/);
+  });
   test('rozpis: bez záhlaví a zápatí, Kolo X, Zápas Y, názvy družstev v hlavičce, mezera mezi zápasy', () => {
     const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: defaultProfile(), round: 3 });
     assert.equal(doc.layout.header, null);

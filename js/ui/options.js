@@ -18,6 +18,7 @@ export function optionControls(tpl, values, { setOpt, allRounds = false, players
   const out = [];
   for (const o of tpl.options || []) {
     if (o.onlyAllRounds && !allRounds) continue;
+    if (o.onlySingleRound && allRounds) continue;
     const v = values[o.key];
     if (o.type === 'bool') {
       out.push(h('label', { class: 'check' },
