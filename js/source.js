@@ -60,6 +60,22 @@ export function cacheKey(tnr, dataset, round) {
   return `${tnr}|${dataset}|${d && d.round && round ? round : ''}`;
 }
 
+/** Prázdná stránka („zatím není k dispozici“) se po této době stáhne znovu (ms). */
+export const EMPTY_TTL = 2 * 60 * 1000;
+
+/**
+ * Je záznam prázdný – chess-results stránku ještě nezveřejnil (všechny seznamy
+ * prázdné)? Takové záznamy se neukládají a po EMPTY_TTL se stahují znovu.
+ * Hlavní stránka a ručně vložené stránky se nepočítají.
+ */
+export function isEmptyEntry(key, entry) {
+  if (!entry || entry.manual || String(key).split('|')[1] === 'main') return false;
+  const d = entry.data;
+  if (!d || typeof d !== 'object') return false;
+  const arrays = Object.values(d).filter(Array.isArray);
+  return arrays.length > 0 && arrays.every((a) => a.length === 0);
+}
+
 export class FetchError extends Error {
   constructor(message, { status, hint } = {}) {
     super(message);
@@ -135,7 +151,10 @@ export class Source {
    */
   async get(tnr, dataset, round = null, { fresh = false } = {}) {
     const key = cacheKey(tnr, dataset, round);
-    if (!fresh && this.cache.has(key)) return this.cache.get(key);
+    const hit = this.cache.get(key);
+    const emptyStale = hit && isEmptyEntry(key, hit)
+      && Date.now() - (hit.cachedAt || new Date(hit.fetchedAt).getTime()) > EMPTY_TTL;
+    if (!fresh && hit && !emptyStale) return hit;
     if (!fresh && this.inflight.has(key)) return this.inflight.get(key);
     const p = (async () => {
       const url = buildUrl(tnr, dataset, round);
@@ -154,6 +173,8 @@ export class Source {
         entry.info.tnr = tnr;
       }
       if (entry.info && !entry.info.tnr) entry.info.tnr = tnr;
+      // Kdy se záznam uložil do appky (proxy může vracet starší čas stažení ze své mezipaměti)
+      Object.defineProperty(entry, 'cachedAt', { value: Date.now(), enumerable: false });
       this.cache.set(key, entry);
       this.emit({ type: 'loaded', key, tnr, dataset, round });
       return entry;
@@ -265,11 +286,14 @@ export class Source {
   /** Serializace cache jednoho turnaje (pro obnovení po načtení stránky). */
   snapshot(tnr) {
     const out = {};
-    for (const [k, v] of this.cache) if (k.startsWith(`${tnr}|`)) out[k] = v;
+    // Prázdné stránky se neukládají – po obnovení se stáhnou znovu
+    for (const [k, v] of this.cache) if (k.startsWith(`${tnr}|`) && !isEmptyEntry(k, v)) out[k] = v;
     return out;
   }
 
   restore(snapshot) {
-    for (const [k, v] of Object.entries(snapshot || {})) if (!this.cache.has(k)) this.cache.set(k, v);
+    for (const [k, v] of Object.entries(snapshot || {})) {
+      if (!this.cache.has(k) && !isEmptyEntry(k, v)) this.cache.set(k, v);
+    }
   }
 }

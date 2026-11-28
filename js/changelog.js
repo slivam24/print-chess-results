@@ -6,6 +6,7 @@ export const CHANGELOG = [
   {
     date: '2026-11-28',
     items: [
+      'Stránky, které chess-results ještě nezveřejnil (prázdná tabulka, los, …), si appka neukládá – po obnovení stránky nebo nejpozději po 2 minutách je zkusí stáhnout znovu sama, bez „Aktualizovat data“.',
       'Oprava: Pořadí družstev u švýcarského systému družstev bylo prázdné – chess-results ho tam zveřejňuje na jiné stránce (Pořadí po N. kole), appka ji teď načte.',
       'Rozpis šachovnic: sestava doplněná ze soupisky (u družstev s přesně tolika hráči jako šachovnic) vychází vždy z aktuální soupisky – starší než 10 minut se před doplněním stáhne znovu; upozornění ukazuje, kdy byla soupiska stažena.',
     ],
