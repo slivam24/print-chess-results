@@ -778,6 +778,21 @@ describe('šířky sloupců', () => {
     const cols = resolveColumns(getTemplate('team-boards').columns, [{ key: 'homeRoster', width: '8%' }]);
     assert.equal(cols.find((c) => c.key === 'homeRoster').width, '8%');
   });
+  test('souměrné tabulky: min./max. nebo šířka jen u jednoho sloupce platí i pro protějšek', () => {
+    const tpl = getTemplate('team-matches');
+    const cols = resolveColumns(tpl.columns, [{ key: 'home', fit: 'max' }, { key: 'score' }, { key: 'away' }, { key: 'awayPts', width: '9' }]);
+    const by = (k) => cols.find((c) => c.key === k);
+    assert.equal(by('home').grow, true);
+    assert.equal(by('away').grow, true); // jinak by se Hosté zúžili na obsah
+    assert.equal(by('away').shrink, undefined);
+    assert.equal(by('homePts').width, '9mm');
+    // každý zvlášť → zůstane
+    const own = resolveColumns(tpl.columns, [{ key: 'home', fit: 'max' }, { key: 'away', fit: 'min' }]);
+    assert.equal(own.find((c) => c.key === 'away').shrink, true);
+    // bílý – černý
+    const pc = resolveColumns(getTemplate('pairings').columns, [{ key: 'wName', fit: 'min' }]);
+    assert.equal(pc.find((c) => c.key === 'bName').shrink, true);
+  });
   test('úzké sloupce se přizpůsobí obsahu (data-fit), protějšky a vlastní šířka', async () => {
     const { partnerKey } = await import('../js/layout.js');
     assert.equal(partnerKey('homeRoster'), 'awayRoster');
@@ -787,8 +802,10 @@ describe('šířky sloupců', () => {
     p.templates['team-boards'] = { columns: [{ key: 'awayRoster', width: 15 }] };
     const doc = buildDocument({ tpl: getTemplate('team-boards'), info: team.info, data: team.data, profile: p, round: 3 });
     const cg = doc.blocks.find((b) => b.type === 'table').colgroup;
-    assert.match(cg, /data-key="homeRoster" data-fit="1"/);
-    assert.match(cg, /style="width:15mm" data-key="awayRoster">/); // vlastní šířka se nepřizpůsobuje
+    // vlastní šířka se nepřizpůsobuje a platí i pro protějšek (souměrná tabulka)
+    assert.match(cg, /style="width:15mm" data-key="homeRoster">/);
+    assert.match(cg, /style="width:15mm" data-key="awayRoster">/);
+    assert.match(cg, /data-key="homeRating" data-fit="1"/);
     assert.match(cg, /data-key="result" data-fit="1" data-min="5.5"/); // k zápisu: nejmenší šířka
   });
 });

@@ -11,6 +11,10 @@
 //     splitAt? ([indexy řádků] – tabulka se smí rozdělit jen před těmito řádky, např. škola + její hráči) }
 //   { type: 'break' }
 
+import { partnerKey } from './templates/common.js';
+
+export { partnerKey };
+
 const PAGE_MM = { portrait: [210, 297], landscape: [297, 210] };
 const SAFETY_PX = 2;
 
@@ -100,14 +104,6 @@ function columnPercents(table) {
   return [...ref.children].map((c) => (c.getBoundingClientRect().width / tw) * 100);
 }
 
-/** Protějškový sloupec (bílý ↔ černý, domácí ↔ hosté) – má mít stejnou šířku. */
-export function partnerKey(key) {
-  if (/^w[A-Z]/.test(key)) return `b${key.slice(1)}`;
-  if (/^b[A-Z]/.test(key)) return `w${key.slice(1)}`;
-  if (/^home/.test(key)) return `away${key.slice(4)}`;
-  if (/^away/.test(key)) return `home${key.slice(4)}`;
-  return null;
-}
 
 /**
  * Úzké sloupce tabulek s pevným rozložením („sym“) přizpůsobí obsahu: šířka = nejdelší text
