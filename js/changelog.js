@@ -6,6 +6,7 @@ export const CHANGELOG = [
   {
     date: '2026-11-28',
     items: [
+      'Pořadí družstev: sloupce Skupina, Body a Federace – zobrazí se, když je pořadatel na chess-results zveřejní (Federace jen po zapnutí v Nastavení → Výstup → Sloupce).',
       'Souměrné tabulky (Domácí – Hosté, Bílý – Černý): zaškrtávátko „min.“ / „max.“ nebo vlastní šířka u jednoho sloupce platí i pro jeho protějšek, takže oba zůstanou stejně široké.',
       'Los zápasů družstev: volba „Zobrazit body družstev před kolem“ – sloupce Body u domácích i hostů jako v Swiss-Manageru (z pořadí po předchozím kole).',
       'Stránky, které chess-results ještě nezveřejnil (prázdná tabulka, los, …), si appka neukládá – po obnovení stránky nebo nejpozději po 2 minutách je zkusí stáhnout znovu sama, bez „Aktualizovat data“.',
