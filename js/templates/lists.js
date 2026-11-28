@@ -543,6 +543,10 @@ const TEAM_RANK_COLUMNS = [
   { key: 'rank', label: 'Poř.', cls: 'c num strong', width: '2.8em', get: (r) => esc(r.rank ?? '') },
   { key: 'startNo', label: 'č.', cls: 'c num muted', width: '2.6em', def: false, get: (r) => esc(r.startNo ?? '') },
   { key: 'name', label: 'Družstvo', cls: 'name', get: (r) => esc(r.name) },
+  // Sloupce, které pořadatel může na chess-results zapnout – ukážou se, jen když jsou vyplněné
+  { key: 'group', hideEmpty: true, label: 'Skup.', cls: 'c', get: (r) => esc(r.group || '') },
+  { key: 'fed', hideEmpty: true, label: 'Fed', cls: 'c', width: '3em', def: false, get: (r) => esc(r.fed || '') },
+  { key: 'points', hideEmpty: true, label: 'Body', cls: 'c num strong', width: '3em', get: (r) => (r.points != null ? esc(fmtPoints(r.points)) : '') },
   { key: 'games', label: 'Záp.', cls: 'c num', width: '2.8em', get: (r) => esc(r.games ?? '') },
   { key: 'wins', label: '+', cls: 'c num', width: '2.2em', get: (r) => esc(r.wins ?? '') },
   { key: 'draws', label: '=', cls: 'c num', width: '2.2em', get: (r) => esc(r.draws ?? '') },
@@ -563,7 +567,7 @@ export const teamRanking = {
   needs: ({ round }) => [{ dataset: 'teamRanking', round }],
   render({ data, round, opts, cols }) {
     const rk = data.teamRanking || { rows: [], tiebreaks: [] };
-    const usable = cols.filter((c) => !c.tb || c.tb <= rk.tiebreaks.length);
+    const usable = pruneEmpty(cols.filter((c) => !c.tb || c.tb <= rk.tiebreaks.length), rk.rows, {});
     const blocks = [{ type: 'table', className: 'grid ranking', colgroup: colgroup(usable), thead: theadRow(usable), rows: rk.rows.map((r) => bodyRow(usable, r, {})) }];
     if (opts.legend !== false) {
       const lg = tbLegend(rk.tiebreaks);

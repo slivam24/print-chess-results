@@ -671,6 +671,21 @@ describe('družstva: startovní pořadí, všechna kola, rozpis k rozstříhán�
     assert.equal(doc.title, 'Los všech kol');
     assert.ok(doc.blocks.some((b) => b.type === 'table' && b.keepTogether));
   });
+  test('pořadí družstev: sloupce Skupina / Body jen když je chess-results zveřejňuje', () => {
+    const tpl = getTemplate('team-ranking');
+    const rows = [
+      { rank: 1, startNo: 1, name: 'Alfa A', group: 'VC', points: null, games: 4, wins: 3, draws: 0, losses: 1, tb: ['13'] },
+      { rank: 2, startNo: 2, name: 'Beta A', group: 'VC', points: null, games: 4, wins: 4, draws: 0, losses: 0, tb: ['13'] },
+    ];
+    const doc = buildDocument({ tpl, info: team.info, data: { teamRanking: { rows, tiebreaks: [{ key: 'TB1', label: 'x' }] } }, profile: defaultProfile(), round: 4 });
+    const t = doc.blocks[0];
+    assert.match(t.thead, />Skup\.</);
+    assert.doesNotMatch(t.thead, />Body</); // body nevyplněné → sloupec se skryje
+    assert.match(t.rows[0], />Alfa A<\/td><td class="c">VC</);
+    const plain = buildDocument({ tpl, info: team.info, data: { teamRanking: { rows: rows.map((r) => ({ ...r, group: '', points: 6 })), tiebreaks: [] } }, profile: defaultProfile(), round: 4 });
+    assert.doesNotMatch(plain.blocks[0].thead, />Skup\.</);
+    assert.match(plain.blocks[0].thead, />Body</);
+  });
   test('los zápasů: body družstev před kolem (volitelně, jako Swiss-Manager)', () => {
     const tpl = getTemplate('team-matches');
     // bez volby žádné body a žádné stahování pořadí
