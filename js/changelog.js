@@ -4,6 +4,12 @@
 
 export const CHANGELOG = [
   {
+    date: '2026-11-28',
+    items: [
+      'Rozpis šachovnic: sestava doplněná ze soupisky (u družstev s přesně tolika hráči jako šachovnic) vychází vždy z aktuální soupisky – starší než 10 minut se před doplněním stáhne znovu; upozornění ukazuje, kdy byla soupiska stažena.',
+    ],
+  },
+  {
     date: '2026-11-27',
     items: [
       'Nové okno „? O aplikaci“ v horní liště: návod k použití, seznam novinek a informace o appce (klávesa ?).',

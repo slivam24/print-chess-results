@@ -434,3 +434,53 @@ test('O aplikaci: návod, novinky s tečkou „nové“, klávesa ?', async () =
   assert.deepEqual(errors, []);
   await context.close();
 });
+
+test('rozpis šachovnic: sestava ze soupisky jen podle aktuální soupisky (stará se stáhne znovu)', async () => {
+  const context = await browser.newContext({ viewport: { width: 1400, height: 950 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(base);
+  await page.waitForFunction(() => window.chessPrint);
+  // Soupiska „v1“: družstvo ŠK Ostrava-Jih má jen 8 hráčů (= počet šachovnic), „v2“: přibyl 9. hráč
+  const TEAM = 'ŠK Ostrava-Jih';
+  const players = fixture('team-players');
+  const v1 = await page.evaluate(({ html, team }) => {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    let n = 0;
+    for (const tr of [...doc.querySelectorAll('table.CRs1 tr')]) {
+      if (![...tr.cells].some((c) => c.textContent.trim() === team)) continue;
+      n += 1;
+      if (n > 8) tr.remove();
+    }
+    return `<!DOCTYPE html>${doc.documentElement.outerHTML}`;
+  }, { html: players, team: TEAM });
+  let roster = v1;
+  const pages = { '': fixture('team-main'), 2: fixture('team-pairings-r3'), 3: fixture('team-boards-r4'), 32: fixture('team-teams'), 16: null };
+  await page.route('**/proxy?**', (route) => {
+    const target = new URL(new URL(route.request().url()).searchParams.get('url'));
+    const art = target.searchParams.get('art') || '';
+    const body = art === '16' ? roster : pages[art];
+    route.fulfill(body ? { status: 200, contentType: 'text/html; charset=utf-8', body } : { status: 404, body: 'nenalezeno' });
+  });
+  await page.evaluate((p) => window.chessPrint.store.update((s) => { s.proxyUrl = p; }, { silent: true }), `${base}proxy`);
+  await page.evaluate(async () => {
+    const cp = window.chessPrint;
+    await cp.loadTournament({ tnr: 1464724 });
+    cp.session.round = 4;
+  });
+  await rendered(page, () => page.evaluate(() => window.chessPrint.selectTemplate('team-boards')));
+  assert.match(await page.locator('#warnings').innerText(), new RegExp(`doplněny podle soupisek z chess-results \\(staženo [^)]+\\) u družstev, která mají přesně tolik hráčů jako šachovnic: ${TEAM}`));
+  // Soupiska se změnila (přibyl hráč) a uložená je starší než 10 minut → stáhne se znovu, sestava zůstane prázdná
+  roster = players;
+  await rendered(page, () => page.evaluate(() => {
+    const cp = window.chessPrint;
+    cp.source.peek(cp.session.tnr, 'teamPlayers').fetchedAt = new Date(Date.now() - 11 * 60000).toISOString();
+    cp.refreshPreview();
+  }));
+  const w = await page.locator('#warnings').innerText();
+  assert.doesNotMatch(w, new RegExp(TEAM));
+  assert.match(w, /šachovnice zůstanou prázdné k ručnímu vyplnění/);
+  assert.deepEqual(errors, []);
+  await context.close();
+});
